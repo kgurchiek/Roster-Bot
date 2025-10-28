@@ -1,0 +1,26 @@
+{
+    "supabase": {
+        "url": "",
+        "key": "",
+        "tables": {
+            "users": "",
+            "items": "",
+            "jobs": "",
+            "templates": "",
+            "events": "",
+            "signups": ""
+        }
+    },
+    "discord": {
+        "token": "",
+        "id": "",
+        "server": "",
+        "monstersChannel": "",
+        "rosterChannel": ""
+    },
+    "roster": {
+        "alliances": 4,
+        "parties": 3,
+        "slots": 6
+    }
+}
