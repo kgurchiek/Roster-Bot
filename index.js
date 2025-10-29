@@ -112,18 +112,31 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                     template = { allowed_job_ids: [] };
                                 }
 
-                                if (template.role) field.value += `\n\`${template.role}\` ${this.signups[i][j][k]?.user.username || '-'}`;
-                                else {
-                                    let jobs = template.allowed_job_ids.map(a => {
-                                        let job = jobList.find(b => b.job_id == a);
-                                        if (job == null) {
-                                            console.log(`Error: can't find job id: ${a}`);
-                                            return null;
-                                        }
-                                        return `\`${job.color}${job.job_abbreviation}\``;
-                                    }).filter(a => a != null);
-                                    field.value += `\n${jobs.length == 0 ? '`-`' : jobs.join('/')} ${this.signups[i][j][k]?.user.username || '-'}`;
+                                let role;
+                                let username = '-';
+                                if (this.signups[i][j][k] != null) {
+                                    let job = jobList.find(a => a.job_id == this.signups[i][j][k].job);
+                                    if (job == null) console.log(`Error: can't find job id: ${a}`);
+                                    else {
+                                        role = `\`${job.color}${job.job_abbreviation}\``;
+                                        username = this.signups[i][j][k].user.username;
+                                    }
                                 }
+                                if (role == null) {
+                                    if (template.role == null) {
+                                        let jobs = template.allowed_job_ids.map(a => {
+                                            let job = jobList.find(b => b.job_id == a);
+                                            if (job == null) {
+                                                console.log(`Error: can't find job id: ${a}`);
+                                                return null;
+                                            }
+                                            return `\`${job.color}${job.job_abbreviation}\``;
+                                        }).filter(a => a != null);
+                                        role = jobs.length == 0 ? '`-`' : jobs.join('/');
+                                    } else role = template.role;
+                                }
+
+                                field.value += `\n\`${role}\` ${username}`;
                             }
 
                             return field;
@@ -152,7 +165,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             new ActionRowBuilder()
                 .addComponents(
                     new ButtonBuilder()
-                        .setCustomId(`quickjoin-${monster}`)
+                        .setCustomId(`quickjoin-job-${monster}`)
                         .setLabel('≫ Quick Join')
                         .setStyle(ButtonStyle.Success)
                     )
@@ -165,7 +178,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             new ActionRowBuilder()
                 .addComponents(
                     new ButtonBuilder()
-                        .setCustomId(`leave-${monster}`)
+                        .setCustomId(`leave-monster-${monster}`)
                         .setLabel('✖ Leave')
                         .setStyle(ButtonStyle.Danger)
                 )

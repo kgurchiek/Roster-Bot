@@ -10,8 +10,29 @@ module.exports = {
         switch (interaction.customId.split('-')[1]) {
             case 'select': {
                 let monster = interaction.customId.split('-')[2];
-                if (monster == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed(`Error fetching ${monster}`, `Could not find data for monster "${monster}"`)] });
                 
+                if (monsters[monster] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`${monster} is not active`)
+                    return await interaction.reply({ embeds: [embed] });
+                }
+
+                for (let alliances of monster.signups) {
+                    for (let parties of alliances) {
+                        for (let slot of parties) {
+                            if (interaction.user.id == slot.user.id) {
+                                let embed = new EmbedBuilder()
+                                    .setTitle('Error')
+                                    .setColor('#ff0000')
+                                    .setDescription('You already signed up for this raid')
+                                return await interaction.reply({ ephemeral: true, embed: [embed] });
+                            }
+                        }
+                    }
+                }
+
                 let buttons = [
                     new ActionRowBuilder()
                         .addComponents(
@@ -92,9 +113,24 @@ module.exports = {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')
-                        .setDescription(`${monster} is not accepting signups`)
+                        .setDescription(`${monster} is not active`)
                     return await interaction.reply({ embeds: [embed] });
                 }
+
+                for (let alliances of monsters[monster].signups) {
+                    for (let parties of alliances) {
+                        for (let slot of parties) {
+                            if (interaction.user.id == slot.user.id) {
+                                let embed = new EmbedBuilder()
+                                    .setTitle('Error')
+                                    .setColor('#ff0000')
+                                    .setDescription('You already signed up for this raid')
+                                return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                            }
+                        }
+                    }
+                }
+
                 let template = templateList.find(a => a.monster_name == monster && a.alliance_number == alliance && a.party_number == party && a.party_slot_number == slot);
                 let templateId = template.slot_template_id;
                 template = template.allowed_job_ids;
@@ -141,6 +177,20 @@ module.exports = {
                     .setColor('#ff0000')
                     .setDescription(`${monster} is not active`)
                     return await interaction.reply({ embeds: [embed] });
+                }
+
+                for (let alliances of monsters[monster].signups) {
+                    for (let parties of alliances) {
+                        for (let slot of parties) {
+                            if (interaction.user.id == slot.user.id) {
+                                let embed = new EmbedBuilder()
+                                    .setTitle('Error')
+                                    .setColor('#ff0000')
+                                    .setDescription('You already signed up for this raid')
+                                return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                            }
+                        }
+                    }
                 }
                 
                 if (selections[id] == null) {
@@ -189,12 +239,26 @@ module.exports = {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'selectslot': {
+                if (selections[interaction.message.id] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription('This message has expired, please click the sign up button again')
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
                 interaction.deferUpdate();
                 if (selections[interaction.message.id] == null) selections[interaction.message.id] = {};
                 selections[interaction.message.id][args[2]] = parseInt(interaction.values[0]);
                 break;
             }
             case 'selectjob': {
+                if (selections[args[2]] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription('This message has expired, please click the sign up button again')
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
                 interaction.deferUpdate();
                 selections[args[2]].job = interaction.values[0];
                 break;
