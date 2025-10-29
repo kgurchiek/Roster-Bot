@@ -89,7 +89,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             this.name = name;
             this.timestamp = timestamp;
             this.day = day;
-            this.signups = Array(config.roster.alliances).fill().map(() => Array(config.roster.parties).fill().map(() => []));
+            this.signups = Array(config.roster.alliances).fill().map(() => Array(config.roster.parties).fill().map(() => Array(config.roster.slots).fill(null)));
             this.event = event;
         }
         message;
@@ -130,7 +130,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                                 console.log(`Error: can't find job id: ${a}`);
                                                 return null;
                                             }
-                                            return `\`${job.color}${job.job_abbreviation}\``;
+                                            return `${job.color}${job.job_abbreviation}`;
                                         }).filter(a => a != null);
                                         role = jobs.length == 0 ? '`-`' : jobs.join('/');
                                     } else role = template.role;
