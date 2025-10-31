@@ -1,4 +1,4 @@
-const { Client, Partials, Collection, Events, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
+const { Client, Partials, Collection, Events, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ThreadAutoArchiveDuration, ChannelType } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const config = require('./config.json');
@@ -72,7 +72,19 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
 
     process.on('uncaughtException', console.error);
 
-    const client = new Client({ partials: [Partials.Channel, Partials.GuildMember, Partials.Message], intents: [GatewayIntentBits.Guilds, GatewayIntentBits.DirectMessages, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages] });
+    const client = new Client({
+        partials: [
+            Partials.Channel,
+            Partials.GuildMember,
+            Partials.Message
+        ],
+        intents: [
+            GatewayIntentBits.Guilds,
+            GatewayIntentBits.DirectMessages,
+            GatewayIntentBits.GuildMembers,
+            GatewayIntentBits.GuildMessages
+        ]
+    });
     client.commands = new Collection();
     const commandsPath = path.join(__dirname, 'commands');
     const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
@@ -84,7 +96,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
     }
 
     class Monster {
-        constructor(name, timestamp, day, event) {
+        constructor(name, timestamp, day, event, threads) {
             this.name = name;
             this.timestamp = timestamp;
             this.day = day;
@@ -93,6 +105,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
 
             this.data = monsterList.find(a => a.monster_name == this.name);
             if (this.data == null) console.log(`Error: could not find data for monster "${this.name}"`);
+            else this.thread = threads[this.data.channel_type].find(a => a.name == this.name);
         }
         message;
         createEmbed() {
@@ -185,9 +198,17 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         }).select('*').single();
         if (error != null) return console.log(`Error creating event for ${monster}:`, error.message);
         
-        monsters[monster] = new Monster(monster, timestamp, day, data.event_id);
-
-        monsters[monster].message = await rosterChannels[monsters[monster].data.monster_type == 'PPP' ? 'PPP' : 'DKP'].send({ embeds: [monsters[monster].createEmbed()], components: monsters[monster].createButtons() });
+        let threads = {
+            DKP: Array.from((await rosterChannels.DKP.threads.fetchActive(false)).threads.values()).concat(Array.from((await rosterChannels.DKP.threads.fetchArchived(false)).threads.values())),
+            PPP: Array.from((await rosterChannels.PPP.threads.fetchActive(false)).threads.values()).concat(Array.from((await rosterChannels.PPP.threads.fetchArchived(false)).threads.values()))
+        }
+        monsters[monster] = new Monster(monster, timestamp, day, data.event_id, threads);
+        if (monsters[monster].thread == null) monsters[monster].thread = await rosterChannels[monsters[monster].data.channel_type].threads.create({
+            name: monsters[monster].name,
+            type: ChannelType.PublicThread,
+            autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek
+        });
+        monsters[monster].message = await monsters[monster].thread.send({ embeds: [monsters[monster].createEmbed()], components: monsters[monster].createButtons() });
     }
 
     let guild;
@@ -208,21 +229,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         await updateTemplates();
         let messages = Array.from((await monstersChannel.messages.fetch({ limit: 100, cache: false })).values()).filter(a => a.embeds.length > 0).reverse();
         for (let message of messages) scheduleMonster(message);
-
     });
-
-    async function handleMonsters() {
-        try {
-            for (let monster in monsters) {
-                if (monsters[monster].timestamp > Date.now() / 1000) {
-                    let message = monsters[monster].message;
-                    delete monsters[monster];
-                }
-            }
-        } catch (err) { console.log('Error handling monster windows:', err.message) }
-        setTimeout(handleMonsters);
-    }
-    // handleMonsters();
 
     async function getUser(id) {
         let { data: user, error } = await supabase.from(config.supabase.tables.users).select('id::text, username, dkp, ppp, frozen').eq('id', id).limit(1);
