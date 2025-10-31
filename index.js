@@ -6,21 +6,20 @@ const { createClient } = require('@supabase/supabase-js');
 const supabase = createClient(config.supabase.url, config.supabase.key);
 
 (async () => {
-    let itemList;
-    async function updateItems () {
+    let monsterList;
+    async function updateMonsters () {
         try {
-            let { data, error } = await supabase.from(config.supabase.tables.items).select('*').eq('available', true);
+            let { data, error } = await supabase.from(config.supabase.tables.monsters).select('*');
             if (error == null) {
-                itemList = data;
-                // console.log(`[Item List]: Fetched ${itemList.length} items.`);
+                monsterList = data;
+                // console.log(`[Item List]: Fetched ${monsterList.length} items.`);
             } else {
-                console.log('Error fetching item list:', error.message);
+                console.log('Error fetching monster list:', error.message);
                 await new Promise(res => setTimeout(res, 5000));
             }
-        } catch (err) { console.log('Error fetching item list:', err) }
-        setTimeout(updateItems);
+        } catch (err) { console.log('Error fetching monster list:', err) }
+        setTimeout(updateMonsters);
     }
-    updateItems();
 
     let userList;
     async function updateUsers() {
@@ -91,6 +90,9 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             this.day = day;
             this.signups = Array(config.roster.alliances).fill().map(() => Array(config.roster.parties).fill().map(() => Array(config.roster.slots).fill(null)));
             this.event = event;
+
+            this.data = monsterList.find(a => a.monster_name == this.name);
+            if (this.data == null) console.log(`Error: could not find data for monster "${this.name}"`);
         }
         message;
         createEmbed() {
@@ -144,6 +146,30 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                     ]).reduce((a, b) => a.concat(b.reduce((c, d) => c.concat(d), [])), [])
                 )
         }
+        createButtons() {
+            return [
+                new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId(`quickjoin-job-${this.name}`)
+                            .setLabel('≫ Quick Join')
+                            .setStyle(ButtonStyle.Success)
+                        )
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId(`signup-select-${this.name}`)
+                            .setLabel('📝 Sign Up')
+                            .setStyle(ButtonStyle.Primary)
+                    ),
+                new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId(`leave-monster-${this.name}`)
+                            .setLabel('✖ Leave')
+                            .setStyle(ButtonStyle.Danger)
+                    )
+            ]
+        }
     }
 
     let monsters = {};
@@ -160,47 +186,29 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         if (error != null) return console.log(`Error creating event for ${monster}:`, error.message);
         
         monsters[monster] = new Monster(monster, timestamp, day, data.event_id);
-        
-        let buttons = [
-            new ActionRowBuilder()
-                .addComponents(
-                    new ButtonBuilder()
-                        .setCustomId(`quickjoin-job-${monster}`)
-                        .setLabel('≫ Quick Join')
-                        .setStyle(ButtonStyle.Success)
-                    )
-                .addComponents(
-                    new ButtonBuilder()
-                        .setCustomId(`signup-select-${monster}`)
-                        .setLabel('📝 Sign Up')
-                        .setStyle(ButtonStyle.Primary)
-                ),
-            new ActionRowBuilder()
-                .addComponents(
-                    new ButtonBuilder()
-                        .setCustomId(`leave-monster-${monster}`)
-                        .setLabel('✖ Leave')
-                        .setStyle(ButtonStyle.Danger)
-                )
-        ]
 
-        monsters[monster].message = await rosterChannel.send({ embeds: [monsters[monster].createEmbed()], components: buttons });
+        monsters[monster].message = await rosterChannels[monsters[monster].data.monster_type == 'PPP' ? 'PPP' : 'DKP'].send({ embeds: [monsters[monster].createEmbed()], components: monsters[monster].createButtons() });
     }
 
     let guild;
     let monstersChannel;
-    let rosterChannel;
+    let rosterChannels;
     client.once(Events.ClientReady, async () => {
         console.log(`[Bot]: ${client.user.tag}`);
         console.log(`[Servers]: ${client.guilds.cache.size}`);
         guild = await client.guilds.fetch(config.discord.server);
         monstersChannel = await client.channels.fetch(config.discord.monstersChannel);
-        rosterChannel = await client.channels.fetch(config.discord.rosterChannel);
+        rosterChannels = {
+            DKP: await client.channels.fetch(config.discord.rosterChannel.DKP),
+            PPP: await client.channels.fetch(config.discord.rosterChannel.PPP)
+        }
 
+        await updateMonsters();
         await updateJobs();
         await updateTemplates();
         let messages = Array.from((await monstersChannel.messages.fetch({ limit: 100, cache: false })).values()).filter(a => a.embeds.length > 0).reverse();
         for (let message of messages) scheduleMonster(message);
+
     });
 
     async function handleMonsters() {
@@ -266,7 +274,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             }
             
             try {
-                await command.execute({ interaction, client, user, supabase, itemList, userList, jobList, templateList, monsters });
+                await command.execute({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, monsters });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()
@@ -283,7 +291,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             if (!command) return;
 
             try {
-                await command.autocomplete({ interaction, client, user, supabase, itemList, userList, jobList, templateList, monsters });
+                await command.autocomplete({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, monsters });
             } catch (error) {
                 console.log(error);
                 try {
@@ -294,7 +302,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         if (interaction.isButton()) {
             const command = client.commands.get(interaction.customId.split('-')[0]);
             try {
-                if (command?.buttonHandler) command.buttonHandler({ interaction, client, user, supabase, itemList, userList, jobList, templateList, monsters });
+                if (command?.buttonHandler) command.buttonHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, monsters });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()
@@ -309,7 +317,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         if (interaction.isAnySelectMenu()) {
             const command = client.commands.get(interaction.customId.split('-')[0]);
             try {
-                if (command?.selectHandler) command.selectHandler({ interaction, client, user, supabase, itemList, userList, jobList, templateList, monsters });
+                if (command?.selectHandler) command.selectHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, monsters });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()
@@ -328,7 +336,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 return;
             }
             try {
-                if (command?.modalHandler) command.modalHandler({ interaction, client, user, supabase, itemList, userList, jobList, templateList, monsters });
+                if (command?.modalHandler) command.modalHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, monsters });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()

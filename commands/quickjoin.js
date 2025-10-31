@@ -7,10 +7,11 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('quickjoin'),
     async buttonHandler({ interaction, user, supabase, jobList, templateList, monsters }) {
-        switch (interaction.customId.split('-')[1]) {
+        let args = interaction.customId.split('-');
+        switch (args[1]) {
             case 'job': {
-                let monster = interaction.customId.split('-')[2];
-                selections[interaction.message.id] = {}
+                let monster = args[2];
+                selections[interaction.id] = {};
 
                 if (monsters[monster] == null) {
                     let embed = new EmbedBuilder()
@@ -61,7 +62,7 @@ module.exports = {
                         .addComponents(
                             new StringSelectMenuBuilder()
                                 .setPlaceholder('Select Job')
-                                .setCustomId(`quickjoin-selectjob-${interaction.message.id}`)
+                                .setCustomId(`quickjoin-selectjob-${interaction.id}`)
                                 .addOptions(
                                     ...jobs.map(a => 
                                         new StringSelectMenuOptionBuilder()
@@ -73,7 +74,7 @@ module.exports = {
                      new ActionRowBuilder()
                         .addComponents(
                             new ButtonBuilder()
-                                .setCustomId(`quickjoin-confirm-${monster}-${interaction.message.id}`)
+                                .setCustomId(`quickjoin-confirm-${monster}-${interaction.id}`)
                                 .setLabel('✓')
                                 .setStyle(ButtonStyle.Success)
                         )
@@ -82,7 +83,7 @@ module.exports = {
                 break;
             }
             case 'confirm': {
-                let [monster, id] = interaction.customId.split('-').slice(2);
+                let [monster, id] = args.slice(2);
                 if (monsters[monster] == null) {
                     let embed = new EmbedBuilder()
                     .setTitle('Error')
@@ -188,7 +189,9 @@ module.exports = {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'selectjob': {
-                if (selections[args[2]] == null) {
+                let id = args[2];
+
+                if (selections[id] == null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')
@@ -196,7 +199,7 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
                 interaction.deferUpdate();
-                selections[args[2]].job = interaction.values[0];
+                selections[id].job = interaction.values[0];
                 break;
             }
         }

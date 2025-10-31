@@ -7,9 +7,11 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('signup'),
     async buttonHandler({ interaction, user, supabase, jobList, templateList, monsters }) {
-        switch (interaction.customId.split('-')[1]) {
+        let args = interaction.customId.split('-');
+        switch (args[1]) {
             case 'select': {
-                let monster = interaction.customId.split('-')[2];
+                let monster = args[2];
+                selections[interaction.id] = {};
                 
                 if (monsters[monster] == null) {
                     let embed = new EmbedBuilder()
@@ -19,7 +21,7 @@ module.exports = {
                     return await interaction.reply({ embeds: [embed] });
                 }
 
-                for (let alliances of monster.signups) {
+                for (let alliances of monsters[monster].signups) {
                     for (let parties of alliances) {
                         for (let slot of parties) {
                             if (interaction.user.id == slot?.user.id) {
@@ -37,7 +39,7 @@ module.exports = {
                     new ActionRowBuilder()
                         .addComponents(
                             new StringSelectMenuBuilder()
-                                .setCustomId(`signup-selectslot-alliance`)
+                                .setCustomId(`signup-selectslot-alliance-${interaction.id}`)
                                 .setPlaceholder('Select Alliance')
                                 .addOptions(
                                     ...Array(config.roster.alliances).fill().map((a, i) =>
@@ -50,7 +52,7 @@ module.exports = {
                     new ActionRowBuilder()
                         .addComponents(
                             new StringSelectMenuBuilder()
-                                .setCustomId(`signup-selectslot-party`)
+                                .setCustomId(`signup-selectslot-party-${interaction.id}`)
                                 .setPlaceholder('Select Party')
                                 .addOptions(
                                     ...Array(config.roster.parties).fill().map((a, i) => 
@@ -64,7 +66,7 @@ module.exports = {
                         .addComponents(
                             new StringSelectMenuBuilder()
                                 .setPlaceholder('Select Slot')
-                                .setCustomId(`signup-selectslot-slot`)
+                                .setCustomId(`signup-selectslot-slot-${interaction.id}`)
                                 .addOptions(
                                     ...Array(config.roster.slots).fill().map((a, i) => 
                                         new StringSelectMenuOptionBuilder()
@@ -76,7 +78,7 @@ module.exports = {
                     new ActionRowBuilder()
                         .addComponents(
                             new ButtonBuilder()
-                                .setCustomId(`signup-job-${monster}`)
+                                .setCustomId(`signup-job-${monster}-${interaction.id}`)
                                 .setLabel('✓')
                                 .setStyle(ButtonStyle.Success)
                         )
@@ -86,9 +88,10 @@ module.exports = {
                 break;
             }
             case 'job': {
-                let monster = interaction.customId.split('-')[2];
+                let monster = args[2];
+                let id = args[3];
 
-                if (selections[interaction.message.id] == null) {
+                if (selections[id] == null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')
@@ -96,7 +99,7 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
-                let { alliance, party, slot } = selections[interaction.message.id];
+                let { alliance, party, slot } = selections[id];
                 if (alliance == null) return await interaction.reply({ ephemeral: true, embeds: [new EmbedBuilder().setTitle('Error').setColor('#ff0000').setDescription('Select which alliance you wish to join')] });
                 if (party == null) return await interaction.reply({ ephemeral: true, embeds: [new EmbedBuilder().setTitle('Error').setColor('#ff0000').setDescription('Select which party you wish to join')] });
                 if (slot == null) return await interaction.reply({ ephemeral: true, embeds: [new EmbedBuilder().setTitle('Error').setColor('#ff0000').setDescription('Select which slot you wish to join')] });
@@ -149,7 +152,7 @@ module.exports = {
                         .addComponents(
                             new StringSelectMenuBuilder()
                                 .setPlaceholder('Select Job')
-                                .setCustomId(`signup-selectjob-${interaction.message.id}`)
+                                .setCustomId(`signup-selectjob-${id}`)
                                 .addOptions(
                                     ...template.map(a => 
                                         new StringSelectMenuOptionBuilder()
@@ -161,7 +164,7 @@ module.exports = {
                      new ActionRowBuilder()
                         .addComponents(
                             new ButtonBuilder()
-                                .setCustomId(`signup-confirm-${monster}-${interaction.message.id}-${templateId}`)
+                                .setCustomId(`signup-confirm-${monster}-${id}-${templateId}`)
                                 .setLabel('✓')
                                 .setStyle(ButtonStyle.Success)
                         )
@@ -170,7 +173,7 @@ module.exports = {
                 break;
             }
             case 'confirm': {
-                let [monster, id, templateId] = interaction.customId.split('-').slice(2);
+                let [monster, id, templateId] = args.slice(2);
                 if (monsters[monster] == null) {
                     let embed = new EmbedBuilder()
                     .setTitle('Error')
@@ -240,7 +243,9 @@ module.exports = {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'selectslot': {
-                if (selections[interaction.message.id] == null) {
+                let [type, id] = args.slice(2);
+
+                if (selections[id] == null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')
@@ -248,12 +253,13 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
                 interaction.deferUpdate();
-                if (selections[interaction.message.id] == null) selections[interaction.message.id] = {};
-                selections[interaction.message.id][args[2]] = parseInt(interaction.values[0]);
+                selections[id][type] = parseInt(interaction.values[0]);
                 break;
             }
             case 'selectjob': {
-                if (selections[args[2]] == null) {
+                let id = args[2];
+
+                if (selections[id] == null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')
@@ -261,7 +267,7 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
                 interaction.deferUpdate();
-                selections[args[2]].job = interaction.values[0];
+                selections[id].job = interaction.values[0];
                 break;
             }
         }

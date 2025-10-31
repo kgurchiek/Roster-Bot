@@ -3,8 +3,8 @@
         "url": "",
         "key": "",
         "tables": {
+            "monsters": "",
             "users": "",
-            "items": "",
             "jobs": "",
             "templates": "",
             "events": "",
@@ -16,7 +16,10 @@
         "id": "",
         "server": "",
         "monstersChannel": "",
-        "rosterChannel": ""
+        "rosterChannel": {
+            "DKP": "",
+            "PPP": ""
+        }
     },
     "roster": {
         "alliances": 4,
