@@ -7,8 +7,10 @@
             "users": "",
             "jobs": "",
             "templates": "",
+            "point_rules": "",
             "events": "",
-            "signups": ""
+            "signups": "",
+            "groups": ""
         }
     },
     "discord": {
@@ -24,6 +26,7 @@
     "roster": {
         "alliances": 4,
         "parties": 3,
-        "slots": 6
+        "slots": 6,
+        "team": ""
     }
 }

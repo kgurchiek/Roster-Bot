@@ -13,6 +13,11 @@ module.exports = {
                 let monster = args[2];
                 selections[interaction.id] = {};
 
+                if (monster == 'Tiamat') {
+                    interaction.customId = `leave-confirm-${monster}-${interaction.id}`;
+                    return this.buttonHandler({ interaction, user, supabase, monsters });
+                }
+
                 if (monsters[monster] == null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
@@ -35,6 +40,23 @@ module.exports = {
                         .setColor('#ff0000')
                         .setDescription('You are not signed up for this raid')
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
+
+                if (monsters[monster].data.max_windows == null || monsters[monster].data.max_windows >= 25) {
+                    let modal = new ModalBuilder()
+                        .setCustomId(`leave-${monster}-${interaction.id}-${monsters[monster].data.max_windows}`)
+                        .setTitle(`Leave ${monster} Raid`)
+                        .addComponents(
+                            new ActionRowBuilder()
+                                .addComponents(
+                                    new TextInputBuilder()
+                                        .setCustomId('windows')
+                                        .setLabel('Windows')
+                                        .setStyle(TextInputStyle.Short)
+                                )
+                        )
+                    
+                    return await interaction.showModal(modal);
                 }
 
                 let buttons = [
@@ -73,19 +95,22 @@ module.exports = {
                     return await interaction.reply({ embeds: [embed] });
                 }
 
-                if (selections[id] == null) {
-                    let embed = new EmbedBuilder()
-                        .setTitle('Error')
-                        .setColor('#ff0000')
-                        .setDescription('This message has expired, please click the sign up button again')
-                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
-                }
-                if (selections[id].windows == null) {
-                    let embed = new EmbedBuilder()
-                        .setTitle('Error')
-                        .setColor('#ff0000')
-                        .setDescription('Please select how many windows you camped')
-                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                if (monster == 'Tiamat') selections[id] = {}
+                else {
+                    if (selections[id] == null) {
+                        let embed = new EmbedBuilder()
+                            .setTitle('Error')
+                            .setColor('#ff0000')
+                            .setDescription('This message has expired, please click the sign up button again')
+                        return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                    }
+                    if (selections[id].windows == null) {
+                        let embed = new EmbedBuilder()
+                            .setTitle('Error')
+                            .setColor('#ff0000')
+                            .setDescription('Please select how many windows you camped')
+                        return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                    }
                 }
                 
                 let alliance;
@@ -112,8 +137,14 @@ module.exports = {
                 }
 
                 await interaction.deferReply({ ephemeral: true });
-                let { error } = await supabase.from(config.supabase.tables.signups).update({ active: false, windows: selections[id].windows }).eq('event_id', monsters[monster].event).eq('player_id', user.id);
-                if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating database', error.message)] });
+
+                if (monster == 'Tiamat') {
+                    let { error } = await supabase.from(config.supabase.tables.signups).delete().eq('event_id', monsters[monster].event).eq('player_id', user.id).eq('active', true);
+                    if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating database', error.message)] });
+                } else {
+                    let { error } = await supabase.from(config.supabase.tables.signups).update(Object.assign({ active: false }, selections[id].windows == null ? {} : { windows: selections[id].windows })).eq('event_id', monsters[monster].event).eq('player_id', user.id).eq('active', true);
+                    if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating database', error.message)] });
+                }
 
                 monsters[monster].signups[alliance][party][slot] = null;
                 delete selections[id];
@@ -146,5 +177,31 @@ module.exports = {
                 break;
             }
         }
+    },
+    async modalHandler({ interaction, supabase, groupList, monsters }) {        
+        let args = interaction.customId.split('-');
+        let [monster, id, maxWindows] = args.slice(1);
+        maxWindows = parseInt(maxWindows) || Infinity;
+
+        if (monsters[monster] == null) {
+            let embed = new EmbedBuilder()
+                .setTitle('Error')
+                .setColor('#ff0000')
+                .setDescription(`${monster} is not active`)
+            return await interaction.reply({ embeds: [embed] });
+        }
+
+        let windows = parseInt(interaction.fields.getTextInputValue('windows'));
+        if (isNaN(windows) || windows < 0 || windows > maxWindows) {
+            let embed = new EmbedBuilder()
+                .setTitle('Error')
+                .setColor('#ff0000')
+                .setDescription(`Please enter a valid number of windows${maxWindows == Infinity ? '' : ` (max: ${maxWindows})`}`)
+            return await interaction.reply({ ephemeral: true, embeds: [embed] });
+        }
+        selections[id].windows = windows;
+
+        interaction.customId = `leave-confirm-${monster}-${id}`;
+        this.buttonHandler({ interaction, supabase, groupList, monsters });
     }
 }
