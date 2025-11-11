@@ -21,7 +21,8 @@
         "rosterChannel": {
             "DKP": "",
             "PPP": ""
-        }
+        },
+        "threadGroups": []
     },
     "roster": {
         "alliances": 4,

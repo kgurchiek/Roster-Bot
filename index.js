@@ -141,7 +141,11 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
 
             this.data = monsterList.find(a => a.monster_name == this.name);
             if (this.data == null) console.log(`Error: could not find data for monster "${this.name}"`);
-            else if (thread == null) this.thread = threads[this.data.channel_type].find(a => a.name == this.name);
+            else if (thread == null) {
+                let group = config.discord.threadGroups.find(a => a.includes(this.name));
+                if (group) this.thread = threads[this.data.channel_type].find(a => a.name == group.join('/'));
+                else this.thread = threads[this.data.channel_type].find(a => a.name == this.name);
+            }
         }
         active = true;
         createEmbeds() {
@@ -303,13 +307,11 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             DKP: Array.from((await rosterChannels.DKP.threads.fetchActive(false)).threads.values()).concat(Array.from((await rosterChannels.DKP.threads.fetchArchived(false)).threads.values())),
             PPP: Array.from((await rosterChannels.PPP.threads.fetchActive(false)).threads.values()).concat(Array.from((await rosterChannels.PPP.threads.fetchArchived(false)).threads.values()))
         }
-        let event = events.find(a => a.message == message.id);
+        let event = events.find(a => new Date(a.start_time).getTime() / 1000 == timestamp);
         if (event == null) {
             let { data, error } = await supabase.from(config.supabase.tables.events).insert({
                 monster_name: monster,
-                start_time: new Date(timestamp * 1000),
-                channel: message.channelId,
-                message: message.id
+                start_time: new Date(timestamp * 1000)
             }).select('*').single();
             if (error != null) return console.log(`Error creating event for ${monster}:`, error.message);
             event = data;
@@ -357,12 +359,21 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         }
 
         if (monsters[monster].message == null) {
-            if (monsters[monster].thread == null) monsters[monster].thread = await rosterChannels[monsters[monster].event.channel_type].threads.create({
-                name: monsters[monster].name,
-                type: ChannelType.PublicThread,
-                autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek
-            });
+            if (monsters[monster].thread == null) {
+                let group = config.discord.threadGroups.find(a => a.includes(monster));
+                monsters[monster].thread = await rosterChannels[monsters[monster].data.channel_type].threads.create({
+                    name: group ? group.join('/') : monsters[monster].name,
+                    type: ChannelType.PublicThread,
+                    autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek
+                });
+            }
             monsters[monster].message = await monsters[monster].thread.send({ embeds: monsters[monster].createEmbeds(), components: monsters[monster].createButtons() });
+
+            let { error } = await supabase.from(config.supabase.tables.events).update({
+                channel: monsters[monster].message.channelId,
+                message: monsters[monster].message.id
+            }).eq('event_id', monsters[monster].event);
+            if (error) console.log('Error updating event:', error.message);
         }
         monsters[monster].archive = archive.push(monsters[monster]) - 1;   
     }
