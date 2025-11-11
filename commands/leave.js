@@ -154,7 +154,7 @@ module.exports = {
                     .setColor('#00ff00')
                     .setDescription(`You let the raid`)
                 await interaction.editReply({ ephemeral: true, embeds: [embed] });
-                await monsters[monster].message.edit({ embeds: [monsters[monster].createEmbed()] });
+                await monsters[monster].message.edit({ embeds: monsters[monster].createEmbeds() });
                 break;
             }
         }

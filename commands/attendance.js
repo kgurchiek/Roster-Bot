@@ -231,7 +231,7 @@ module.exports = {
                     killed: selections[id].kill,
                     tagged: selections[id].tag
                 });
-                await archive[selections[id].archiveId].message.edit({ embeds: [archive[selections[id].archiveId].createEmbed()] });
+                await archive[selections[id].archiveId].message.edit({ embeds: archive[selections[id].archiveId].createEmbeds() });
 
                 let embed = new EmbedBuilder()
                     .setTitle('Success')

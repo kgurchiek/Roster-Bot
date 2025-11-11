@@ -127,81 +127,98 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
     }
 
     class Monster {
-        constructor(name, timestamp, day, event, threads) {
+        constructor(name, timestamp, day, event, threads, thread, message, windows, killer) {
             this.name = name;
             this.timestamp = timestamp;
             this.day = day;
-            this.signups = Array(config.roster.alliances).fill().map(() => Array(config.roster.parties).fill().map(() => Array(config.roster.slots).fill(null)));
             this.event = event;
+            this.signups = Array(config.roster.alliances).fill().map(() => Array(config.roster.parties).fill().map(() => Array(config.roster.slots).fill(null)));
+            
+            this.thread = thread;
+            this.message = message;
+            this.windows = windows;
+            this.killer = killer;
 
             this.data = monsterList.find(a => a.monster_name == this.name);
             if (this.data == null) console.log(`Error: could not find data for monster "${this.name}"`);
-            else this.thread = threads[this.data.channel_type].find(a => a.name == this.name);
+            else if (thread == null) this.thread = threads[this.data.channel_type].find(a => a.name == this.name);
         }
         active = true;
-        message;
-        windows;
-        killer;
-        archive;
-        createEmbed() {
+        createEmbeds() {
             if (this.active) {
-                return new EmbedBuilder()
-                    .setTitle(`🐉 ${this.name} (Day ${this.day})`)
-                    .setDescription(`🕒 Starts at <t:${this.timestamp}:D> <t:${this.timestamp}:T> (<t:${this.timestamp}:R>)`)
-                    .addFields(
-                        ...Array(config.roster.alliances).fill().map((a, i) => [
-                            Array(config.roster.parties).fill().map((b, j) => {
-                                let field = {
-                                    name: `${j == 0 ? `🛡️ Alliance ${i + 1} - ` : ''}Party ${j + 1}`,
-                                    value: `(0/0)`,
-                                    inline: true
-                                };
-                                for (let k = 0; k < config.roster.slots; k++) {
-                                    let template = templateList.find(a => a.monster_name == this.name && a.alliance_number == i + 1 && a.party_number == j + 1 && a.party_slot_number == k + 1);
-                                    if (template == null) {
-                                        console.log(`Error: Cannot find template for ${this.name}, Alliance ${i + 1}, Party ${j + 1}, Slot ${k + 1}`);
-                                        template = { allowed_job_ids: [] };
-                                    }
+                if (false && this.name == 'Lord of Onzozo') {
+                    // TODO
+                } else {
+                    return [
+                        new EmbedBuilder()
+                            .setTitle(`🐉 ${this.name} (Day ${this.day})`)
+                            .setDescription(`🕒 Starts at <t:${this.timestamp}:D> <t:${this.timestamp}:T> (<t:${this.timestamp}:R>)`)
+                            .addFields(
+                                ...Array(config.roster.alliances).fill().map((a, i) => [
+                                    Array(config.roster.parties).fill().map((b, j) => {
+                                        let field = {
+                                            name: `${j == 0 ? `🛡️ Alliance ${i + 1} - ` : ''}Party ${j + 1}`,
+                                            value: `(0/0)`,
+                                            inline: true
+                                        };
+                                        for (let k = 0; k < config.roster.slots; k++) {
+                                            let template = templateList.find(a => a.monster_name == this.name && a.alliance_number == i + 1 && a.party_number == j + 1 && a.party_slot_number == k + 1);
+                                            if (template == null) {
+                                                console.log(`Error: Cannot find template for ${this.name}, Alliance ${i + 1}, Party ${j + 1}, Slot ${k + 1}`);
+                                                template = { allowed_job_ids: [] };
+                                            }
 
-                                    let role;
-                                    let username = '-';
-                                    if (this.signups[i][j][k] != null) {
-                                        let job = jobList.find(a => a.job_id == this.signups[i][j][k].job);
-                                        if (job == null) console.log(`Error: can't find job id: ${a}`);
-                                        else {
-                                            role = `\`${job.color}${job.job_abbreviation}\``;
-                                            username = this.signups[i][j][k].user.username;
-                                        }
-                                    }
-                                    if (role == null) {
-                                        if (template.role == null) {
-                                            let jobs = template.allowed_job_ids.map(a => {
-                                                let job = jobList.find(b => b.job_id == a);
-                                                if (job == null) {
-                                                    console.log(`Error: can't find job id: ${a}`);
-                                                    return null;
+                                            let role;
+                                            let username = '-';
+                                            if (this.signups[i][j][k] != null) {
+                                                let job = jobList.find(a => a.job_id == this.signups[i][j][k].job);
+                                                if (job == null) console.log(`Error: can't find job id: ${a}`);
+                                                else {
+                                                    role = `\`${job.color}${job.job_abbreviation}\``;
+                                                    username = this.signups[i][j][k].user.username;
                                                 }
-                                                return `${job.color}${job.job_abbreviation}`;
-                                            }).filter(a => a != null);
-                                            role = jobs.length == 0 ? '`-`' : jobs.join('/');
-                                        } else role = template.role;
-                                    }
+                                            }
+                                            if (role == null) {
+                                                if (template.role == null) {
+                                                    let jobs = template.allowed_job_ids.map(a => {
+                                                        let job = jobList.find(b => b.job_id == a);
+                                                        if (job == null) {
+                                                            console.log(`Error: can't find job id: ${a}`);
+                                                            return null;
+                                                        }
+                                                        return `${job.color}${job.job_abbreviation}`;
+                                                    }).filter(a => a != null);
+                                                    role = jobs.length == 0 ? '`-`' : jobs.join('/');
+                                                } else role = template.role;
+                                            }
 
-                                    field.value += `\n\`${role}\` ${username}`;
-                                }
+                                            field.value += `\n\`${role}\` ${username}`;
+                                        }
 
-                                return field;
-                            })
-                        ]).reduce((a, b) => a.concat(b.reduce((c, d) => c.concat(d), [])), [])
-                    )
+                                        return field;
+                                    })
+                                ]).reduce((a, b) => a.concat(b.reduce((c, d) => c.concat(d), [])), [])
+                            )
+                    ];
+                }
             } else {
-                return new EmbedBuilder()
-                    .setTitle(`🐉 ${this.name} (Day ${this.day})`)
-                    .setDescription(`🕒 Closed\n\`\`\`\n${this.data.signups.map(a => `${a.verified ? '✅' : '❌'} ${a.player_id.username} - ${a.windows == null ? '' : `${a.windows}/${this.windows}`}${a.tagged ? ' - T' : ''}${a.killed ? ' - K' : ''}`).join('\n')}\n\`\`\``)
+                return [
+                    this.data.signups.filter(a => a.active),
+                    this.name == 'Tiamat' ? null : this.signups.filter(a => !a.active).filter((a, i, arr) => arr.slice(0, i).find(b => b.signup_id == a.signup_id) == null)
+                ].filter(a => a != null).map((a, i) => {
+                        let embed = new EmbedBuilder()
+                        if (i == 0) embed.setTitle(`🐉 ${this.name} (Day ${this.day})`);
+                        embed.setDescription(`${i == 0 ? '🕒 Closed\n**Active**\n' : '**Inactive**\n'}\`\`\`\n${
+                            a.map(b => `${b.verified ? '✅' : '❌'} ${b.player_id.username} - ${b.windows == null ? '' : `${b.windows}/${this.windows}`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}`).join('\n')
+                        }\n\`\`\``);
+
+                        return embed;
+                    }
+                )
             }
         }
         createButtons() {
-            let buttons = [
+            return [
                 new ActionRowBuilder()
                     .addComponents(
                         new ButtonBuilder()
@@ -221,32 +238,22 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                             .setCustomId(`leave-monster-${this.name}`)
                             .setLabel('✖ Leave')
                             .setStyle(ButtonStyle.Danger)
-                    )
-            ];
-
-            if (this.name == 'Tiamat') {
-                buttons.push(
-                    new ActionRowBuilder()
-                        .addComponents(
-                            new ButtonBuilder()
-                                .setCustomId(`clear-monster-${this.name}`)
-                                .setLabel('🗑️ Clear')
-                                .setStyle(ButtonStyle.Secondary)
-                        )
-                )
-            }
-
-            buttons.push(
+                    ),
+                this.name == 'Tiamat' ? (new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId(`clear-monster-${this.name}`)
+                            .setLabel('🗑️ Clear')
+                            .setStyle(ButtonStyle.Secondary)
+                    )) : null,
                 new ActionRowBuilder()
                     .addComponents(
                         new ButtonBuilder()
                             .setCustomId(`populate-monster-${this.name}`)
-                            .setLabel('Populate')
+                            .setLabel('💰 Populate')
                             .setStyle(ButtonStyle.Secondary)
                     )
-            )
-
-            return buttons;
+            ].filter(a => a != null);
         }
         async close() {
             this.active = false;
@@ -259,7 +266,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             if (error) return { error };
             this.data.signups = data;
             
-            await this.message.edit({ embeds: [this.createEmbed(this.data.signups)], components: [] });
+            await this.message.edit({ embeds: this.createEmbeds(), components: [] });
             delete monsters[this.name];
 
             for (let signup of this.data.signups.filter(a => a.active)) {
@@ -286,31 +293,78 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
 
     let monsters = {};
     let archive = [];
-    async function scheduleMonster(message) {
+    async function scheduleMonster(message, events = []) {
         let monster = message.embeds[0].title;
-        monster = 'Tiamat';
         let timestamp = parseInt(message.embeds[0].fields[0].value.split(':')[1]);
         let day = parseInt(message.embeds[0].fields[1].value);
         if (timestamp < Date.now() / 1000) return;
-        
-        let { data, error } = await supabase.from(config.supabase.tables.events).insert({
-            monster_name: monster,
-            start_time: new Date(timestamp * 1000)
-        }).select('*').single();
-        if (error != null) return console.log(`Error creating event for ${monster}:`, error.message);
-        
+
         let threads = {
             DKP: Array.from((await rosterChannels.DKP.threads.fetchActive(false)).threads.values()).concat(Array.from((await rosterChannels.DKP.threads.fetchArchived(false)).threads.values())),
             PPP: Array.from((await rosterChannels.PPP.threads.fetchActive(false)).threads.values()).concat(Array.from((await rosterChannels.PPP.threads.fetchArchived(false)).threads.values()))
         }
-        monsters[monster] = new Monster(monster, timestamp, day, data.event_id, threads);
-        if (monsters[monster].thread == null) monsters[monster].thread = await rosterChannels[monsters[monster].data.channel_type].threads.create({
-            name: monsters[monster].name,
-            type: ChannelType.PublicThread,
-            autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek
-        });
-        monsters[monster].message = await monsters[monster].thread.send({ embeds: [monsters[monster].createEmbed()], components: monsters[monster].createButtons() });
-        monsters[monster].archive = archive.push(monsters[monster]) - 1;
+        let event = events.find(a => a.message == message.id);
+        if (event == null) {
+            let { data, error } = await supabase.from(config.supabase.tables.events).insert({
+                monster_name: monster,
+                start_time: new Date(timestamp * 1000),
+                channel: message.channelId,
+                message: message.id
+            }).select('*').single();
+            if (error != null) return console.log(`Error creating event for ${monster}:`, error.message);
+            event = data;
+
+            monsters[monster] = new Monster(monster, timestamp, day, event.event_id, threads);
+        } else {
+            let thread;
+            let message;
+            try {
+                thread = await client.channels.fetch(event.channel);
+                message = await thread.fetch(event.message);
+            } catch (err) {
+                console.log('Error fetching previous monster message:', err);
+            }
+
+            monsters[monster] = new Monster(monster, timestamp, day, event.event_id, threads, thread, message, event.windows, event.killed_by);
+            let { data, error } = await supabase.from(config.supabase.tables.signups).select('*').eq('event_id', event.event_id).eq('active', true);
+            if (error) console.log('Error fetching signups:', error.message);
+
+            for (let signup of data) {
+                let template = templateList.find(a => a.id == signup.slot_template_id);
+                if (template == null) {
+                    console.log(`Error: couldn't find template with id "${signup.slot_template_id}"`)
+                    continue;
+                }
+
+                let user;
+                try {
+                    user = await client.users.fetch(signup.player_id);
+                } catch (error) {
+                    console.log(`Error: couldn't fetch user with id "${signup.player_id}"`);
+                    continue;
+                }
+
+                let job = jobList.find(a => a.job_id == signup.assigned_job_id);
+                if (job == null) {
+                    console.log(`Error: couldn't find job with id "${signup.assigned_job_id}"`)
+                    continue;
+                }
+                monsters[monster].signups[signup.alliance_number][signup.party_number][signup.party_slot_number] = {
+                    user,
+                    job
+                };
+            }
+        }
+
+        if (monsters[monster].message == null) {
+            if (monsters[monster].thread == null) monsters[monster].thread = await rosterChannels[monsters[monster].event.channel_type].threads.create({
+                name: monsters[monster].name,
+                type: ChannelType.PublicThread,
+                autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek
+            });
+            monsters[monster].message = await monsters[monster].thread.send({ embeds: monsters[monster].createEmbeds(), components: monsters[monster].createButtons() });
+        }
+        monsters[monster].archive = archive.push(monsters[monster]) - 1;   
     }
 
     let guild;
@@ -333,8 +387,14 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         await updatePointRules();
         await updateGroupList();
         let messages = Array.from((await monstersChannel.messages.fetch({ limit: 100, cache: false })).values()).filter(a => a.embeds.length > 0).reverse();
-        // for (let message of messages) scheduleMonster(message);
-        scheduleMonster(messages.slice(-1)[0]);
+
+        let { data: events, error } = await supabase.from(config.supabase.tables.events).select('*').eq('active', true);
+        if (error) {
+            console.log('Error fetching events:', error.message);
+            data = [];
+        }
+
+        for (let message of messages) scheduleMonster(message, events);
     });
 
     async function getUser(id) {

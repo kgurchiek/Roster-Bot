@@ -76,7 +76,7 @@ module.exports = {
                     await interaction.editReply({ ephemeral: true, embeds: [embed] });
                 }
 
-                await monsters[monster].message.edit({ embeds: [monsters[monster].createEmbed()] });
+                await monsters[monster].message.edit({ embeds: monsters[monster].createEmbeds() });
                 break;
             }
         }
