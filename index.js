@@ -208,7 +208,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             } else {
                 return [
                     this.data.signups.filter(a => a.active),
-                    this.name == 'Tiamat' ? null : this.signups.filter(a => !a.active).filter((a, i, arr) => arr.slice(0, i).find(b => b.signup_id == a.signup_id) == null)
+                    this.name == 'Tiamat' ? null : this.data.signups.filter(a => !a.active).filter((a, i, arr) => arr.slice(0, i).find(b => b.signup_id == a.signup_id) == null)
                 ].filter(a => a != null).map((a, i) => {
                         let embed = new EmbedBuilder()
                         if (i == 0) embed.setTitle(`🐉 ${this.name} (Day ${this.day})`);
@@ -441,7 +441,6 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         if (interaction.isChatInputCommand()) {
             const command = client.commands.get(interaction.commandName);
             if (!command) return;
-            await interaction.deferReply({ ephemeral: command.ephemeral });
             
             let members = await guild.members.fetch();
             let guildMember = members.get(interaction.user.id);

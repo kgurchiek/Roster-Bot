@@ -15,7 +15,7 @@ module.exports = {
                         .setTitle('Error')
                         .setColor('#ff0000')
                         .setDescription(`${monster} is not active`)
-                    return await interaction.reply({ embeds: [embed] });
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
                 let buttons = [
@@ -38,7 +38,7 @@ module.exports = {
                         .setTitle('Error')
                         .setColor('#ff0000')
                         .setDescription(`${monster} is not active`)
-                    return await interaction.reply({ embeds: [embed] });
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
                 
                 await interaction.deferReply({ ephemeral: true });

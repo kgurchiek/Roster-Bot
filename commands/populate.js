@@ -18,7 +18,7 @@ module.exports = {
                         .setTitle('Error')
                         .setColor('#ff0000')
                         .setDescription(`${monster} is not active`)
-                    return await interaction.reply({ embeds: [embed] });
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
                 let buttons = [
@@ -67,7 +67,7 @@ module.exports = {
                         .setTitle('Error')
                         .setColor('#ff0000')
                         .setDescription(`${monster} is not active`)
-                    return await interaction.reply({ embeds: [embed] });
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
                 if (selections[id] == null) {
@@ -122,7 +122,7 @@ module.exports = {
                         .setTitle('Error')
                         .setColor('#ff0000')
                         .setDescription(`${monster} is not active`)
-                    return await interaction.reply({ embeds: [embed] });
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
                 if (selections[id] == null) {
@@ -164,6 +164,7 @@ module.exports = {
                         .setDescription(`The raid has been closed`)
                     await interaction.editReply({ ephemeral: true, embeds: [embed] });
                 } catch (err) {
+                    console.log(err);
                     return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error closing monster', err.message)] });
                 }
 
@@ -214,7 +215,7 @@ module.exports = {
                 .setTitle('Error')
                 .setColor('#ff0000')
                 .setDescription(`${monster} is not active`)
-            return await interaction.reply({ embeds: [embed] });
+            return await interaction.reply({ ephemeral: true, embeds: [embed] });
         }
 
         let windows = parseInt(interaction.fields.getTextInputValue('windows'));
