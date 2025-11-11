@@ -12,14 +12,14 @@ module.exports = {
             case 'monster': {
                 let [archiveId, signupId] = args.slice(2);
                 let monster = archive[archiveId].name;
-                let maxWindows = archive[archiveId].data.max_windows;
+                let maxWindows = archive[archiveId].windows;
                 let killer = archive[archiveId].killer;
                 let event = archive[archiveId].event;
                 
                 selections[interaction.id] = {
                     archiveId,
                     monster,
-                    maxWindows: maxWindows || Infinity,
+                    maxWindows: maxWindows,
                     killer,
                     event,
                     signupId,

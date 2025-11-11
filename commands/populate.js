@@ -28,10 +28,10 @@ module.exports = {
                                 .setPlaceholder('Windows')
                                 .setCustomId(`populate-windows-${interaction.id}`)
                                 .addOptions(
-                                    ...Array(monsters[monster].data.max_windows + 1).fill().map((a, i) => 
+                                    ...Array(monsters[monster].data.max_windows).fill().map((a, i) => 
                                         new StringSelectMenuOptionBuilder()
-                                            .setLabel(`${i}`)
-                                            .setValue(`${i}`)
+                                            .setLabel(`${i + 1}`)
+                                            .setValue(`${i + 1}`)
                                     )
                                 )
                         ),
@@ -87,7 +87,7 @@ module.exports = {
 
                 if (monsters[monster].data.max_windows == null || monsters[monster].data.max_windows >= 25) {
                     let modal = new ModalBuilder()
-                        .setCustomId(`populate-${monster}-${id}-${monsters[monster].data.max_windows || 0}`)
+                        .setCustomId(`populate-${monster}-${id}-${monsters[monster].windows}`)
                         .setTitle(`Populate ${monster} Points`)
                         .addComponents(
                             new ActionRowBuilder()
@@ -208,7 +208,7 @@ module.exports = {
     async modalHandler({ interaction, supabase, groupList, monsters }) {        
         let args = interaction.customId.split('-');
         let [monster, id, maxWindows] = args.slice(1);
-        maxWindows = parseInt(maxWindows) || Infinity;
+        maxWindows = parseInt(maxWindows);
 
         if (monsters[monster] == null) {
             let embed = new EmbedBuilder()

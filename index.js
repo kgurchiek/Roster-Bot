@@ -208,8 +208,8 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             } else {
                 return [
                     this.data.signups.filter(a => a.active),
-                    this.name == 'Tiamat' ? null : this.data.signups.filter(a => !a.active).filter((a, i, arr) => arr.slice(0, i).find(b => b.signup_id == a.signup_id) == null)
-                ].filter(a => a != null).map((a, i) => {
+                    this.data.signups.filter(a => !a.active).filter((a, i, arr) => arr.slice(0, i).find(b => b.signup_id == a.signup_id) == null)
+                ].filter(a.length > 0).map((a, i) => {
                         let embed = new EmbedBuilder()
                         if (i == 0) embed.setTitle(`🐉 ${this.name} (Day ${this.day})`);
                         embed.setDescription(`${i == 0 ? '🕒 Closed\n**Active**\n' : '**Inactive**\n'}\`\`\`\n${
