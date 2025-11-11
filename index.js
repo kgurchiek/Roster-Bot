@@ -318,6 +318,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
 
             monsters[monster] = new Monster(monster, timestamp, day, event.event_id, threads);
         } else {
+            if (!event.active) return;
             let thread;
             let message;
             try {
@@ -399,7 +400,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         await updateGroupList();
         let messages = Array.from((await monstersChannel.messages.fetch({ limit: 100, cache: false })).values()).filter(a => a.embeds.length > 0).reverse();
 
-        let { data: events, error } = await supabase.from(config.supabase.tables.events).select('*').eq('active', true);
+        let { data: events, error } = await supabase.from(config.supabase.tables.events).select('*');
         if (error) {
             console.log('Error fetching events:', error.message);
             data = [];
