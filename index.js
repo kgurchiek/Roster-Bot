@@ -6,6 +6,8 @@ const { createClient } = require('@supabase/supabase-js');
 const supabase = createClient(config.supabase.url, config.supabase.key);
 
 (async () => {
+    process.on('uncaughtException', console.error);
+
     let monsterList;
     async function updateMonsters () {
         try {
@@ -101,8 +103,6 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         setTimeout(updatePointRules, 2000);
     }
 
-    process.on('uncaughtException', console.error);
-
     const client = new Client({
         partials: [
             Partials.Channel,
@@ -125,6 +125,42 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         client.commands.set(command.data.name, command);
         console.log(`[Loaded]: ${file}`);
     }
+
+    async function updateClaimRates() {
+        let data;
+        let error;
+        ({ data, error } = await supabase.from(config.supabase.tables.claimRates).delete().gt('id', -1));
+        if (error) return console.log('Error clearing claim rates:', error);
+
+        ({ data, error } = await supabase.from(config.supabase.tables.claims).select('linkshell_name, monster_name'));
+        if (error) return console.log('Error fetching claims:', error);
+        let claims = data.reduce((a, b) => {
+            if (!config.supabase.trackedRates.includes(b.monster_name)) return;
+            b.monster_name = b.monster_name.toLowerCase().replaceAll(' ', '_');
+            if (a[b.linkshell_name] == null) a[b.linkshell_name] = {};
+            if (a[b.linkshell_name][b.monster_name] == null) a[b.linkshell_name][b.monster_name] = 0;
+            a[b.linkshell_name][b.monster_name]++;
+            return a;
+        }, {});
+
+        ({ data, error } = await supabase.from(config.supabase.tables.deaths).select('monster_name'));
+        if (error) return console.log('Error fetching deaths:', error);
+        let deaths = data.reduce((a, b) => {
+            if (!config.supabase.trackedRates.includes(b.monster_name)) return;
+            b.monster_name = b.monster_name.toLowerCase().replaceAll(' ', '_');
+            if (a[b.monster_name] == null) a[b.monster_name] = 0;
+            a[b.monster_name]++;
+            return a;
+        }, {});
+
+        for (let team in claims) {
+            for (let monster in claims[team]) claims[team][monster] /= deaths[monster];
+            claims[team].linkshell_name = team;
+            ({ error } = await supabase.from(config.supabase.tables.claimRates).insert(claims[team]));
+            if (error) console.log('Error inserting claim rate:', error);
+        }
+    }
+    updateClaimRates();
 
     class Monster {
         constructor(name, timestamp, day, event, threads, thread, message, windows, killer) {
@@ -206,19 +242,27 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                     ];
                 }
             } else {
-                return [
-                    this.data.signups.filter(a => a.active),
-                    this.data.signups.filter(a => !a.active).filter((a, i, arr) => arr.slice(0, i).find(b => b.signup_id == a.signup_id) == null)
-                ].filter(a.length > 0).map((a, i) => {
-                        let embed = new EmbedBuilder()
-                        if (i == 0) embed.setTitle(`🐉 ${this.name} (Day ${this.day})`);
-                        embed.setDescription(`${i == 0 ? '🕒 Closed\n**Active**\n' : '**Inactive**\n'}\`\`\`\n${
-                            a.map(b => `${b.verified ? '✅' : '❌'} ${b.player_id.username} - ${b.windows == null ? '' : `${b.windows}/${this.windows}`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}`).join('\n')
-                        }\n\`\`\``);
+                if (this.data.signups.length == 0) {
+                    return [
+                        new EmbedBuilder()
+                            .setTitle(`🐉 ${this.name} (Day ${this.day})`)
+                            .setDescription('No participants recorded.')
+                    ]
+                } else {
+                    return [
+                        this.data.signups.filter(a => a.active),
+                        this.data.signups.filter(a => !a.active).filter((a, i, arr) => arr.slice(0, i).find(b => b.signup_id == a.signup_id) == null)
+                    ].filter(a => a.length > 0).map((a, i) => {
+                            let embed = new EmbedBuilder()
+                            if (i == 0) embed.setTitle(`🐉 ${this.name} (Day ${this.day})`);
+                            embed.setDescription(`${i == 0 ? '🕒 Closed\n**Active**\n' : '**Inactive**\n'}\`\`\`\n${
+                                a.map(b => `${b.verified ? '✅' : '❌'} ${b.player_id.username} - ${b.windows == null ? '' : `${b.windows}/${this.windows}`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}`).join('\n')
+                            }\n\`\`\``);
 
-                        return embed;
-                    }
-                )
+                            return embed;
+                        }
+                    )
+                }
             }
         }
         createButtons() {
@@ -262,10 +306,19 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         async close() {
             this.active = false;
 
-            let { error } = await supabase.from(config.supabase.tables.events).update({ active: false }).eq('event_id', this.event);
+            let data;
+            let error;
+            if (config.supabase.trackedRates.includes(this.name)) {
+                ({ error } = await supabase.from(config.supabase.tables.claims).insert({ linkshell_name: this.killer, monster_name: this.name }));
+                if (error) return { error };
+
+                ({ error } = await supabase.from(config.supabase.tables.deaths).insert({ monster_name: this.name }));
+                if (error) return { error };
+            }
+
+            ({ error } = await supabase.from(config.supabase.tables.events).update({ active: false }).eq('event_id', this.event));
             if (error) return { error };
             
-            let data;
             ({ data, error } = await supabase.from(config.supabase.tables.signups).select('signup_id, player_id (id, username), active, windows, killed, tagged, verified').eq('event_id', this.event));
             if (error) return { error };
             this.data.signups = data;
@@ -290,8 +343,14 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                 .setCustomId(`attendance-monster-${this.archive}-${signup.signup_id}`)
                         )
                 ]
-                await discordUser.send({ embeds: [embed], components });
+                try {
+                    await discordUser.send({ embeds: [embed], components });
+                } catch (error) {
+                    console.log(`Error sending dm to user ${signup.player_id}:`, error);
+                }
             }
+
+            await updateClaimRates();
         }
     }
 
@@ -321,11 +380,13 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             if (!event.active) return;
             let thread;
             let message;
-            try {
-                thread = await client.channels.fetch(event.channel);
-                message = await thread.fetch(event.message);
-            } catch (err) {
-                console.log('Error fetching previous monster message:', err);
+            if (event.channel != null) {
+                try {
+                    thread = await client.channels.fetch(event.channel);
+                    message = await thread.fetch(event.message);
+                } catch (err) {
+                    console.log('Error fetching previous monster message:', err);
+                }
             }
 
             monsters[monster] = new Monster(monster, timestamp, day, event.event_id, threads, thread, message, event.windows, event.killed_by);

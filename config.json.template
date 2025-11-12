@@ -10,8 +10,12 @@
             "point_rules": "",
             "events": "",
             "signups": "",
-            "groups": ""
-        }
+            "groups": "",
+            "deaths": "",
+            "claims": "",
+            "claimRates": ""
+        },
+        "trackedRates": []
     },
     "discord": {
         "token": "",
