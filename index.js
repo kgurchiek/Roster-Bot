@@ -163,11 +163,12 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
     updateClaimRates();
 
     class Monster {
-        constructor(name, timestamp, day, event, threads, thread, message, windows, killer) {
+        constructor(name, timestamp, day, event, threads, rage, thread, message, windows, killer) {
             this.name = name;
             this.timestamp = timestamp;
             this.day = day;
             this.event = event;
+            this.rage = rage;
             this.signups = Array(config.roster.alliances).fill().map(() => Array(config.roster.parties).fill().map(() => Array(config.roster.slots).fill(null)));
             
             this.thread = thread;
@@ -191,7 +192,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 } else {
                     return [
                         new EmbedBuilder()
-                            .setTitle(`🐉 ${this.name} (Day ${this.day})`)
+                            .setTitle(`🐉 ${this.name} (Day ${this.day})${this.rage ? ' (Rage)' : ''}`)
                             .setDescription(`🕒 Starts at <t:${this.timestamp}:D> <t:${this.timestamp}:T> (<t:${this.timestamp}:R>)`)
                             .addFields(
                                 ...Array(config.roster.alliances).fill().map((a, i) => [
@@ -245,7 +246,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 if (this.data.signups.length == 0) {
                     return [
                         new EmbedBuilder()
-                            .setTitle(`🐉 ${this.name} (Day ${this.day})`)
+                            .setTitle(`🐉 ${this.name} (Day ${this.day})${this.rage ? ' (Rage)' : ''}`)
                             .setDescription('No participants recorded.')
                     ]
                 } else {
@@ -254,9 +255,9 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                         this.data.signups.filter(a => !a.active).filter((a, i, arr) => arr.slice(0, i).find(b => b.signup_id == a.signup_id) == null)
                     ].filter(a => a.length > 0).map((a, i) => {
                             let embed = new EmbedBuilder()
-                            if (i == 0) embed.setTitle(`🐉 ${this.name} (Day ${this.day})`);
+                            if (i == 0) embed.setTitle(`🐉 ${this.name} (Day ${this.day})${this.rage ? ' (Rage)' : ''}`);
                             embed.setDescription(`${i == 0 ? '🕒 Closed\n**Active**\n' : '**Inactive**\n'}\`\`\`\n${
-                                a.map(b => `${b.verified ? '✅' : '❌'} ${b.player_id.username} - ${b.windows == null ? '' : `${b.windows}/${this.windows}`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}`).join('\n')
+                                a.map(b => `${b.verified ? '✅' : '❌'} ${b.player_id.username} - ${b.windows == null ? '' : `${b.windows}/${this.windows}`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''}`).join('\n')
                             }\n\`\`\``);
 
                             return embed;
@@ -372,7 +373,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 monster_name: monster,
                 start_time: new Date(timestamp * 1000)
             }).select('*').single();
-            if (error != null) return console.log(`Error creating event for ${monster}:`, error.message);
+            if (error) return console.log(`Error creating event for ${monster}:`, error.message);
             event = data;
 
             monsters[monster] = new Monster(monster, timestamp, day, event.event_id, threads);
@@ -383,15 +384,18 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             if (event.channel != null) {
                 try {
                     thread = await client.channels.fetch(event.channel);
-                    message = await thread.fetch(event.message);
+                    message = await thread.messages.fetch(event.message);
                 } catch (err) {
                     console.log('Error fetching previous monster message:', err);
                 }
             }
 
-            monsters[monster] = new Monster(monster, timestamp, day, event.event_id, threads, thread, message, event.windows, event.killed_by);
+            monsters[monster] = new Monster(monster, timestamp, day, event.event_id, threads, event.rage, thread, message, event.windows, event.killed_by);
             let { data, error } = await supabase.from(config.supabase.tables.signups).select('*').eq('event_id', event.event_id).eq('active', true);
-            if (error) console.log('Error fetching signups:', error.message);
+            if (error) {
+                console.log('Error fetching signups:', error.message);
+                data = [];
+            }
 
             for (let signup of data) {
                 let template = templateList.find(a => a.id == signup.slot_template_id);
@@ -437,7 +441,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             }).eq('event_id', monsters[monster].event);
             if (error) console.log('Error updating event:', error.message);
         }
-        monsters[monster].archive = archive.push(monsters[monster]) - 1;   
+        monsters[monster].archive = archive.push(monsters[monster]) - 1;
     }
 
     let guild;
@@ -453,12 +457,6 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             PPP: await client.channels.fetch(config.discord.rosterChannel.PPP)
         }
 
-        await updateMonsters();
-        await updateUsers();
-        await updateJobs();
-        await updateTemplates();
-        await updatePointRules();
-        await updateGroupList();
         let messages = Array.from((await monstersChannel.messages.fetch({ limit: 100, cache: false })).values()).filter(a => a.embeds.length > 0).reverse();
 
         let { data: events, error } = await supabase.from(config.supabase.tables.events).select('*');
@@ -484,7 +482,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         if (!interaction.isAutocomplete()) {
             if (user == null) {
                 let errorEmbed = new EmbedBuilder()
-                    .setColor('#ff0000')
+                    .setColor('#190d0dff')
                     .addFields({ name: 'Error', value: 'User not found.' });
                 await interaction.reply({ embeds: [errorEmbed], components: [], ephemeral: true });
                 return;
@@ -513,13 +511,8 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 return;
             }
             
-            if (user != null) {
-                user.staff = false;
-                for (const role of config.discord.staffRoles) if (guildMember.roles.cache.get(role)) user.staff = true;
-            }
-            
             try {
-                await command.execute({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive });
+                await command.execute({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, Monster });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()
@@ -536,7 +529,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             if (!command) return;
 
             try {
-                await command.autocomplete({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive });
+                await command.autocomplete({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, Monster });
             } catch (error) {
                 console.log(error);
                 try {
@@ -547,7 +540,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         if (interaction.isButton()) {
             const command = client.commands.get(interaction.customId.split('-')[0]);
             try {
-                if (command?.buttonHandler) command.buttonHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive });
+                if (command?.buttonHandler) command.buttonHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, Monster });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()
@@ -562,7 +555,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         if (interaction.isAnySelectMenu()) {
             const command = client.commands.get(interaction.customId.split('-')[0]);
             try {
-                if (command?.selectHandler) command.selectHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive });
+                if (command?.selectHandler) command.selectHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, Monster });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()
@@ -581,7 +574,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 return;
             }
             try {
-                if (command?.modalHandler) command.modalHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive });
+                if (command?.modalHandler) command.modalHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, Monster });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()
@@ -595,5 +588,13 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         }
     });
 
-    client.login(config.discord.token);
+    (async () => {
+        await updateMonsters();
+        await updateUsers();
+        await updateJobs();
+        await updateTemplates();
+        await updatePointRules();
+        await updateGroupList();
+        client.login(config.discord.token);
+    })()
 })();
