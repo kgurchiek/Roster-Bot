@@ -244,12 +244,15 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                             })
                         ]).reduce((a, b) => a.concat(b.reduce((c, d) => c.concat(d), [])), [])
                     )
-                if (this.placeholders != null) embed.addFields(
-                    {
-                        name: 'Placeholders',
-                        value: Object.entries(this.placeholders).map(a => `${a[0]}: ${a[1]} | ${(a[1] % 4) * 0.2} PPP`)
-                    }
-                );
+                if (this.placeholders != null) {
+                    let longest = Object.entries(this.placeholders).reduce((a, b) => Math.max(a, `${b[0]}: ${b[1]}`.length), 0)
+                    embed.addFields(
+                        {
+                            name: 'Placeholders',
+                            value: Object.keys(this.placeholders).length == 0 ? '​' : `\`\`\`\n${Object.entries(this.placeholders).map(a => `${a[0]}: ${a[1]}${' '.repeat(`${a[0]}: ${a[1]}`.length - longest)} | ${(a[1] % 4) * 0.2} PPP`).join('\n')}\n\`\`\``
+                        }
+                    )
+                };
                 return [embed];
             } else {
                 if (this.data.signups.length == 0) {
