@@ -22,7 +22,7 @@ module.exports = {
                 }
 
                 let buttons = [
-                    (monsters[monster].data.max_windows == null || monsters[monster].data.max_windows >= 25) ? null : new ActionRowBuilder()
+                    (['Tiamat', 'Lord of Onzozo'].includes(monster) || monsters[monster].data.max_windows == null || monsters[monster].data.max_windows >= 25) ? null : new ActionRowBuilder()
                         .addComponents(
                             new StringSelectMenuBuilder()
                                 .setPlaceholder('Windows')
@@ -85,29 +85,31 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
-                if (monsters[monster].data.max_windows == null || monsters[monster].data.max_windows >= 25) {
-                    let modal = new ModalBuilder()
-                        .setCustomId(`populate-${monster}-${id}-${monsters[monster].windows}`)
-                        .setTitle(`Populate ${monster} Points`)
-                        .addComponents(
-                            new ActionRowBuilder()
-                                .addComponents(
-                                    new TextInputBuilder()
-                                        .setCustomId('windows')
-                                        .setLabel('Windows')
-                                        .setStyle(TextInputStyle.Short)
-                                )
-                        )
+                if (!['Tiamat', 'Lord of Onzozo'].includes(monster)) {
+                    if (monsters[monster].data.max_windows == null || monsters[monster].data.max_windows >= 25) {
+                        let modal = new ModalBuilder()
+                            .setCustomId(`populate-${monster}-${id}-${monsters[monster].windows}`)
+                            .setTitle(`Populate ${monster} Points`)
+                            .addComponents(
+                                new ActionRowBuilder()
+                                    .addComponents(
+                                        new TextInputBuilder()
+                                            .setCustomId('windows')
+                                            .setLabel('Windows')
+                                            .setStyle(TextInputStyle.Short)
+                                    )
+                            )
 
-                    return await interaction.showModal(modal);
-                }
+                        return await interaction.showModal(modal);
+                    }
 
-                if (selections[id].windows == null) {
-                    let embed = new EmbedBuilder()
-                        .setTitle('Error')
-                        .setColor('#ff0000')
-                        .setDescription('Please select the number of windows')
-                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                    if (selections[id].windows == null) {
+                        let embed = new EmbedBuilder()
+                            .setTitle('Error')
+                            .setColor('#ff0000')
+                            .setDescription('Please select the number of windows')
+                        return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                    }
                 }
                 
                 interaction.customId = `populate-confirm2-${monster}-${id}`;
@@ -140,7 +142,7 @@ module.exports = {
                         .setDescription('Please select the group that killed the monster')
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
-                if (selections[id].windows == null) {
+                if (!['Tiamat', 'Lord of Onzozo'].includes(monster) && selections[id].windows == null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')

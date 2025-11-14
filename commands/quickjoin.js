@@ -36,9 +36,9 @@ module.exports = {
                 }
 
                 let jobs = [];
-                for (let alliance = 1; alliance < config.roster.alliances + 1; alliance++) {
-                    for (let party = 1; party < config.roster.parties + 1; party++) {
-                        for (let slot = 1; slot < config.roster.slots + 1; slot++) {
+                for (let alliance = 1; alliance < monsters[monster].alliances + 1; alliance++) {
+                    for (let party = 1; party < monsters[monster].parties + 1; party++) {
+                        for (let slot = 1; slot < monsters[monster].slots + 1; slot++) {
                             if (monsters[monster].signups[alliance - 1][party - 1][slot - 1] != null) continue;
                             let template = templateList.find(a => a.monster_name == monster && a.alliance_number == alliance && a.party_number == party && a.party_slot_number == slot).allowed_job_ids;
                             if (template == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed(`Error fetching jobs`, `Could not find template for monster "${monster}", alliance ${alliance}, party ${party}, slot ${slot}`)] });
@@ -124,9 +124,9 @@ module.exports = {
                 }
 
                 let emptySlot;
-                for (let alliance = 1; emptySlot == null && alliance < config.roster.alliances + 1; alliance++) {
-                    for (let party = 1; emptySlot == null && party < config.roster.parties + 1; party++) {
-                        for (let slot = 1; emptySlot == null && slot < config.roster.slots + 1; slot++) {
+                for (let alliance = 1; emptySlot == null && alliance < monsters[monster].alliances + 1; alliance++) {
+                    for (let party = 1; emptySlot == null && party < monsters[monster].parties + 1; party++) {
+                        for (let slot = 1; emptySlot == null && slot < monsters[monster].slots + 1; slot++) {
                             if (monsters[monster].signups[alliance - 1][party - 1][slot - 1] != null) continue;
                             let template = templateList.find(a => a.monster_name == monster && a.alliance_number == alliance && a.party_number == party && a.party_slot_number == slot);
                             if (template == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed(`Error fetching jobs`, `Could not find template for monster "${monster}", alliance ${alliance}, party ${party}, slot ${slot}`)] });

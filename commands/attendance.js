@@ -6,7 +6,7 @@ let selections = {};
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('attendance'),
-    async buttonHandler({ interaction, supabase, groupList, monsters, archive }) {
+    async buttonHandler({ interaction, user, supabase, groupList, monsters, archive }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {
@@ -15,6 +15,15 @@ module.exports = {
                 let maxWindows = archive[archiveId].windows;
                 let killer = archive[archiveId].killer;
                 let event = archive[archiveId].event;
+
+                if (signupId == null) signupId = archive[archiveId].data.signups.find(a => a.player_id == user.id)
+                if (signupId == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription('You did not participate in this raid')
+                    await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
                 
                 selections[interaction.id] = {
                     archiveId,

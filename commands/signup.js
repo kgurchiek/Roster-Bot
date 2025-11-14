@@ -42,7 +42,7 @@ module.exports = {
                                 .setCustomId(`signup-selectslot-alliance-${interaction.id}`)
                                 .setPlaceholder('Select Alliance')
                                 .addOptions(
-                                    ...Array(config.roster.alliances).fill().map((a, i) =>
+                                    ...Array(monsters[monster].alliances).fill().map((a, i) =>
                                         new StringSelectMenuOptionBuilder()
                                             .setLabel(`${i + 1}`)
                                             .setValue(`${i + 1}`)
@@ -55,7 +55,7 @@ module.exports = {
                                 .setCustomId(`signup-selectslot-party-${interaction.id}`)
                                 .setPlaceholder('Select Party')
                                 .addOptions(
-                                    ...Array(config.roster.parties).fill().map((a, i) => 
+                                    ...Array(monsters[monster].parties).fill().map((a, i) => 
                                         new StringSelectMenuOptionBuilder()
                                             .setLabel(`${i + 1}`)
                                             .setValue(`${i + 1}`)
@@ -68,7 +68,7 @@ module.exports = {
                                 .setPlaceholder('Select Slot')
                                 .setCustomId(`signup-selectslot-slot-${interaction.id}`)
                                 .addOptions(
-                                    ...Array(config.roster.slots).fill().map((a, i) => 
+                                    ...Array(monsters[monster].slots).fill().map((a, i) => 
                                         new StringSelectMenuOptionBuilder()
                                             .setLabel(`${i + 1}`)
                                             .setValue(`${i + 1}`)

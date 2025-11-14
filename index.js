@@ -165,11 +165,15 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
     class Monster {
         constructor(name, timestamp, day, event, threads, rage, thread, message, windows, killer) {
             this.name = name;
+            if (this.name == 'Lord of Onzozo') {
+                this.alliances = 2;
+                this.placeholders = {};
+            }
             this.timestamp = timestamp;
             this.day = day;
             this.event = event;
             this.rage = rage;
-            this.signups = Array(config.roster.alliances).fill().map(() => Array(config.roster.parties).fill().map(() => Array(config.roster.slots).fill(null)));
+            this.signups = Array(this.alliances).fill().map(() => Array(this.parties).fill().map(() => Array(this.slots).fill(null)));
             
             this.thread = thread;
             this.message = message;
@@ -185,68 +189,74 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             }
         }
         active = true;
+        alliances = config.roster.alliances;
+        parties = config.roster.parties;
+        slots = config.roster.slots;
         createEmbeds() {
             if (this.active) {
-                if (false && this.name == 'Lord of Onzozo') {
-                    // TODO
-                } else {
-                    return [
-                        new EmbedBuilder()
-                            .setTitle(`🐉 ${this.name} (Day ${this.day})${this.rage ? ' (Rage)' : ''}`)
-                            .setDescription(`🕒 Starts at <t:${this.timestamp}:D> <t:${this.timestamp}:T> (<t:${this.timestamp}:R>)`)
-                            .addFields(
-                                ...Array(config.roster.alliances).fill().map((a, i) => [
-                                    Array(config.roster.parties).fill().map((b, j) => {
-                                        let field = {
-                                            name: `${j == 0 ? `🛡️ Alliance ${i + 1} - ` : ''}Party ${j + 1}`,
-                                            value: `(0/0)`,
-                                            inline: true
-                                        };
-                                        for (let k = 0; k < config.roster.slots; k++) {
-                                            let template = templateList.find(a => a.monster_name == this.name && a.alliance_number == i + 1 && a.party_number == j + 1 && a.party_slot_number == k + 1);
-                                            if (template == null) {
-                                                console.log(`Error: Cannot find template for ${this.name}, Alliance ${i + 1}, Party ${j + 1}, Slot ${k + 1}`);
-                                                template = { allowed_job_ids: [] };
-                                            }
+                let embed = new EmbedBuilder()
+                    .setTitle(`🐉 ${this.name} (Day ${this.day})${this.rage ? ' (Rage)' : ''}`)
+                    .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/images//${this.name.split('(')[0].replaceAll(' ', '')}.png`)
+                    .setDescription(`🕒 Starts at <t:${this.timestamp}:D> <t:${this.timestamp}:T> (<t:${this.timestamp}:R>)`)
+                    .addFields(
+                        ...Array(this.alliances).fill().map((a, i) => [
+                            Array(this.parties).fill().map((b, j) => {
+                                let field = {
+                                    name: `${j == 0 ? `🛡️ Alliance ${i + 1} - ` : ''}Party ${j + 1}`,
+                                    value: `(0/0)`,
+                                    inline: true
+                                };
+                                for (let k = 0; k < this.slots; k++) {
+                                    let template = templateList.find(a => a.monster_name == this.name && a.alliance_number == i + 1 && a.party_number == j + 1 && a.party_slot_number == k + 1);
+                                    if (template == null) {
+                                        console.log(`Error: Cannot find template for ${this.name}, Alliance ${i + 1}, Party ${j + 1}, Slot ${k + 1}`);
+                                        template = { allowed_job_ids: [] };
+                                    }
 
-                                            let role;
-                                            let username = '-';
-                                            if (this.signups[i][j][k] != null) {
-                                                let job = jobList.find(a => a.job_id == this.signups[i][j][k].job);
-                                                if (job == null) console.log(`Error: can't find job id: ${a}`);
-                                                else {
-                                                    role = `\`${job.color}${job.job_abbreviation}\``;
-                                                    username = this.signups[i][j][k].user.username;
-                                                }
-                                            }
-                                            if (role == null) {
-                                                if (template.role == null) {
-                                                    let jobs = template.allowed_job_ids.map(a => {
-                                                        let job = jobList.find(b => b.job_id == a);
-                                                        if (job == null) {
-                                                            console.log(`Error: can't find job id: ${a}`);
-                                                            return null;
-                                                        }
-                                                        return `${job.color}${job.job_abbreviation}`;
-                                                    }).filter(a => a != null);
-                                                    role = jobs.length == 0 ? '`-`' : jobs.join('/');
-                                                } else role = template.role;
-                                            }
-
-                                            field.value += `\n\`${role}\` ${username}`;
+                                    let role;
+                                    let username = '-';
+                                    if (this.signups[i][j][k] != null) {
+                                        let job = jobList.find(a => a.job_id == this.signups[i][j][k].job);
+                                        if (job == null) console.log(`Error: can't find job id: ${a}`);
+                                        else {
+                                            role = `\`${job.color}${job.job_abbreviation}\``;
+                                            username = this.signups[i][j][k].user.username;
                                         }
+                                    }
+                                    if (role == null) {
+                                        if (template.role == null) {
+                                            let jobs = template.allowed_job_ids.map(a => {
+                                                let job = jobList.find(b => b.job_id == a);
+                                                if (job == null) {
+                                                    console.log(`Error: can't find job id: ${a}`);
+                                                    return null;
+                                                }
+                                                return `${job.color}${job.job_abbreviation}`;
+                                            }).filter(a => a != null);
+                                            role = jobs.length == 0 ? '`-`' : jobs.join('/');
+                                        } else role = template.role;
+                                    }
 
-                                        return field;
-                                    })
-                                ]).reduce((a, b) => a.concat(b.reduce((c, d) => c.concat(d), [])), [])
-                            )
-                    ];
-                }
+                                    field.value += `\n\`${role}\` ${username}`;
+                                }
+
+                                return field;
+                            })
+                        ]).reduce((a, b) => a.concat(b.reduce((c, d) => c.concat(d), [])), [])
+                    )
+                if (this.placeholders != null) embed.addFields(
+                    {
+                        name: 'Placeholders',
+                        value: Object.entries(this.placeholders).map(a => `${a[0]}: ${a[1]} | ${(a[1] % 4) * 0.2} PPP`)
+                    }
+                );
+                return [embed];
             } else {
                 if (this.data.signups.length == 0) {
                     return [
                         new EmbedBuilder()
                             .setTitle(`🐉 ${this.name} (Day ${this.day})${this.rage ? ' (Rage)' : ''}`)
+                            .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/images//${this.name.split('(')[0].replaceAll(' ', '')}.png`)
                             .setDescription('No participants recorded.')
                     ]
                 } else {
@@ -255,9 +265,10 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                         this.data.signups.filter(a => !a.active).filter((a, i, arr) => arr.slice(0, i).find(b => b.signup_id == a.signup_id) == null)
                     ].filter(a => a.length > 0).map((a, i) => {
                             let embed = new EmbedBuilder()
+                                .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/images//${this.name.split('(')[0].replaceAll(' ', '')}.png`)
                             if (i == 0) embed.setTitle(`🐉 ${this.name} (Day ${this.day})${this.rage ? ' (Rage)' : ''}`);
                             embed.setDescription(`${i == 0 ? '🕒 Closed\n**Active**\n' : '**Inactive**\n'}\`\`\`\n${
-                                a.map(b => `${b.verified ? '✅' : '❌'} ${b.player_id.username} - ${b.windows == null ? '' : `${b.windows}/${this.windows}`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''}`).join('\n')
+                                a.map(b => `${b.verified ? '✅' : '❌'} ${b.player_id.username}${(b.windows == null || this.data.max_windows == 1) ? '' : ` - ${b.tagged == null ? '' : `${b.windows}/${this.windows}`}`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''}`).join('\n')
                             }\n\`\`\``);
 
                             return embed;
@@ -273,7 +284,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                         new ButtonBuilder()
                             .setCustomId(`quickjoin-job-${this.name}`)
                             .setLabel('≫ Quick Join')
-                            .setStyle(ButtonStyle.Success)
+                            .setStyle(ButtonStyle.Primary)
                         )
                     .addComponents(
                         new ButtonBuilder()
@@ -288,19 +299,30 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                             .setLabel('✖ Leave')
                             .setStyle(ButtonStyle.Danger)
                     ),
-                this.name == 'Tiamat' ? (new ActionRowBuilder()
+                this.name == 'Tiamat' ? new ActionRowBuilder()
                     .addComponents(
                         new ButtonBuilder()
                             .setCustomId(`clear-monster-${this.name}`)
                             .setLabel('🗑️ Clear')
                             .setStyle(ButtonStyle.Secondary)
-                    )) : null,
+                    ) : null,
+                this.placeholders == null ? null : new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId(`placeholder-increment-${this.name}`)
+                            .setLabel('+1 Placeholder')
+                            .setStyle(ButtonStyle.Secondary),
+                        new ButtonBuilder()
+                            .setCustomId(`placeholder-enter-${this.name}`)
+                            .setLabel('Enter Placeholders')
+                            .setStyle(ButtonStyle.Secondary)
+                    ),
                 new ActionRowBuilder()
                     .addComponents(
                         new ButtonBuilder()
                             .setCustomId(`populate-monster-${this.name}`)
                             .setLabel('💰 Populate')
-                            .setStyle(ButtonStyle.Secondary)
+                            .setStyle(ButtonStyle.Success)
                     )
             ].filter(a => a != null);
         }
@@ -324,7 +346,17 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             if (error) return { error };
             this.data.signups = data;
             
-            await this.message.edit({ embeds: this.createEmbeds(), components: [] });
+            let components = [
+                new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setLabel('Confirm')
+                            .setStyle(ButtonStyle.Success)
+                            .setCustomId(`attendance-monster-${this.archive}`)
+                    )
+            ]
+
+            await this.message.edit({ embeds: this.createEmbeds(), components: this.data.signups.length > 0 ? components : [] });
             delete monsters[this.name];
 
             for (let signup of this.data.signups.filter(a => a.active)) {
@@ -440,7 +472,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 message: monsters[monster].message.id
             }).eq('event_id', monsters[monster].event);
             if (error) console.log('Error updating event:', error.message);
-        }
+        } else await monsters[monster].message.edit({ embeds: monsters[monster].createEmbeds(), components: monsters[monster].createButtons() });
         monsters[monster].archive = archive.push(monsters[monster]) - 1;
     }
 
