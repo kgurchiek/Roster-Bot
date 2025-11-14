@@ -399,7 +399,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             DKP: Array.from((await rosterChannels.DKP.threads.fetchActive(false)).threads.values()).concat(Array.from((await rosterChannels.DKP.threads.fetchArchived(false)).threads.values())),
             PPP: Array.from((await rosterChannels.PPP.threads.fetchActive(false)).threads.values()).concat(Array.from((await rosterChannels.PPP.threads.fetchArchived(false)).threads.values()))
         }
-        let event = events.find(a => new Date(a.start_time).getTime() / 1000 == timestamp);
+        let event = events.find(a => a.monster_name == monster && new Date(a.start_time).getTime() / 1000 == timestamp);
         if (event == null) {
             let { data, error } = await supabase.from(config.supabase.tables.events).insert({
                 monster_name: monster,
