@@ -286,7 +286,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                     embed.addFields(
                         {
                             name: 'Placeholders',
-                            value: Object.keys(this.placeholders).length == 0 ? '​' : `\`\`\`\n${Object.entries(this.placeholders).map(a => `${a[0]}: ${a[1]}${' '.repeat(`${a[0]}: ${a[1]}`.length - longest)} | ${(a[1] % 4) * 0.2} PPP`).join('\n')}\n\`\`\``
+                            value: Object.keys(this.placeholders).length == 0 ? '​' : `\`\`\`\n${Object.entries(this.placeholders).map(a => `${a[0]}: ${a[1]}${' '.repeat(`${a[0]}: ${a[1]}`.length - longest)} | ${Math.floor(a[1] / 4) * 0.2} PPP`).join('\n')}\n\`\`\``
                         }
                     )
                 };
