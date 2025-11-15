@@ -10,97 +10,134 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
 
     let monsterList;
     async function updateMonsters () {
+        let hadError = false;
         try {
             let { data, error } = await supabase.from(config.supabase.tables.monsters).select('*');
             if (error == null) {
                 monsterList = data;
                 // console.log(`[Monster List]: Fetched ${monsterList.length} monsers.`);
             } else {
+                hadError = true;
                 console.log('[Monster List]: Error:', error.message);
                 await new Promise(res => setTimeout(res, 5000));
             }
-        } catch (err) { console.log('[Monster List]: Error:', err) }
+        } catch (err) {
+            hadError = true;
+            console.log('[Monster List]: Error:', err)
+        }
+
         setTimeout(updateMonsters);
+        return hadError;
     }
 
     let userList;
     async function updateUsers() {
+        let hadError = false;
         try {
             let { data, error } = await supabase.from(config.supabase.tables.users).select('id::text, username, dkp, ppp, frozen, lifetime_dkp, lifetime_ppp');
             if (error == null) {
                 userList = data;
                 // console.log(`[User List]: Fetched ${userList.length} users.`);
             } else {
+                hadError = true;
                 console.log('[User List]: Error:', error.message);
                 await new Promise(res => setTimeout(res, 5000));
             }
-        } catch (err) { console.log('[User List]: Error:', err) }
+        } catch (err) {
+            hadError = true;
+            console.log('[User List]: Error:', err)
+        }
         
         setTimeout(updateUsers, 2000);
+        return hadError;
     }
 
     let jobList;
     async function updateJobs() {
+        let hadError = false;
         try {
             let { data, error } = await supabase.from(config.supabase.tables.jobs).select('*');
             if (error == null) {
                 jobList = data;
                 // console.log(`[Job List]: Fetched ${jobList.length} jobs.`);
             } else {
+                hadError = true;
                 console.log('[Job List]: Error:', error.message);
                 await new Promise(res => setTimeout(res, 5000));
             }
-        } catch (err) { console.log('[Job List]: Error:', err) }
+        } catch (err) {
+            hadError = true;
+            console.log('[Job List]: Error:', err)
+        }
         
         setTimeout(updateJobs, 2000);
+        return hadError;
     }
 
     let templateList;
     async function updateTemplates() {
+        let hadError = false;
         try {
             let { data, error } = await supabase.from(config.supabase.tables.templates).select('*');
             if (error == null) {
                 templateList = data;
                 // console.log(`[Template List]: Fetched ${templateList.length} templates.`);
             } else {
+                hadError = true;
                 console.log('[Template List]: Error:', error.message);
                 await new Promise(res => setTimeout(res, 5000));
             }
-        } catch (err) { console.log('[Template List]: Error:', err) }
+        } catch (err) {
+            hadError = true;
+            console.log('[Template List]: Error:', err)
+        }
         
         setTimeout(updateTemplates, 2000);
+        return hadError;
     }
 
     let pointRules;
     async function updatePointRules() {
+        let hadError = false;
         try {
             let { data, error } = await supabase.from(config.supabase.tables.pointRules).select('*');
             if (error == null) {
                 pointRules = data;
                 // console.log(`[Point Rules]: Fetched ${pointRules.length} point rules.`);
             } else {
+                hadError = true;
                 console.log('[Point Rules]: Error:', error.message);
                 await new Promise(res => setTimeout(res, 5000));
             }
-        } catch (err) { console.log('[Point Rules]: Error:', err) }
+        } catch (err) {
+            hadError = true;
+            console.log('[Point Rules]: Error:', err)
+        }
         
         setTimeout(updatePointRules, 2000);
+        return hadError;
     }
 
     let groupList;
     async function updateGroupList() {
+        let hadError = false;
         try {
             let { data, error } = await supabase.from(config.supabase.tables.groups).select('*');
             if (error == null) {
                 groupList = data;
                 // console.log(`[Group List]: Fetched ${groupList.length} groups.`);
             } else {
+                hadError = true;
                 console.log('[Group List]: Error:', error.message);
                 await new Promise(res => setTimeout(res, 5000));
             }
-        } catch (err) { console.log('[Group List]: Error:', err) }
+        } catch (err) {
+            hadError = true;
+            console.log('[Group List]: Error:', err)
+        }
         
         setTimeout(updatePointRules, 2000);
+        return hadError;
     }
 
     const client = new Client({
@@ -395,8 +432,11 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
     async function scheduleMonster(message, events = []) {
         let monster = message.embeds[0].title;
         let timestamp = parseInt(message.embeds[0].fields[0].value.split(':')[1]);
+        timestamp = (Date.now() / 1000) + 3610;
         let day = parseInt(message.embeds[0].fields[1].value);
-        if (timestamp < Date.now() / 1000) return;
+        let delay = timestamp - (Date.now() / 1000);
+        if (delay < 0) return;
+        if (delay > 3600) await new Promise(res => setTimeout(res, (delay - 3600) * 1000));
 
         let threads = {
             DKP: Array.from((await rosterChannels.DKP.threads.fetchActive(false)).threads.values()).concat(Array.from((await rosterChannels.DKP.threads.fetchArchived(false)).threads.values())),
@@ -624,12 +664,14 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
     });
 
     (async () => {
-        await updateMonsters();
-        await updateUsers();
-        await updateJobs();
-        await updateTemplates();
-        await updatePointRules();
-        await updateGroupList();
+        if (
+            await updateMonsters() ||
+            await updateUsers() ||
+            await updateJobs() ||
+            await updateTemplates() ||
+            await updatePointRules() ||
+            await updateGroupList()
+        ) process.exit();
         client.login(config.discord.token);
     })()
 })();
