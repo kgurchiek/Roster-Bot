@@ -432,7 +432,6 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
     async function scheduleMonster(message, events = []) {
         let monster = message.embeds[0].title;
         let timestamp = parseInt(message.embeds[0].fields[0].value.split(':')[1]);
-        timestamp = (Date.now() / 1000) + 3610;
         let day = parseInt(message.embeds[0].fields[1].value);
         let delay = timestamp - (Date.now() / 1000);
         if (delay < 0) return;
