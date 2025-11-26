@@ -1,9 +1,11 @@
-const { Client, Partials, Collection, Events, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ThreadAutoArchiveDuration, ChannelType } = require('discord.js');
+const { Client, Partials, Collection, Events, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ThreadAutoArchiveDuration, ChannelType, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const config = require('./config.json');
 const { createClient } = require('@supabase/supabase-js');
+const attendance = require('./commands/attendance');
 const supabase = createClient(config.supabase.url, config.supabase.key);
+const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
 
 (async () => {
     process.on('uncaughtException', console.error);
@@ -150,7 +152,8 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             GatewayIntentBits.Guilds,
             GatewayIntentBits.DirectMessages,
             GatewayIntentBits.GuildMembers,
-            GatewayIntentBits.GuildMessages
+            GatewayIntentBits.GuildMessages,
+            GatewayIntentBits.MessageContent
         ]
     });
     client.commands = new Collection();
@@ -232,8 +235,8 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         createEmbeds() {
             if (this.active) {
                 let embed = new EmbedBuilder()
-                    .setTitle(`🐉 ${this.name} (Day ${this.day})${this.rage ? ' (Rage)' : ''}`)
-                    .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/images//${this.name.split('(')[0].replaceAll(' ', '')}.png`)
+                    .setTitle(`🐉 ${this.name}${this.day == null ? '' : ` (Day ${this.day})`}${this.rage ? ' (Rage)' : ''}`)
+                    .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.name.split('(')[0].replaceAll(' ', '')}.png`)
                     .setDescription(`🕒 Starts at <t:${this.timestamp}:D> <t:${this.timestamp}:T> (<t:${this.timestamp}:R>)`)
                     .addFields(
                         ...Array(this.alliances).fill().map((a, i) => [
@@ -254,7 +257,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                     let username = '-';
                                     if (this.signups[i][j][k] != null) {
                                         let job = jobList.find(a => a.job_id == this.signups[i][j][k].job);
-                                        if (job == null) console.log(`Error: can't find job id: ${a}`);
+                                        if (job == null) console.log(`Error: can't find job id: ${this.signups[i][j][k].job}`);
                                         else {
                                             role = `\`${job.color}${job.job_abbreviation}\``;
                                             username = this.signups[i][j][k].user.username;
@@ -286,7 +289,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                     embed.addFields(
                         {
                             name: 'Placeholders',
-                            value: Object.keys(this.placeholders).length == 0 ? '​' : `\`\`\`\n${Object.entries(this.placeholders).map(a => `${a[0]}: ${a[1]}${' '.repeat(`${a[0]}: ${a[1]}`.length - longest)} | ${Math.floor(a[1] / 4) * 0.2} PPP`).join('\n')}\n\`\`\``
+                            value: Object.keys(this.placeholders).length == 0 ? '​' : `\`\`\`\n${Object.entries(this.placeholders).sort((a, b) => a > b ? 1 : -1).map(a => `${a[0]}: ${a[1]}${' '.repeat(`${a[0]}: ${a[1]}`.length - longest)} | ${Math.floor(a[1] / 4) * 0.2} PPP`).join('\n')}\n\`\`\``
                         }
                     )
                 };
@@ -296,7 +299,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                     return [
                         new EmbedBuilder()
                             .setTitle(`🐉 ${this.name} (Day ${this.day})${this.rage ? ' (Rage)' : ''}`)
-                            .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/images//${this.name.split('(')[0].replaceAll(' ', '')}.png`)
+                            .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.name.split('(')[0].replaceAll(' ', '')}.png`)
                             .setDescription('No participants recorded.')
                     ]
                 } else {
@@ -305,11 +308,12 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                         this.data.signups.filter(a => !a.active).filter((a, i, arr) => arr.slice(0, i).find(b => b.signup_id == a.signup_id) == null)
                     ].filter(a => a.length > 0).map((a, i) => {
                             let embed = new EmbedBuilder()
-                                .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/images//${this.name.split('(')[0].replaceAll(' ', '')}.png`)
+                                .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.name.split('(')[0].replaceAll(' ', '')}.png`)
                             if (i == 0) embed.setTitle(`🐉 ${this.name} (Day ${this.day})${this.rage ? ' (Rage)' : ''}`);
-                            embed.setDescription(`${i == 0 ? '🕒 Closed\n**Active**\n' : '**Inactive**\n'}\`\`\`\n${
-                                a.map(b => `${b.verified ? '✅' : '❌'} ${b.player_id.username}${(b.windows == null || this.data.max_windows == 1) ? '' : ` - ${b.tagged == null ? '' : `${b.windows}/${this.windows}`}`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''}`).join('\n')
+                            embed.setDescription(`${i == 0 ? '🕒 Closed\n\n**Active**\n' : '**Inactive**\n'}\`\`\`\n${
+                                a.map(b => `${b.verified ? '✓' : '✖'} ${b.player_id.username}${(b.windows == null || this.data.max_windows == 1) ? '' : ` - ${b.tagged == null ? '' : `${b.windows}/${this.windows}`}`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''}`).join('\n')
                             }\n\`\`\``);
+                            if (this.verified) embed.setFooter({ text: '✓ Verified' })
 
                             return embed;
                         }
@@ -318,53 +322,94 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             }
         }
         createButtons() {
-            return [
-                new ActionRowBuilder()
-                    .addComponents(
-                        new ButtonBuilder()
-                            .setCustomId(`quickjoin-job-${this.name}`)
-                            .setLabel('≫ Quick Join')
-                            .setStyle(ButtonStyle.Primary)
+            if (this.verified) return [];
+            if (this.active) {
+                return [
+                    new ActionRowBuilder()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId(`quickjoin-job-${this.name}`)
+                                .setLabel('≫ Quick Join')
+                                .setStyle(ButtonStyle.Primary)
+                            )
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId(`signup-select-${this.name}`)
+                                .setLabel('📝 Sign Up')
+                                .setStyle(ButtonStyle.Primary)
+                        ),
+                    new ActionRowBuilder()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId(`leave-monster-${this.name}`)
+                                .setLabel('✖ Leave')
+                                .setStyle(ButtonStyle.Danger)
+                        ),
+                    this.name == 'Tiamat' ? new ActionRowBuilder()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId(`clear-monster-${this.name}`)
+                                .setLabel('🗑️ Clear')
+                                .setStyle(ButtonStyle.Secondary)
+                        ) : null,
+                    this.placeholders == null ? null : new ActionRowBuilder()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId(`placeholder-increment-${this.name}`)
+                                .setLabel('+1 Placeholder')
+                                .setStyle(ButtonStyle.Secondary),
+                            new ButtonBuilder()
+                                .setCustomId(`placeholder-enter-${this.name}`)
+                                .setLabel('Enter Placeholders')
+                                .setStyle(ButtonStyle.Secondary)
+                        ),
+                    new ActionRowBuilder()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId(`populate-monster-${this.name}`)
+                                .setLabel('💰 Populate')
+                                .setStyle(ButtonStyle.Success)
                         )
-                    .addComponents(
-                        new ButtonBuilder()
-                            .setCustomId(`signup-select-${this.name}`)
-                            .setLabel('📝 Sign Up')
-                            .setStyle(ButtonStyle.Primary)
+                ].filter(a => a != null);
+            }
+            if (this.data.signups.length > 0) {
+                return [
+                    new ActionRowBuilder()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setLabel('Attendance')
+                                .setStyle(ButtonStyle.Primary)
+                                .setCustomId(`attendance-monster-${this.event}`),
+                            new ButtonBuilder()
+                                .setLabel('📷 Upload Screenshot')
+                                .setStyle(ButtonStyle.Primary)
+                                .setCustomId(`screenshot-monster-${this.event}`),
+                        ),
+                    ...new Array(Math.ceil(this.data.signups.length / 25)).fill().map((a, i) =>
+                        new ActionRowBuilder()
+                            .addComponents(
+                                new StringSelectMenuBuilder()
+                                    .setPlaceholder('🛡️ Verify User')
+                                    .setCustomId(`verify-signup-${this.event}-${i}`)
+                                    .addOptions(
+                                        ...Array(Math.min(25, this.data.signups.length - i * 25)).fill().map((a, j) => 
+                                            new StringSelectMenuOptionBuilder()
+                                                .setLabel(`${this.data.signups[i * 25 + j].player_id.username}`)
+                                                .setValue(`${i * 25 + j}`)
+                                        )
+                                    )
+                            )
                     ),
-                new ActionRowBuilder()
-                    .addComponents(
-                        new ButtonBuilder()
-                            .setCustomId(`leave-monster-${this.name}`)
-                            .setLabel('✖ Leave')
-                            .setStyle(ButtonStyle.Danger)
-                    ),
-                this.name == 'Tiamat' ? new ActionRowBuilder()
-                    .addComponents(
-                        new ButtonBuilder()
-                            .setCustomId(`clear-monster-${this.name}`)
-                            .setLabel('🗑️ Clear')
-                            .setStyle(ButtonStyle.Secondary)
-                    ) : null,
-                this.placeholders == null ? null : new ActionRowBuilder()
-                    .addComponents(
-                        new ButtonBuilder()
-                            .setCustomId(`placeholder-increment-${this.name}`)
-                            .setLabel('+1 Placeholder')
-                            .setStyle(ButtonStyle.Secondary),
-                        new ButtonBuilder()
-                            .setCustomId(`placeholder-enter-${this.name}`)
-                            .setLabel('Enter Placeholders')
-                            .setStyle(ButtonStyle.Secondary)
-                    ),
-                new ActionRowBuilder()
-                    .addComponents(
-                        new ButtonBuilder()
-                            .setCustomId(`populate-monster-${this.name}`)
-                            .setLabel('💰 Populate')
-                            .setStyle(ButtonStyle.Success)
-                    )
-            ].filter(a => a != null);
+                    this.data.signups.find(a => !a.verified) ? null : new ActionRowBuilder()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setLabel('🛡️ Verify Raid')
+                                .setStyle(ButtonStyle.Success)
+                                .setCustomId(`resolve-monster-${this.event}`)
+                        )
+                ].filter(a => a != null)
+            }
+            return [];
         }
         async close() {
             this.active = false;
@@ -382,21 +427,11 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             ({ error } = await supabase.from(config.supabase.tables.events).update({ active: false }).eq('event_id', this.event));
             if (error) return { error };
             
-            ({ data, error } = await supabase.from(config.supabase.tables.signups).select('signup_id, player_id (id, username), active, windows, killed, tagged, verified').eq('event_id', this.event));
+            ({ data, error } = await supabase.from(config.supabase.tables.signups).select('signup_id, event_id, slot_template_id, player_id (id, username), assigned_job_id, active, windows, tagged, killed, rage, verified, date, placeholders, screenshot').eq('event_id', this.event));
             if (error) return { error };
             this.data.signups = data;
-            
-            let components = [
-                new ActionRowBuilder()
-                    .addComponents(
-                        new ButtonBuilder()
-                            .setLabel('Confirm')
-                            .setStyle(ButtonStyle.Success)
-                            .setCustomId(`attendance-monster-${this.archive}`)
-                    )
-            ]
 
-            await this.message.edit({ embeds: this.createEmbeds(), components: this.data.signups.length > 0 ? components : [] });
+            await this.message.edit({ embeds: this.createEmbeds(), components: this.createButtons() });
             delete monsters[this.name];
 
             for (let signup of this.data.signups.filter(a => a.active)) {
@@ -406,14 +441,18 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 let embed = new EmbedBuilder()
                     .setTitle('Confirm Attendance')
                     .setColor('#ffff00')
-                    .setDescription(`The ${this.name} raid has been closed, click the button below to confirm your attendance`)
+                    .setDescription(`The ${this.name} raid has been closed, use the buttons below to confirm your attendance and upload your screenshot.`)
                 let components = [
                     new ActionRowBuilder()
                         .addComponents(
                             new ButtonBuilder()
                                 .setLabel('Confirm')
                                 .setStyle(ButtonStyle.Success)
-                                .setCustomId(`attendance-monster-${this.archive}-${signup.signup_id}`)
+                                .setCustomId(`attendance-monster-${this.event}-${signup.signup_id}`),
+                            new ButtonBuilder()
+                                .setLabel('📷 Upload Screenshot')
+                                .setStyle(ButtonStyle.Success)
+                                .setCustomId(`screenshot-monster-${this.event}`)
                         )
                 ]
                 try {
@@ -428,14 +467,14 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
     }
 
     let monsters = {};
-    let archive = [];
+    let archive = {};
     async function scheduleMonster(message, events = []) {
         let monster = message.embeds[0].title;
         let timestamp = parseInt(message.embeds[0].fields[0].value.split(':')[1]);
         let day = parseInt(message.embeds[0].fields[1].value);
         let delay = timestamp - (Date.now() / 1000);
-        if (delay < 0) return;
-        if (delay > 3600) await new Promise(res => setTimeout(res, (delay - 3600) * 1000));
+        // if (delay < 0) return;
+        // if (delay > 3600) await new Promise(res => setTimeout(res, (delay - 3600) * 1000));
 
         let threads = {
             DKP: Array.from((await rosterChannels.DKP.threads.fetchActive(false)).threads.values()).concat(Array.from((await rosterChannels.DKP.threads.fetchArchived(false)).threads.values())),
@@ -445,7 +484,8 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         if (event == null) {
             let { data, error } = await supabase.from(config.supabase.tables.events).insert({
                 monster_name: monster,
-                start_time: new Date(timestamp * 1000)
+                start_time: new Date(timestamp * 1000),
+                day
             }).select('*').single();
             if (error) return console.log(`Error creating event for ${monster}:`, error.message);
             event = data;
@@ -465,14 +505,16 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             }
 
             monsters[monster] = new Monster(monster, timestamp, day, event.event_id, threads, event.rage, thread, message, event.windows, event.killed_by);
-            let { data, error } = await supabase.from(config.supabase.tables.signups).select('*').eq('event_id', event.event_id).eq('active', true);
+            let { data, error } = await supabase.from(config.supabase.tables.signups).select('signup_id, slot_template_id, player_id (id, username), assigned_job_id, placeholders').eq('event_id', event.event_id).eq('active', true);
             if (error) {
                 console.log('Error fetching signups:', error.message);
                 data = [];
             }
 
             for (let signup of data) {
-                let template = templateList.find(a => a.id == signup.slot_template_id);
+                if (monsters[monster].placeholders && signup.placeholders) monsters[monster].placeholders[signup.player_id.username] = signup.placeholders;
+
+                let template = templateList.find(a => a.slot_template_id == signup.slot_template_id);
                 if (template == null) {
                     console.log(`Error: couldn't find template with id "${signup.slot_template_id}"`)
                     continue;
@@ -480,20 +522,21 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
 
                 let user;
                 try {
-                    user = await client.users.fetch(signup.player_id);
+                    user = await client.users.fetch(signup.player_id.id);
                 } catch (error) {
-                    console.log(`Error: couldn't fetch user with id "${signup.player_id}"`);
+                    console.log(`Error: couldn't fetch user with id "${signup.player_id.id}"`);
                     continue;
                 }
 
-                let job = jobList.find(a => a.job_id == signup.assigned_job_id);
+                let job = jobList.find(a => a.job_id == signup.assigned_job_id)?.job_id;
                 if (job == null) {
                     console.log(`Error: couldn't find job with id "${signup.assigned_job_id}"`)
                     continue;
                 }
-                monsters[monster].signups[signup.alliance_number][signup.party_number][signup.party_slot_number] = {
+                monsters[monster].signups[template.alliance_number - 1][template.party_number - 1][template.party_slot_number - 1] = {
                     user,
-                    job
+                    job,
+                    signupId: signup.signup_id
                 };
             }
         }
@@ -515,12 +558,13 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             }).eq('event_id', monsters[monster].event);
             if (error) console.log('Error updating event:', error.message);
         } else await monsters[monster].message.edit({ embeds: monsters[monster].createEmbeds(), components: monsters[monster].createButtons() });
-        monsters[monster].archive = archive.push(monsters[monster]) - 1;
+        archive[monsters[monster].event] = monsters[monster];
     }
 
     let guild;
     let monstersChannel;
     let rosterChannels;
+    let ocrCategory;
     client.once(Events.ClientReady, async () => {
         console.log(`[Bot]: ${client.user.tag}`);
         console.log(`[Servers]: ${client.guilds.cache.size}`);
@@ -530,16 +574,42 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             DKP: await client.channels.fetch(config.discord.rosterChannel.DKP),
             PPP: await client.channels.fetch(config.discord.rosterChannel.PPP)
         }
+        ocrCategory = await client.channels.fetch(config.discord.ocrCategory);
 
         let messages = Array.from((await monstersChannel.messages.fetch({ limit: 100, cache: false })).values()).filter(a => a.embeds.length > 0).reverse();
 
         let { data: events, error } = await supabase.from(config.supabase.tables.events).select('*');
         if (error) {
             console.log('Error fetching events:', error.message);
-            data = [];
+            events = [];
         }
 
-        for (let message of messages) scheduleMonster(message, events);
+        for (let event of events.filter(a => !a.verified)) {
+            if (event.channel == null) return;
+            let thread;
+            let message;
+            try {
+                thread = await client.channels.fetch(event.channel);
+                message = await thread.messages.fetch(event.message);
+            } catch (err) {
+                console.log('Error fetching previous monster message:', err);
+                continue;
+            }
+            archive[event.event_id] = new Monster(event.monster_name, event.start_time, event.day, event.event_id, null, event.rage, thread, message, event.windows, event.killer);
+            archive[event.event_id].active = false;
+            
+            ({ data, error } = await supabase.from(config.supabase.tables.signups).select('signup_id, event_id, slot_template_id, player_id (id, username), assigned_job_id, active, windows, tagged, killed, rage, verified, date, placeholders, screenshot').eq('event_id', event.event_id));
+            if (error) {
+                console.log('Error fetching signups:', error.message);
+                continue;
+            }
+            archive[event.event_id].data.signups = data;
+            await archive[event.event_id].message.edit({ embeds: archive[event.event_id].createEmbeds(), components: archive[event.event_id].createButtons() });
+        }
+        console.log('Handled closed rosters');
+
+        await Promise.all(messages.map(a => scheduleMonster(a, events)));
+        console.log('Handled historical embeds');
     });
 
     async function getUser(id) {
@@ -548,7 +618,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
     }
 
     client.on(Events.MessageCreate, async message => {
-        if (message.channelId == config.discord.monstersChannel) if (message.embeds.length > 0) scheduleMonster(message);
+        if (message.channelId == config.discord.monstersChannel && message.embeds.length > 0) scheduleMonster(message);
     })
 
     client.on(Events.InteractionCreate, async interaction => {
@@ -586,7 +656,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             }
             
             try {
-                await command.execute({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, Monster });
+                await command.execute({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, Monster });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()
@@ -603,7 +673,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             if (!command) return;
 
             try {
-                await command.autocomplete({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, Monster });
+                await command.autocomplete({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, Monster });
             } catch (error) {
                 console.log(error);
                 try {
@@ -614,7 +684,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         if (interaction.isButton()) {
             const command = client.commands.get(interaction.customId.split('-')[0]);
             try {
-                if (command?.buttonHandler) command.buttonHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, Monster });
+                if (command?.buttonHandler) command.buttonHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, Monster });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()
@@ -629,7 +699,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         if (interaction.isAnySelectMenu()) {
             const command = client.commands.get(interaction.customId.split('-')[0]);
             try {
-                if (command?.selectHandler) command.selectHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, Monster });
+                if (command?.selectHandler) command.selectHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, Monster });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()
@@ -648,7 +718,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 return;
             }
             try {
-                if (command?.modalHandler) command.modalHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, Monster });
+                if (command?.modalHandler) command.modalHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, Monster });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()

@@ -22,7 +22,7 @@ module.exports = {
                 }
 
                 let buttons = [
-                    (['Tiamat', 'Lord of Onzozo'].includes(monster) || monsters[monster].data.max_windows == null || monsters[monster].data.max_windows >= 25) ? null : new ActionRowBuilder()
+                    (['Tiamat', 'Lord of Onzozo'].includes(monster) || monsters[monster].data.max_windows == null || monsters[monster].data.max_windows == 1 || monsters[monster].data.max_windows >= 25) ? null : new ActionRowBuilder()
                         .addComponents(
                             new StringSelectMenuBuilder()
                                 .setPlaceholder('Windows')
@@ -85,7 +85,7 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
-                if (!['Tiamat', 'Lord of Onzozo'].includes(monster)) {
+                if (!(['Tiamat', 'Lord of Onzozo'].includes(monster) || monsters[monster].data.max_windows == 1)) {
                     if (monsters[monster].data.max_windows == null || monsters[monster].data.max_windows >= 25) {
                         let modal = new ModalBuilder()
                             .setCustomId(`populate-${monster}-${id}-${monsters[monster].windows}`)
@@ -151,7 +151,7 @@ module.exports = {
                 }
 
                 await interaction.deferReply({ ephemeral: true });
-                let { error } = await supabase.from(config.supabase.tables.events).update({ killed_by: selections[id].group, active: false }).eq('event_id', monsters[monster].event);
+                let { error } = await supabase.from(config.supabase.tables.events).update({ windows: selections[id].windows, killed_by: selections[id].group, active: false }).eq('event_id', monsters[monster].event);
                 if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating killer', error.message)] });
                 monsters[monster].windows = selections[id].windows;
                 monsters[monster].killer = selections[id].group;

@@ -161,17 +161,18 @@ module.exports = {
                 }
 
                 await interaction.deferReply({ ephemeral: true });
-                let { error } = await supabase.from(config.supabase.tables.signups).insert({
+                let { data, error } = await supabase.from(config.supabase.tables.signups).insert({
                     event_id: monsters[monster].event,
                     slot_template_id: templateId,
                     player_id: user.id,
                     assigned_job_id: job
-                });
+                }).select('*').single();
                 if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating database', error.message)] });
                 
                 monsters[monster].signups[alliance - 1][party - 1][slot - 1] = {
                     user,
-                    job
+                    job,
+                    signupId: data.signup_id
                 }
                 delete selections[id];
 

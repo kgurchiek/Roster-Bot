@@ -66,8 +66,8 @@ module.exports = {
                 channel: monsters[monster].message.channelId,
                 message: monsters[monster].message.id
             }).eq('event_id', monsters[monster].event));
-            if (error) return interaction.editReply({ ephemeral: true, embeds: [errorEmbed(`Error updating event fpr ${monster}:`, error.message)] });
-            monsters[monster].archive = archive.push(monsters[monster]) - 1;
+            if (error) return interaction.editReply({ ephemeral: true, embeds: [errorEmbed(`Error updating event for ${monster}:`, error.message)] });
+            archive[monsters[monster].event] = monsters[monster];
 
             let embed = new EmbedBuilder()
                 .setTitle('Success')

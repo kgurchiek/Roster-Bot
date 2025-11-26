@@ -21,11 +21,20 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
-                interaction.customId = `placeholder-confirm-${monster}-${interaction.id}`;
+                let signupId = monsters[monster].signups.filter(alliance => alliance.filter(party => party.filter(slot => slot?.user.id == user.id)))[0][0][0].signupId;
+                if (signupId == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription('You are not signed up for this raid')
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
+
+                interaction.customId = `placeholder-confirm-${monster}-${interaction.id}-${signupId}`;
                 this.buttonHandler({ interaction, user, supabase, monsters })
                 break;
             }
-            case 'monster': {
+            case 'enter': {
                 let monster = args[2];
                 selections[interaction.id] = {};
 
@@ -36,6 +45,16 @@ module.exports = {
                         .setDescription(`${monster} is not active`)
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
+
+                let signupId = monsters[monster].signups.filter(alliance => alliance.filter(party => party.filter(slot => slot?.user.id == user.id)))[0][0][0].signupId;
+                if (signupId == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription('You are not signed up for this raid')
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
+
 
                 let buttons = [
                     new ActionRowBuilder()
@@ -54,7 +73,7 @@ module.exports = {
                     new ActionRowBuilder()
                         .addComponents(
                             new ButtonBuilder()
-                                .setCustomId(`placeholder-confirm-${monster}-${interaction.id}`)
+                                .setCustomId(`placeholder-confirm-${monster}-${interaction.id}-${signupId}`)
                                 .setLabel('✓')
                                 .setStyle(ButtonStyle.Success)
                         )
@@ -63,7 +82,7 @@ module.exports = {
                 break;
             }
             case 'confirm':  {
-                let [monster, id] = args.slice(2);
+                let [monster, id, signupId] = args.slice(2);
 
                 if (monsters[monster] == null) {
                     let embed = new EmbedBuilder()
@@ -92,7 +111,7 @@ module.exports = {
                 if (monsters[monster].placeholders[user.username] == null) monsters[monster].placeholders[user.username] = 0;
                 let { error } = await supabase.from(config.supabase.tables.signups).update({
                     placeholders: monsters[monster].placeholders[user.username] + selections[id].count
-                }).eq('player_id', user.id);
+                }).eq('signup_id', signupId);
                 if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating placeholders', error.message)] });
                 monsters[monster].placeholders[user.username] += selections[id].count;
 

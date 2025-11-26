@@ -18,6 +18,9 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
+                let embed = new EmbedBuilder()
+                    .setColor('#ffff00')
+                    .setDescription('Are you sure you want to clear this raid?')
                 let buttons = [
                     new ActionRowBuilder()
                         .addComponents(
@@ -27,7 +30,7 @@ module.exports = {
                                 .setStyle(ButtonStyle.Success)
                         )
                 ]
-                await interaction.reply({ ephemeral: true, content: 'Are you sure you want to clear this raid?', components: buttons });
+                await interaction.reply({ ephemeral: true, embeds: [embed], components: buttons });
                 break;
             }
             case 'confirm':  {

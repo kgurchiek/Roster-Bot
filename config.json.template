@@ -15,7 +15,11 @@
             "claims": "",
             "claimRates": ""
         },
-        "trackedRates": []
+        "trackedRates": [],
+        "buckets": {
+            "images": "",
+            "screenshots": ""
+        }
     },
     "discord": {
         "token": "",
@@ -26,7 +30,8 @@
             "DKP": "",
             "PPP": ""
         },
-        "threadGroups": []
+        "threadGroups": [],
+        "screenshotsChannel": ""
     },
     "roster": {
         "alliances": 4,

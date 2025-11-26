@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ModalBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { errorEmbed } = require('../commonFunctions.js');
 const config = require('../config.json');
 
@@ -178,7 +178,7 @@ module.exports = {
             }
         }
     },
-    async modalHandler({ interaction, supabase, groupList, monsters }) {        
+    async modalHandler({ interaction, user, supabase, monsters }) {        
         let args = interaction.customId.split('-');
         let [monster, id, maxWindows] = args.slice(1);
         maxWindows = parseInt(maxWindows) || Infinity;
@@ -202,6 +202,6 @@ module.exports = {
         selections[id].windows = windows;
 
         interaction.customId = `leave-confirm-${monster}-${id}`;
-        this.buttonHandler({ interaction, supabase, groupList, monsters });
+        this.buttonHandler({ interaction, user, supabase, monsters });
     }
 }

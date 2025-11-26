@@ -6,40 +6,49 @@ let selections = {};
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('attendance'),
-    async buttonHandler({ interaction, user, supabase, groupList, monsters, archive }) {
+    async buttonHandler({ interaction, user, supabase, monsters, archive }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {
-                let [archiveId, signupId] = args.slice(2);
-                let monster = archive[archiveId].name;
-                let maxWindows = archive[archiveId].windows;
-                let killer = archive[archiveId].killer;
-                let event = archive[archiveId].event;
+                let [event, signupId] = args.slice(2);
 
-                if (signupId == null) signupId = archive[archiveId].data.signups.find(a => a.player_id == user.id)
+                if (archive[event] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`This raid has been closed`)
+                        .setFooter({ text: `raid id: ${event}` })
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
+                
+                let monster = archive[event].name;
+                let maxWindows = archive[event].windows;
+                let killer = archive[event].killer;
+
+                let private = signupId != null;
+                if (signupId == null) signupId = archive[event].data.signups?.find(a => a.player_id.id == user.id)?.signup_id;
                 if (signupId == null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')
                         .setDescription('You did not participate in this raid')
-                    await interaction.reply({ ephemeral: true, embeds: [embed] });
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
                 
                 selections[interaction.id] = {
-                    archiveId,
                     monster,
                     maxWindows: maxWindows,
                     killer,
                     event,
-                    signupId,
-                    message: interaction.message
+                    signupId
                 };
+                if (private) selections[interaction.id].message = interaction.message;
 
                 await interaction.deferReply({ ephemeral: true });
                 let { data, error } = await supabase.from(config.supabase.tables.signups).select('*').eq('signup_id', signupId).single();
                 if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error fetching signup', error.message)] });
 
-                if (data.windows != null) {
+                if (data.tagged != null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')
@@ -127,21 +136,20 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
-                await interaction.deferReply({ ephemeral: true });
                 let { data, error } = await supabase.from(config.supabase.tables.signups).select('*').eq('signup_id', selections[id].signupId).single();
-                if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error fetching signup', error.message)] });
+                if (error) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching signup', error.message)] });
 
-                if (data.windows != null) {
+                if (data.tagged != null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')
                         .setDescription('Your attendence in this raid has already been confirmed')
-                    return await interaction.editReply({ ephemeral: true, embeds: [embed] });
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
                 if (selections[id].monster == 'Tiamat') {
                     let { data, error } = await supabase.from(config.supabase.tables.signups).select('*').eq('event_id', selections[id].event);
-                    if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error fetching signups', error.message)] });
+                    if (error) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching signups', error.message)] });
                     selections[id].windows = data.length;
                 } else if (selections[id].maxWindows == null || selections[id].maxWindows >= 25) {
                     let modal = new ModalBuilder()
@@ -164,21 +172,21 @@ module.exports = {
                             .setTitle('Error')
                             .setColor('#ff0000')
                             .setDescription('Please select the number of windows')
-                        return await interaction.editReply({ ephemeral: true, embeds: [embed] });
+                        return await interaction.reply({ ephemeral: true, embeds: [embed] });
                     }
     
                     if (selections[id].windows < 0 || selections[id].windows > selections[id].maxWindows) {
                         let embed = new EmbedBuilder()
                             .setTitle('Error')
                             .setColor('#ff0000')
-                            .setDescription(`Please enter a valid number of windows${selections[id].maxWindows == Infinity ? '' : ` (max: ${selections[id].maxWindows})`}`)
-                        return await interaction.editReply({ ephemeral: true, embeds: [embed] });
+                            .setDescription(`Please enter a valid number of windows${selections[id].maxWindows == null ? '' : ` (max: ${selections[id].maxWindows})`}`)
+                        return await interaction.reply({ ephemeral: true, embeds: [embed] });
                     }
                 }
 
                 
                 interaction.customId = `attendance-confirm2-${id}`;
-                this.buttonHandler({ interaction, supabase, groupList, monsters, archive });
+                this.buttonHandler({ interaction, supabase, monsters, archive });
                 break;
             }
             case 'confirm2': {
@@ -221,7 +229,7 @@ module.exports = {
                 let { data, error } = await supabase.from(config.supabase.tables.signups).select('*').eq('signup_id', selections[id].signupId).single();
                 if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error fetching signup', error.message)] });
 
-                if (data.windows != null) {
+                if (data.tagged != null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')
@@ -235,12 +243,12 @@ module.exports = {
                     tagged: selections[id].tag
                 }).eq('signup_id', selections[id].signupId));
                 if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating signup', error.message)] });
-                Object.assign(archive[selections[id].archiveId].data.signups.find(a => a.signup_id == selections[id].signupId), {
+                Object.assign(archive[selections[id].event].data.signups.find(a => a.signup_id == selections[id].signupId), {
                     windows: selections[id].windows,
                     killed: selections[id].kill,
                     tagged: selections[id].tag
                 });
-                await archive[selections[id].archiveId].message.edit({ embeds: archive[selections[id].archiveId].createEmbeds() });
+                await archive[selections[id].event].message.edit({ embeds: archive[selections[id].event].createEmbeds() });
 
                 let embed = new EmbedBuilder()
                     .setTitle('Success')
@@ -250,11 +258,13 @@ module.exports = {
 
                 let selection = selections[id];
                 delete selections[id];
-                embed = new EmbedBuilder()
-                    .setTitle('Attendence Confirmed')
-                    .setColor('#00ff00')
-                    .setDescription(`Your attendence for the ${selection.monster} raid has been recorded`)
-                await selection.message.edit({ embeds: [embed], components: [] });
+                if (selection.message) {
+                    embed = new EmbedBuilder()
+                        .setTitle('Attendence Confirmed')
+                        .setColor('#00ff00')
+                        .setDescription(`Your attendence for the ${selection.monster} raid has been recorded`)
+                    await selection.message.edit({ embeds: [embed] });
+                }
                 break;
             }
         }
@@ -306,7 +316,7 @@ module.exports = {
             }
         }
     },
-    async modalHandler({ interaction, supabase, groupList, monsters }) {        
+    async modalHandler({ interaction, user, supabase, monsters, archive }) {
         let args = interaction.customId.split('-');
         let id = args[1];
 
@@ -315,12 +325,12 @@ module.exports = {
             let embed = new EmbedBuilder()
                 .setTitle('Error')
                 .setColor('#ff0000')
-                .setDescription(`Please enter a valid number of windows${selections[id].maxWindows == Infinity ? '' : ` (max: ${selections[id].maxWindows})`}`)
+                .setDescription(`Please enter a valid number of windows${selections[id].maxWindows == null ? '' : ` (max: ${selections[id].maxWindows})`}`)
             return await interaction.reply({ ephemeral: true, embeds: [embed] });
         }
         selections[id].windows = windows;
 
         interaction.customId = `attendance-confirm2-${id}`;
-        this.buttonHandler({ interaction, supabase, groupList, monsters });
+        this.buttonHandler({ interaction, user, supabase, monsters, archive });
     }
 }
