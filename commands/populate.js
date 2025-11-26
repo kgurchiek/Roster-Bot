@@ -12,6 +12,7 @@ module.exports = {
             case 'monster': {
                 let monster = args[2];
                 selections[interaction.id] = {};
+                if (monsters[monster].data.max_windows == 1) selections[interaction.id].windows = 1;
 
                 if (monsters[monster] == null) {
                     let embed = new EmbedBuilder()
@@ -85,7 +86,7 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
-                if (!(['Tiamat', 'Lord of Onzozo'].includes(monster) || monsters[monster].data.max_windows == 1)) {
+                if (!['Tiamat', 'Lord of Onzozo'].includes(monster)) {
                     if (monsters[monster].data.max_windows == null || monsters[monster].data.max_windows >= 25) {
                         let modal = new ModalBuilder()
                             .setCustomId(`populate-${monster}-${id}-${monsters[monster].windows}`)

@@ -236,6 +236,7 @@ module.exports = {
                     .setDescription(`You signed up for alliance ${alliance}, party ${party}, slot ${slot}`)
                 await interaction.editReply({ ephemeral: true, embeds: [embed] });
                 await monsters[monster].message.edit({ embeds: monsters[monster].createEmbeds() });
+                await monsters[monster].updateLeaders();
                 break;
             }
         }

@@ -27,7 +27,7 @@ module.exports = {
                         .setColor('#ff0000')
                         .setDescription(`${unverified} user${unverified == 1 ? '' : 's'} have not been verified yet`)
                     await interaction.reply({ ephemeral: true, embeds: [embed] });
-                    await archive[event].message.edit({ embeds: archive[event].createEmbeds(), components: archive[event].createButtons() });
+                    await archive[event].updateMessage();
                     return
                 }
 
@@ -63,7 +63,7 @@ module.exports = {
                         .setColor('#ff0000')
                         .setDescription(`${unverified} user${unverified == 1 ? '' : 's'} have not been verified yet`)
                     await interaction.reply({ ephemeral: true, embeds: [embed] });
-                    await archive[event].message.edit({ embeds: archive[event].createEmbeds(), components: archive[event].createButtons() });
+                    await archive[event].updateMessage();
                     return
                 }
                 
@@ -71,7 +71,7 @@ module.exports = {
                 let { error } = await supabase.from(config.supabase.tables.events).update({ verified: true }).eq('event_id', event);
                 if (error) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error updating signup', error.message)] });
                 archive[event].verified = true;
-                await archive[event].message.edit({ embeds: archive[event].createEmbeds(), components: archive[event].createButtons() });
+                await archive[event].updateMessage();
                 delete archive[event];
 
                 let embed = new EmbedBuilder()

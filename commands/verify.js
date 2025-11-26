@@ -185,7 +185,7 @@ module.exports = {
                 signup.killed = selections[id].killed;
                 signup.rage = selections[id].rage;
                 signup.verified = true;
-                await archive[event].message.edit({ embeds: archive[event].createEmbeds(), components: archive[event].createButtons() });
+                await archive[event].updateMessage();
 
                 let embed = new EmbedBuilder()
                     .setTitle('Success')
@@ -211,7 +211,7 @@ module.exports = {
                 if (error) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error updating signup', error.message)] });
                 let signup = archive[event].data.signups.find(a => a.signup_id == signupId);
                 signup.verified = false;
-                await archive[event].message.edit({ embeds: archive[event].createEmbeds(), components: archive[event].createButtons() });
+                await archive[event].updateMessage();
 
                 let embed = new EmbedBuilder()
                     .setTitle('Success')

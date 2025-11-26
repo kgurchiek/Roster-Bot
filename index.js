@@ -214,6 +214,8 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
             this.event = event;
             this.rage = rage;
             this.signups = Array(this.alliances).fill().map(() => Array(this.parties).fill().map(() => Array(this.slots).fill(null)));
+            this.leaders = Array(this.alliances).fill().map(() => Array(this.parties).fill(null));
+            this.removedLeader = Array(this.alliances).fill().map(() => Array(this.parties).fill(null));
             
             this.thread = thread;
             this.message = message;
@@ -260,7 +262,7 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
                                         if (job == null) console.log(`Error: can't find job id: ${this.signups[i][j][k].job}`);
                                         else {
                                             role = `\`${job.color}${job.job_abbreviation}\``;
-                                            username = this.signups[i][j][k].user.username;
+                                            username = `${this.leaders[i][j]?.id == this.signups[i][j][k].user.id ? '👑 ' : ''}${this.signups[i][j][k].user.username}`;
                                         }
                                     }
                                     if (role == null) {
@@ -338,6 +340,13 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
                                 .setLabel('📝 Sign Up')
                                 .setStyle(ButtonStyle.Primary)
                         ),
+                    this.signups.find((a, i) => a.find((b, j) => this.leaders[i][j] == null)) == null ? null : new ActionRowBuilder()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId(`leader-monster-${this.name}`)
+                                .setLabel('👑 Leader')
+                                .setStyle(ButtonStyle.Secondary)
+                        ),
                     new ActionRowBuilder()
                         .addComponents(
                             new ButtonBuilder()
@@ -411,6 +420,24 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
             }
             return [];
         }
+        async updateMessage() {
+            return await this.message.edit({ embeds: this.createEmbeds(), components: this.createButtons() });
+        }
+        async updateLeaders() {
+            for (let i = 0; i < this.signups.length; i++) {
+                for (let j = 0; j < this.signups[i].length; j++) {
+                    if (this.leaders[i][j] != null && !this.signups[i][j].filter(a => a != null).find(a => a.user.id == this.leaders[i][j].id)) this.leaders[i][j] = null;
+                    if (this.signups[i][j].filter(a => a == null).length == 0 && this.leaders[i][j] == null) {
+                        while (this.leaders[i][j] == null || this.leaders[i][j].id == this.removedLeader[i][j]) this.leaders[i][j] = this.signups[i][j][Math.floor(Math.random() * this.signups[i][j].length)].user;
+                        await this.updateMessage();
+                        let embed = new EmbedBuilder()
+                            .setTitle('Leader Chosen')
+                            .setDescription(`${this.leaders[i][j].username} is now leader of alliance ${i} party ${j}.`)
+                        await this.message.reply({ embeds: [embed] });
+                    }
+                }
+            }
+        }
         async close() {
             this.active = false;
 
@@ -427,11 +454,11 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
             ({ error } = await supabase.from(config.supabase.tables.events).update({ active: false }).eq('event_id', this.event));
             if (error) return { error };
             
-            ({ data, error } = await supabase.from(config.supabase.tables.signups).select('signup_id, event_id, slot_template_id, player_id (id, username), assigned_job_id, active, windows, tagged, killed, rage, verified, date, placeholders, screenshot').eq('event_id', this.event));
+            ({ data, error } = await supabase.from(config.supabase.tables.signups).select('signup_id, event_id, slot_template_id, player_id (id, username), assigned_job_id, active, windows, tagged, killed, rage, verified, date, placeholders, screenshot, leader').eq('event_id', this.event));
             if (error) return { error };
             this.data.signups = data;
 
-            await this.message.edit({ embeds: this.createEmbeds(), components: this.createButtons() });
+            await this.updateMessage();
             delete monsters[this.name];
 
             for (let signup of this.data.signups.filter(a => a.active)) {
@@ -505,7 +532,7 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
             }
 
             monsters[monster] = new Monster(monster, timestamp, day, event.event_id, threads, event.rage, thread, message, event.windows, event.killed_by);
-            let { data, error } = await supabase.from(config.supabase.tables.signups).select('signup_id, slot_template_id, player_id (id, username), assigned_job_id, placeholders').eq('event_id', event.event_id).eq('active', true);
+            let { data, error } = await supabase.from(config.supabase.tables.signups).select('signup_id, slot_template_id, player_id (id, username), assigned_job_id, placeholders, leader').eq('event_id', event.event_id).eq('active', true);
             if (error) {
                 console.log('Error fetching signups:', error.message);
                 data = [];
@@ -520,11 +547,9 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
                     continue;
                 }
 
-                let user;
-                try {
-                    user = await client.users.fetch(signup.player_id.id);
-                } catch (error) {
-                    console.log(`Error: couldn't fetch user with id "${signup.player_id.id}"`);
+                let user = await getUser(signup.player_id.id);
+                if (user.error) {
+                    console.log(`Error fetching user with id "${signup.player_id.id}": ${user.error}`);
                     continue;
                 }
 
@@ -538,6 +563,7 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
                     job,
                     signupId: signup.signup_id
                 };
+                if (signup.leader) monsters[monster].leaders[template.alliance_number - 1][template.party_number - 1] = user;
             }
         }
 
@@ -557,7 +583,7 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
                 message: monsters[monster].message.id
             }).eq('event_id', monsters[monster].event);
             if (error) console.log('Error updating event:', error.message);
-        } else await monsters[monster].message.edit({ embeds: monsters[monster].createEmbeds(), components: monsters[monster].createButtons() });
+        } else await monsters[monster].updateMessage();
         archive[monsters[monster].event] = monsters[monster];
     }
 
@@ -598,13 +624,13 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
             archive[event.event_id] = new Monster(event.monster_name, event.start_time, event.day, event.event_id, null, event.rage, thread, message, event.windows, event.killer);
             archive[event.event_id].active = false;
             
-            ({ data, error } = await supabase.from(config.supabase.tables.signups).select('signup_id, event_id, slot_template_id, player_id (id, username), assigned_job_id, active, windows, tagged, killed, rage, verified, date, placeholders, screenshot').eq('event_id', event.event_id));
+            ({ data, error } = await supabase.from(config.supabase.tables.signups).select('signup_id, event_id, slot_template_id, player_id (id, username), assigned_job_id, active, windows, tagged, killed, rage, verified, date, placeholders, screenshot, leader').eq('event_id', event.event_id));
             if (error) {
                 console.log('Error fetching signups:', error.message);
                 continue;
             }
             archive[event.event_id].data.signups = data;
-            await archive[event.event_id].message.edit({ embeds: archive[event.event_id].createEmbeds(), components: archive[event.event_id].createButtons() });
+            await archive[event.event_id].updateMessage();
         }
         console.log('Handled closed rosters');
 
