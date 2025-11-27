@@ -31,7 +31,8 @@
             "PPP": ""
         },
         "threadGroups": [],
-        "screenshotsChannel": ""
+        "screenshotsChannel": "",
+        "staffRoles": []
     },
     "roster": {
         "alliances": 4,

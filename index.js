@@ -649,6 +649,8 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
 
     client.on(Events.InteractionCreate, async interaction => {
         let user = await getUser(interaction.user.id);
+        let members;
+        let guildMember;
         if (!interaction.isAutocomplete()) {
             if (user == null) {
                 let errorEmbed = new EmbedBuilder()
@@ -665,14 +667,16 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
                 await interaction.editReply({ embeds: [errorEmbed], components: [], ephemeral: true });
                 return;
             }
+            members = await guild.members.fetch();
+            guildMember = members.get(interaction.user.id);
+            user.staff = false;
+            for (const role of config.discord.staffRoles) if (guildMember.roles.cache.get(role)) user.staff = true;
         }
 
         if (interaction.isChatInputCommand()) {
             const command = client.commands.get(interaction.commandName);
             if (!command) return;
             
-            let members = await guild.members.fetch();
-            let guildMember = members.get(interaction.user.id);
             if (guildMember == null) {
                 let errorEmbed = new EmbedBuilder()
                     .setColor('#ff0000')

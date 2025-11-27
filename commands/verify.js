@@ -6,7 +6,7 @@ let selections = {};
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('verify'),
-    async selectHandler({ interaction, supabase, archive }) {
+    async selectHandler({ interaction, user, supabase, archive }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'signup': {
@@ -21,6 +21,15 @@ module.exports = {
                         .setDescription(`This raid has been closed`)
                         .setFooter({ text: `raid id: ${event}` })
                     return await interaction.editReply({ ephemeral: true, embeds: [embed] });
+                }
+
+                if (!user.staff) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`This action can only be performed by staff`)
+                        .setFooter({ text: `raid id: ${event}` })
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
         
                 let signup = archive[event].data.signups[interaction.values[0]];

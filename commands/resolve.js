@@ -5,7 +5,7 @@ const config = require('../config.json');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('resolve'),
-    async buttonHandler({ interaction, supabase, pointRules, archive }) {
+    async buttonHandler({ interaction, user, supabase, pointRules, archive }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {
@@ -16,6 +16,15 @@ module.exports = {
                         .setTitle('Error')
                         .setColor('#ff0000')
                         .setDescription(`This raid has already been closed`)
+                        .setFooter({ text: `raid id: ${event}` })
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
+
+                if (!user.staff) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`This action can only be performed by staff`)
                         .setFooter({ text: `raid id: ${event}` })
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
