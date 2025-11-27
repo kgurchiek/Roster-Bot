@@ -29,7 +29,7 @@ module.exports = {
                         .setColor('#ff0000')
                         .setDescription(`This action can only be performed by staff`)
                         .setFooter({ text: `raid id: ${event}` })
-                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                    return await interaction.editReply({ ephemeral: true, embeds: [embed] });
                 }
         
                 let signup = archive[event].data.signups[interaction.values[0]];

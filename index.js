@@ -692,8 +692,7 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
                 await interaction.editReply({ embeds: [errorEmbed], components: [], ephemeral: true });
                 return;
             }
-            members = await guild.members.fetch();
-            guildMember = members.get(interaction.user.id);
+            guildMember = await guild.members.fetch(interaction.user.id);
             user.staff = false;
             for (const role of config.discord.staffRoles) if (guildMember.roles.cache.get(role)) user.staff = true;
         }
