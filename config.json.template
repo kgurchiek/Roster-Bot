@@ -13,7 +13,8 @@
             "groups": "",
             "deaths": "",
             "claims": "",
-            "claimRates": ""
+            "claimRates": "",
+            "tags": ""
         },
         "trackedRates": [],
         "buckets": {

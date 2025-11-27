@@ -83,6 +83,8 @@ module.exports = {
                     let ppp = 0;
                     ppp += Math.floor(signup.placeholders / 4) * 0.2;
                     if (signup.tagged) {
+                        let { error } = await supabase.from(config.supabase.tables.tags).insert({ player_id: signup.player_id.id, monster_name: archive[event].name });
+                        if (error) console.log(`Error inserting ${archive[event].name} tag log for ${signup.player_id.username}: ${error.message}`);
                         let rule = rules.find(a => a.point_code == 't');
                         dkp += rule.dkp_value;
                         ppp += rule.ppp_value;

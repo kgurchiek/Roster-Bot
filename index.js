@@ -202,6 +202,31 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
     }
     updateClaimRates();
 
+    async function updateTagRates() {
+        if (await updateUsers()) return console.log('Error updating user list, aborting tag rate update');
+
+        let { data, error } = await supabase.from(config.supabase.tables.tags).select('player_id, monster_name');;
+        if (error) return console.log('Error fetching tags:', error);
+        let tags = data.reduce((a, b) => {
+            if (!config.supabase.trackedRates.includes(b.monster_name)) return;
+            b.monster_name;
+            if (a[b.player_id] == null) a[b.player_id] = {};
+            if (a[b.player_id][b.monster_name] == null) a[b.player_id][b.monster_name] = 0;
+            a[b.player_id][b.monster_name]++;
+            return a;
+        }, {});
+
+        for (let user in tags) {
+            for (let monster in tags[user]) {
+                tags[user][`${monster.toLowerCase().replaceAll(' ', '_')}_tag_rate`] = tags[user][monster] / data.filter(a => a.monster_name == monster).length;
+                delete tags[user][monster];
+            }
+            ({ error } = await supabase.from(config.supabase.tables.users).update(tags[user]).eq('id', user));
+            if (error) console.log('Error updating tag rates:', error);
+        }
+    }
+    updateTagRates();
+
     class Monster {
         constructor(name, timestamp, day, event, threads, rage, thread, message, windows, killer) {
             this.name = name;
@@ -686,7 +711,7 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
             }
             
             try {
-                await command.execute({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, Monster });
+                await command.execute({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, Monster, updateTagRates });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()
@@ -703,7 +728,7 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
             if (!command) return;
 
             try {
-                await command.autocomplete({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, Monster });
+                await command.autocomplete({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, Monster, updateTagRates });
             } catch (error) {
                 console.log(error);
                 try {
@@ -714,7 +739,7 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
         if (interaction.isButton()) {
             const command = client.commands.get(interaction.customId.split('-')[0]);
             try {
-                if (command?.buttonHandler) command.buttonHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, Monster });
+                if (command?.buttonHandler) command.buttonHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, Monster, updateTagRates });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()
@@ -729,7 +754,7 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
         if (interaction.isAnySelectMenu()) {
             const command = client.commands.get(interaction.customId.split('-')[0]);
             try {
-                if (command?.selectHandler) command.selectHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, Monster });
+                if (command?.selectHandler) command.selectHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, Monster, updateTagRates });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()
@@ -748,7 +773,7 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
                 return;
             }
             try {
-                if (command?.modalHandler) command.modalHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, Monster });
+                if (command?.modalHandler) command.modalHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, Monster, updateTagRates });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()
