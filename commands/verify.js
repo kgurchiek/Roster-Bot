@@ -11,6 +11,7 @@ module.exports = {
         switch (args[1]) {
             case 'signup': {
                 let event = args[2];
+                await interaction.deferReply({ ephemeral: true });
                 await interaction.message.edit({ components: interaction.message.components });
         
                 if (archive[event] == null) {
@@ -19,7 +20,7 @@ module.exports = {
                         .setColor('#ff0000')
                         .setDescription(`This raid has been closed`)
                         .setFooter({ text: `raid id: ${event}` })
-                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                    return await interaction.editReply({ ephemeral: true, embeds: [embed] });
                 }
         
                 let signup = archive[event].data.signups[interaction.values[0]];
@@ -40,7 +41,7 @@ module.exports = {
                                     .setLabel('✓')
                             )
                     ]
-                    return await interaction.reply({ ephemeral: true, embeds: [embed], components });
+                    return await interaction.editReply({ ephemeral: true, embeds: [embed], components });
                 }
 
                 interaction.customId = `verify-confirm-${event}-${interaction.values[0]}`;
@@ -96,6 +97,7 @@ module.exports = {
             case 'confirm': {
                 let [event, index, id] = args.slice(2);
                 if (id == null) id = interaction.id;
+                if (!interaction.deferred) await interaction.deferReply({ ephemeral: true });
                 
                 if (archive[event] == null) {
                     let embed = new EmbedBuilder()
@@ -103,7 +105,7 @@ module.exports = {
                         .setColor('#ff0000')
                         .setDescription(`This raid has been closed`)
                         .setFooter({ text: `raid id: ${event}` })
-                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                    return await interaction.editReply({ ephemeral: true, embeds: [embed] });
                 }
 
                 let signup = archive[event].data.signups[index];
@@ -114,7 +116,8 @@ module.exports = {
                     windows: signup.windows,
                     tagged: signup.tagged,
                     killed: signup.killed,
-                    rage: signup.rage
+                    rage: signup.rage,
+                    placeholders: signup.placeholders
                 }
                 let embed = new EmbedBuilder()
                     .setTitle(`${signup.player_id.username}'${signup.player_id.username.endsWith('s') ? '' : 's'} Attendance (${signup.verified ? 'Verified' : 'Unverified'})`)
@@ -122,7 +125,8 @@ module.exports = {
                         { name: 'Windows', value: selections[id].windows == null ? 'null' : String(selections[id].windows) },
                         { name: 'Tagged', value: selections[id].tagged == null ? 'null' : selections[id].tagged ? 'True' : 'False' },
                         { name: 'Killed', value: selections[id].killed == null ? 'null' : selections[id].killed ? 'True' : 'False' },
-                        { name: 'Rage', value: selections[id].rage ? 'True' : 'False' }
+                        { name: 'Rage', value: selections[id].rage ? 'True' : 'False' },
+                        ...(archive[event].placeholders == null ? [] : [{ name: 'Placeholders', value: selections[id].placeholders == null ? 'null' : String(selections[id].placeholders) }])
                     )
                     .setImage(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.screenshots}/${signup.screenshot}`)
                 let components = [
@@ -147,7 +151,7 @@ module.exports = {
                                 ]
                         )
                 ]
-                await interaction.reply({ ephemeral: true, embeds: [embed], components });
+                await interaction.editReply({ ephemeral: true, embeds: [embed], components });
                 break;
             }
             case 'verify': {
@@ -232,6 +236,15 @@ module.exports = {
                         .setFooter({ text: `raid id: ${event}` })
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
+
+                if (selections[id] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`This message has expired, please use the verify user dropdown again`)
+                        .setFooter({ text: `raid id: ${event}` })
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
                 
                 let signup = archive[event].data.signups[index];
                 let components = [
@@ -244,7 +257,23 @@ module.exports = {
                                     new StringSelectMenuOptionBuilder()
                                         .setLabel('Custom')
                                         .setValue('custom'),
-                                    ...new Array(Math.min(archive[event].windows, 24)).fill().map((a, i) =>
+                                    ...new Array(Math.min(archive[event].windows || 24, 24)).fill().map((a, i) =>
+                                        new StringSelectMenuOptionBuilder()
+                                            .setLabel(`${i + 1}`)
+                                            .setValue(`${i + 1}`)
+                                    )
+                                )
+                        ),
+                    archive[event].placeholders == null ? null : new ActionRowBuilder()
+                        .addComponents(
+                            new StringSelectMenuBuilder()
+                                .setCustomId(`verify-edit-${id}-placeholders-int`)
+                                .setPlaceholder(`Placeholders${selections[id].placeholders == null ? '' : `: ${selections[id].placeholders}`}`)
+                                .addOptions(
+                                    new StringSelectMenuOptionBuilder()
+                                        .setLabel('Custom')
+                                        .setValue('custom'),
+                                    ...new Array(24).fill().map((a, i) =>
                                         new StringSelectMenuOptionBuilder()
                                             .setLabel(`${i + 1}`)
                                             .setValue(`${i + 1}`)
@@ -253,58 +282,48 @@ module.exports = {
                         ),
                     new ActionRowBuilder()
                         .addComponents(
-                            new StringSelectMenuBuilder()
-                                .setCustomId(`verify-edit-${id}-tagged-bool`)
-                                .setPlaceholder(`Tagged${selections[id].tagged == null ? '' : `: ${selections[id].tagged ? 'True' : 'False'}`}`)
-                                .addOptions(
-                                    new StringSelectMenuOptionBuilder()
-                                        .setLabel('True')
-                                        .setValue('true'),
-                                    new StringSelectMenuOptionBuilder()
-                                        .setLabel('False')
-                                        .setValue('false')
-                                )
+                            new ButtonBuilder()
+                                .setCustomId(`verify-toggle-tagged-${event}-${index}-${id}`)
+                                .setStyle(selections[id].tagged == null ? ButtonStyle.Secondary : selections[id].tagged ? ButtonStyle.Success : ButtonStyle.Danger)
+                                .setLabel(`Tagged${selections[id].tagged == null ? '' : selections[id].tagged ? ': ✓' : ': ✖'}`),
+                            new ButtonBuilder()
+                                .setCustomId(`verify-toggle-killed-${event}-${index}-${id}`)
+                                .setStyle(selections[id].killed == null ? ButtonStyle.Secondary : selections[id].killed ? ButtonStyle.Success : ButtonStyle.Danger)
+                                .setLabel(`Killed${selections[id].killed == null ? '' : selections[id].killed ? ': ✓' : ': ✖'}`),
+                            new ButtonBuilder()
+                                .setCustomId(`verify-toggle-rage-${event}-${index}-${id}`)
+                                .setStyle(selections[id].rage ? ButtonStyle.Success : ButtonStyle.Danger)
+                                .setLabel(`Rage${selections[id].rage ? ': ✓' : ': ✖'}`)
                         ),
                     new ActionRowBuilder()
-                        .addComponents(
-                            new StringSelectMenuBuilder()
-                                .setCustomId(`verify-edit-${id}-killed-bool`)
-                                .setPlaceholder(`Killed${selections[id].killed == null ? '' : `: ${selections[id].killed ? 'True' : 'False'}`}`)
-                                .addOptions(
-                                    new StringSelectMenuOptionBuilder()
-                                        .setLabel('True')
-                                        .setValue('true'),
-                                    new StringSelectMenuOptionBuilder()
-                                        .setLabel('False')
-                                        .setValue('false')
-                                )
-                        ),
-                    new ActionRowBuilder()
-                        .addComponents(
-                            new StringSelectMenuBuilder()
-                                .setCustomId(`verify-edit-${id}-rage-bool`)
-                                .setPlaceholder(`Rage${selections[id].rage == null ? '' : `: ${selections[id].rage ? 'True' : 'False'}`}`)
-                                .addOptions(
-                                    new StringSelectMenuOptionBuilder()
-                                        .setLabel('True')
-                                        .setValue('true'),
-                                    new StringSelectMenuOptionBuilder()
-                                        .setLabel('False')
-                                        .setValue('false')
-                                )
-                        ),
-                    new ActionRowBuilder()
-                        .addComponents(
+                    .addComponents(
                             new ButtonBuilder()
                                 .setCustomId(`verify-verify-${event}-${selections[id].signupId}-${id}`)
                                 .setStyle(ButtonStyle.Success)
                                 .setLabel('✓')
                         )
-                ]
+                ].filter(a => a != null);
                 let message = { ephemeral: true, components };
                 if (signup.screenshot != null) message.content = `https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.screenshots}/${signup.screenshot}`;
                 if (update) await interaction.update(message);
                 else await interaction.reply(message);
+                break;
+            }
+            case 'toggle': {
+                let [option, event, index, id] = args.slice(2);
+
+                if (archive[event] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`This raid has been closed`)
+                        .setFooter({ text: `raid id: ${event}` })
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
+
+                selections[id][option] = !selections[id][option];
+                interaction.customId = `verify-edit-${event}-${index}-${id}-true`;
+                this.buttonHandler({ interaction, supabase, archive });
                 break;
             }
         }

@@ -313,7 +313,7 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
                                 .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.name.split('(')[0].replaceAll(' ', '')}.png`)
                             if (i == 0) embed.setTitle(`🐉 ${this.name} (Day ${this.day})${this.rage ? ' (Rage)' : ''}`);
                             embed.setDescription(`${i == 0 ? '🕒 Closed\n\n**Active**\n' : '**Inactive**\n'}\`\`\`\n${
-                                a.map(b => `${b.verified ? '✓' : '✖'} ${b.player_id.username}${(b.windows == null || this.data.max_windows == 1) ? '' : ` - ${b.tagged == null ? '' : `${b.windows}/${this.windows}`}`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''}`).join('\n')
+                                a.map(b => `${b.verified ? '✓' : '✖'} ${b.player_id.username} ${(b.windows == null || this.data.max_windows == 1) ? '' : `- ${b.windows}${this.windows == null ? '' : `/${this.windows}`}`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''}`).join('\n')
                             }\n\`\`\``);
                             if (this.verified) embed.setFooter({ text: '✓ Verified' })
 
