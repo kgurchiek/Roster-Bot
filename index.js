@@ -636,7 +636,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         }
 
         for (let event of events.filter(a => !a.verified)) {
-            if (event.channel == null) return;
+            if (event.channel == null) continue;
             let thread;
             let message;
             try {
