@@ -42,46 +42,67 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
-                if (monsters[monster].data.max_windows == null || monsters[monster].data.max_windows >= 25) {
-                    let modal = new ModalBuilder()
-                        .setCustomId(`leave-${monster}-${interaction.id}-${monsters[monster].data.max_windows}`)
-                        .setTitle(`Leave ${monster} Raid`)
-                        .addComponents(
-                            new ActionRowBuilder()
-                                .addComponents(
-                                    new TextInputBuilder()
-                                        .setCustomId('windows')
-                                        .setLabel('Windows')
-                                        .setStyle(TextInputStyle.Short)
-                                )
-                        )
-                    
-                    return await interaction.showModal(modal);
-                }
-
-                let buttons = [
-                    new ActionRowBuilder()
-                        .addComponents(
-                            new StringSelectMenuBuilder()
-                                .setPlaceholder('Select Windows')
-                                .setCustomId(`leave-windows-${interaction.id}`)
-                                .addOptions(
-                                    ...Array(8).fill().map((a, i) => 
-                                        new StringSelectMenuOptionBuilder()
-                                            .setLabel(`${i}`)
-                                            .setValue(`${i}`)
+                let message;
+                if (monsters[monster].placeholders == null && monsters[monster].name != 'Tiamat') {
+                    if (monsters[monster].data.max_windows == null || monsters[monster].data.max_windows >= 25) {
+                        let modal = new ModalBuilder()
+                            .setCustomId(`leave-${monster}-${interaction.id}-${monsters[monster].data.max_windows}`)
+                            .setTitle(`Leave ${monster} Raid`)
+                            .addComponents(
+                                new ActionRowBuilder()
+                                    .addComponents(
+                                        new TextInputBuilder()
+                                            .setCustomId('windows')
+                                            .setLabel('Windows')
+                                            .setStyle(TextInputStyle.Short)
                                     )
-                                )
-                        ),
-                    new ActionRowBuilder()
-                        .addComponents(
-                            new ButtonBuilder()
-                                .setCustomId(`leave-confirm-${monster}-${interaction.id}`)
-                                .setLabel('✓')
-                                .setStyle(ButtonStyle.Success)
-                        )
-                ]
-                await interaction.reply({ ephemeral: true, content: 'How many windows have you camped?', components: buttons });
+                            )
+                        
+                        return await interaction.showModal(modal);
+                    }
+
+                    let embed = new EmbedBuilder()
+                        .setDescription('How many windows did you camp?')
+                    let buttons = [
+                        new ActionRowBuilder()
+                            .addComponents(
+                                new StringSelectMenuBuilder()
+                                    .setPlaceholder('Select Windows')
+                                    .setCustomId(`leave-windows-${interaction.id}`)
+                                    .addOptions(
+                                        ...Array(8).fill().map((a, i) => 
+                                            new StringSelectMenuOptionBuilder()
+                                                .setLabel(`${i}`)
+                                                .setValue(`${i}`)
+                                        )
+                                    )
+                            ),
+                        new ActionRowBuilder()
+                            .addComponents(
+                                new ButtonBuilder()
+                                    .setCustomId(`leave-confirm-${monster}-${interaction.id}`)
+                                    .setLabel('✓')
+                                    .setStyle(ButtonStyle.Success)
+                            )
+                    ];
+                    message = { ephemeral: true, embeds: [embed], components: buttons };
+                } else {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Warning')
+                        .setColor('#ffff00')
+                        .setDescription(`Are you sure you want to leave the ${monster} raid?`)
+                    buttons = [
+                        new ActionRowBuilder()
+                            .addComponents(
+                                new ButtonBuilder()
+                                    .setCustomId(`leave-confirm-${monster}-${interaction.id}`)
+                                    .setLabel('✓')
+                                    .setStyle(ButtonStyle.Success)
+                            )
+                    ]
+                    message = { ephemeral: true, embeds: [embed], components: buttons };
+                }
+                await interaction.reply(message);
                 break;
             }
             case 'confirm':  {

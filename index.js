@@ -3,9 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const config = require('./config.json');
 const { createClient } = require('@supabase/supabase-js');
-const attendance = require('./commands/attendance');
 const supabase = createClient(config.supabase.url, config.supabase.key);
-const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
 
 (async () => {
     process.on('uncaughtException', console.error);
@@ -229,8 +227,9 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
 
     class Monster {
         constructor(name, timestamp, day, event, threads, rage, thread, message, windows, killer) {
-            this.name = name;
-            if (this.name == 'Lord of Onzozo') {
+            this.group = config.roster.monsterGroups.find(a => a.includes(name));
+            this.name = this.group == null ? name : this.group.join('/');
+            if (name == 'Lord of Onzozo') {
                 this.alliances = 2;
                 this.placeholders = {};
             }
@@ -247,13 +246,9 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
             this.windows = windows;
             this.killer = killer;
 
-            this.data = monsterList.find(a => a.monster_name == this.name);
+            this.data = monsterList.find(a => a.monster_name == this.name.split('/')[0]);
             if (this.data == null) console.log(`Error: could not find data for monster "${this.name}"`);
-            else if (thread == null) {
-                let group = config.discord.threadGroups.find(a => a.includes(this.name));
-                if (group) this.thread = threads[this.data.channel_type].find(a => a.name == group.join('/'));
-                else this.thread = threads[this.data.channel_type].find(a => a.name == this.name);
-            }
+            else if (thread == null) this.thread = threads[this.data.channel_type].find(a => a.name == this.name);
         }
         active = true;
         alliances = config.roster.alliances;
@@ -274,7 +269,7 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
                                     inline: true
                                 };
                                 for (let k = 0; k < this.slots; k++) {
-                                    let template = templateList.find(a => a.monster_name == this.name && a.alliance_number == i + 1 && a.party_number == j + 1 && a.party_slot_number == k + 1);
+                                    let template = templateList.find(a => a.monster_name == this.name.split('/')[0] && a.alliance_number == i + 1 && a.party_number == j + 1 && a.party_slot_number == k + 1);
                                     if (template == null) {
                                         console.log(`Error: Cannot find template for ${this.name}, Alliance ${i + 1}, Party ${j + 1}, Slot ${k + 1}`);
                                         template = { allowed_job_ids: [] };
@@ -476,7 +471,7 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
                 if (error) return { error };
             }
 
-            ({ error } = await supabase.from(config.supabase.tables.events).update({ active: false }).eq('event_id', this.event));
+            ({ error } = await supabase.from(config.supabase.tables.events).update({ active: false, verified: this.data.signups.length == 0 }).eq('event_id', this.event));
             if (error) return { error };
             
             ({ data, error } = await supabase.from(config.supabase.tables.signups).select('signup_id, event_id, slot_template_id, player_id (id, username), assigned_job_id, active, windows, tagged, killed, rage, verified, date, placeholders, screenshot, leader').eq('event_id', this.event));
@@ -485,6 +480,7 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
 
             await this.updateMessage();
             delete monsters[this.name];
+            if (this.group) delete monsters[this.group.join('/')];
 
             for (let signup of this.data.signups.filter(a => a.active)) {
                 let user = signup.player_id;
@@ -542,7 +538,9 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
             if (error) return console.log(`Error creating event for ${monster}:`, error.message);
             event = data;
 
-            monsters[monster] = new Monster(monster, timestamp, day, event.event_id, threads);
+            let newMonster = new Monster(monster, timestamp, day, event.event_id, threads);
+            monster = newMonster.name;
+            monsters[monster] = newMonster;
         } else {
             if (!event.active) return;
             let thread;
@@ -556,7 +554,9 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
                 }
             }
 
-            monsters[monster] = new Monster(monster, timestamp, day, event.event_id, threads, event.rage, thread, message, event.windows, event.killed_by);
+            let newMonster = new Monster(monster, timestamp, day, event.event_id, threads, event.rage, thread, message, event.windows, event.killed_by);
+            monster = newMonster.name;
+            monsters[monster] = newMonster;
             let { data, error } = await supabase.from(config.supabase.tables.signups).select('signup_id, slot_template_id, player_id (id, username), assigned_job_id, placeholders, leader').eq('event_id', event.event_id).eq('active', true);
             if (error) {
                 console.log('Error fetching signups:', error.message);
@@ -594,9 +594,8 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
 
         if (monsters[monster].message == null) {
             if (monsters[monster].thread == null) {
-                let group = config.discord.threadGroups.find(a => a.includes(monster));
                 monsters[monster].thread = await rosterChannels[monsters[monster].data.channel_type].threads.create({
-                    name: group ? group.join('/') : monsters[monster].name,
+                    name: monsters[monster].name,
                     type: ChannelType.PublicThread,
                     autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek
                 });
@@ -648,6 +647,7 @@ const screenshots = supabase.storage.from(config.supabase.buckets.screenshots);
             }
             archive[event.event_id] = new Monster(event.monster_name, event.start_time, event.day, event.event_id, null, event.rage, thread, message, event.windows, event.killer);
             archive[event.event_id].active = false;
+            archive[event.event_id].name = event.monster_name;
             
             ({ data, error } = await supabase.from(config.supabase.tables.signups).select('signup_id, event_id, slot_template_id, player_id (id, username), assigned_job_id, active, windows, tagged, killed, rage, verified, date, placeholders, screenshot, leader').eq('event_id', event.event_id));
             if (error) {

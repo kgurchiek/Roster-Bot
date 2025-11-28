@@ -104,13 +104,11 @@ module.exports = {
         }
 
         let channels = [...(await ocrCategory.guild.channels.fetch(null, { force: true })).values()].filter(a => a.parentId == ocrCategory.id);
-        let group = config.discord.threadGroups.find(a => a.includes(archive[event].name));
-        let name = (group == null ? archive[event].name : group.join('—')).replaceAll(' ', '-').toLowerCase();
-        let channel = channels.find(a => a.name == name);
+        let channel = channels.find(a => a.name == archive[event].name);
         if (channel == null) {
             try {
                 channel = await ocrCategory.children.create({
-                    name,
+                    name: archive[event].name,
                     type: ChannelType.GuildText
                 });
             } catch (err) {

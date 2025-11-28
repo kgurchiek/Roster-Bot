@@ -31,7 +31,6 @@
             "DKP": "",
             "PPP": ""
         },
-        "threadGroups": [],
         "screenshotsChannel": "",
         "staffRoles": []
     },
@@ -39,6 +38,7 @@
         "alliances": 4,
         "parties": 3,
         "slots": 6,
-        "team": ""
+        "team": "",
+        "monsterGroups": []
     }
 }

@@ -22,6 +22,43 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
+                if (monsters[monster].group == null) {
+                    interaction.customId = `populate-confirm-${monster}`;
+                    return this.buttonHandler({ interaction, supabase, groupList, monsters });
+                }
+
+                let components = [
+                    new ActionRowBuilder()
+                        .addComponents(
+                            new StringSelectMenuBuilder()
+                                .setPlaceholder('Which monster spawned?')
+                                .setCustomId(`populate-monster-${monster}`)
+                                .addOptions(
+                                    ...monsters[monster].group.map(a =>
+                                        new StringSelectMenuOptionBuilder()
+                                            .setLabel(a)
+                                            .setValue(a)
+                                    )
+                                )
+                    )
+                ]
+                await interaction.reply({ ephemeral: true, components });
+                break;
+            }
+            case 'confirm': {
+                let monster = args[2];
+                selections[interaction.id] = {};
+                if (monsters[monster].data.max_windows == 1) selections[interaction.id].windows = 1;
+
+                if (!interaction.deferred) await interaction.deferReply();
+                if (monsters[monster] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`${monster} is not active`)
+                    return await interaction.editReply({ ephemeral: true, embeds: [embed] });
+                }
+
                 let buttons = [
                     (['Tiamat', 'Lord of Onzozo'].includes(monster) || monsters[monster].data.max_windows == null || monsters[monster].data.max_windows == 1 || monsters[monster].data.max_windows >= 25) ? null : new ActionRowBuilder()
                         .addComponents(
@@ -52,15 +89,15 @@ module.exports = {
                     new ActionRowBuilder()
                         .addComponents(
                             new ButtonBuilder()
-                                .setCustomId(`populate-confirm-${monster}-${interaction.id}`)
+                                .setCustomId(`populate-confirm2-${monster}-${interaction.id}`)
                                 .setLabel('✓')
                                 .setStyle(ButtonStyle.Success)
                         )
                 ].filter(a => a != null)
-                await interaction.reply({ ephemeral: true, components: buttons });
+                await interaction.editReply({ ephemeral: true, components: buttons });
                 break;
             }
-            case 'confirm':  {
+            case 'confirm2':  {
                 let [monster, id] = args.slice(2);
 
                 if (monsters[monster] == null) {
@@ -113,11 +150,11 @@ module.exports = {
                     }
                 }
                 
-                interaction.customId = `populate-confirm2-${monster}-${id}`;
+                interaction.customId = `populate-confirm3-${monster}-${id}`;
                 this.buttonHandler({ interaction, supabase, groupList, monsters });
                 break;
             }
-            case 'confirm2': {
+            case 'confirm3': {
                 let [monster, id] = args.slice(2);
 
                 if (monsters[monster] == null) {
@@ -175,9 +212,30 @@ module.exports = {
             }
         }
     },
-    async selectHandler({ interaction }) {
+    async selectHandler({ interaction, supabase, groupList, monsters }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
+            case 'monster': {
+                let monster = args[2];
+                await interaction.deferReply({ ephemeral: true });
+
+                if (monsters[monster] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`${monster} is not active`)
+                    return await interaction.editReply({ ephemeral: true, embeds: [embed] });
+                }
+
+                let { error } = await supabase.from(config.supabase.tables.events).update({ monster_name: interaction.values[0] }).eq('event_id', monsters[monster].event);
+                if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating event monster name', error.message)] });
+                monsters[monster].name = interaction.values[0];
+                monsters[interaction.values[0]] = monsters[monster];
+                monsters[monster].updateMessage();
+                interaction.customId = `populate-confirm-${interaction.values[0]}`;
+                this.buttonHandler({ interaction, supabase, groupList, monsters });
+                break;
+            }
             case 'windows': {
                 let id = args[2];
 
@@ -231,7 +289,7 @@ module.exports = {
         }
         selections[id].windows = windows;
 
-        interaction.customId = `populate-confirm2-${monster}-${id}`;
+        interaction.customId = `populate-confirm3-${monster}-${id}`;
         this.buttonHandler({ interaction, supabase, groupList, monsters });
     }
 }

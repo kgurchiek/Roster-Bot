@@ -50,12 +50,13 @@ module.exports = {
             if (error) return interaction.editReply({ ephemeral: true, embeds: [errorEmbed(`Error creating event for ${monster}:`, error.message)] });
             event = data;
 
-            monsters[monster] = new Monster(monster, timestamp, day, event.event_id, threads, true);
+            let newMonster = new Monster(monster, timestamp, day, event.event_id, threads, true);
+            monster = newMonster.name;
+            monsters[monster] = newMonster;
 
             if (monsters[monster].thread == null) {
-                let group = config.discord.threadGroups.find(a => a.includes(monster));
                 monsters[monster].thread = await rosterChannels[monsters[monster].data.channel_type].threads.create({
-                    name: group ? group.join('/') : monsters[monster].name,
+                    name: monsters[monster].name,
                     type: ChannelType.PublicThread,
                     autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek
                 });
