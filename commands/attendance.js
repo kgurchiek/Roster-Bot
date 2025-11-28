@@ -26,18 +26,21 @@ module.exports = {
                 let killer = archive[event].killer;
 
                 let private = signupId != null;
-                if (signupId == null) signupId = archive[event].data.signups?.find(a => a.player_id.id == user.id)?.signup_id;
+                if (signupId == null) signupId = archive[event].data.signups?.find(a => a.active && a.player_id.id == user.id)?.signup_id;
                 if (signupId == null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')
-                        .setDescription('You did not participate in this raid')
+                        .setDescription('You were not signed up when this raid finished')
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
+
+                let minWindows = archive[event].data.signups.filter(a => !a.active && a.player_id.id == user.id).reduce((a, b) => a += (b.windows || 0), 0);
                 
                 selections[interaction.id] = {
                     monster,
-                    maxWindows: maxWindows,
+                    minWindows,
+                    maxWindows,
                     killer,
                     event,
                     signupId
@@ -60,12 +63,12 @@ module.exports = {
                     (monster == 'Tiamat' || maxWindows == null || maxWindows >= 25) ? null : new ActionRowBuilder()
                         .addComponents(
                             new StringSelectMenuBuilder()
-                                .setPlaceholder('Windows')
+                                .setPlaceholder('Total Windows')
                                 .setCustomId(`attendance-windows-${interaction.id}`)
                                 .addOptions(
-                                    ...Array(maxWindows + 1).fill().map((a, i) => 
+                                    ...Array((maxWindows + 1) - minWindows).fill().map((a, i) => 
                                         new StringSelectMenuOptionBuilder()
-                                            .setLabel(`${i}`)
+                                            .setLabel(`${i + minWindows}`)
                                             .setValue(`${i}`)
                                     )
                                 )
@@ -321,11 +324,18 @@ module.exports = {
         let id = args[1];
 
         let windows = parseInt(interaction.fields.getTextInputValue('windows'));
-        if (isNaN(windows) || windows < 0 || windows > selections[id].maxWindows) {
+        if (isNaN(windows) || windows < 0 || (windows + selections[id].minWindows) > selections[id].maxWindows) {
             let embed = new EmbedBuilder()
                 .setTitle('Error')
                 .setColor('#ff0000')
-                .setDescription(`Please enter a valid number of windows${selections[id].maxWindows == null ? '' : ` (max: ${selections[id].maxWindows})`}`)
+                .setDescription(`Please enter a valid number of windows${selections[id].maxWindows == null ? '' : ` (max: ${selections[id].maxWindows - selections[id].minWindows})`}`)
+            return await interaction.reply({ ephemeral: true, embeds: [embed] });
+        }
+        if (windows < selections[id].minWindows) {
+            let embed = new EmbedBuilder()
+                .setTitle('Error')
+                .setColor('#ff0000')
+                .setDescription(`Please eneter the **total** number of windows you camped (you already camped for ${selections[id].minWindows} window${selections[id].minWindows == 1 ? '' : 's'})`)
             return await interaction.reply({ ephemeral: true, embeds: [embed] });
         }
         selections[id].windows = windows;

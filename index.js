@@ -402,6 +402,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 ].filter(a => a != null);
             }
             if (this.data.signups.length > 0) {
+                let signups = this.data.signups.filter((a, i, arr) => arr.slice(0, i).find(b => b.player_id.id == a.player_id.id));
                 return [
                     new ActionRowBuilder()
                         .addComponents(
@@ -414,16 +415,16 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                 .setStyle(ButtonStyle.Primary)
                                 .setCustomId(`screenshot-monster-${this.event}`),
                         ),
-                    ...new Array(Math.ceil(this.data.signups.length / 25)).fill().map((a, i) =>
+                    ...new Array(Math.ceil(signups.length / 25)).fill().map((a, i) =>
                         new ActionRowBuilder()
                             .addComponents(
                                 new StringSelectMenuBuilder()
                                     .setPlaceholder('🛡️ Verify User')
                                     .setCustomId(`verify-signup-${this.event}-${i}`)
                                     .addOptions(
-                                        ...Array(Math.min(25, this.data.signups.length - i * 25)).fill().map((a, j) => 
+                                        ...Array(Math.min(25, signups.length - i * 25)).fill().map((a, j) => 
                                             new StringSelectMenuOptionBuilder()
-                                                .setLabel(`${this.data.signups[i * 25 + j].player_id.username}`)
+                                                .setLabel(`${signups[i * 25 + j].player_id.username}`)
                                                 .setValue(`${i * 25 + j}`)
                                         )
                                     )
