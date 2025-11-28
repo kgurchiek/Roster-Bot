@@ -257,8 +257,8 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         createEmbeds() {
             if (this.active) {
                 let embed = new EmbedBuilder()
-                    .setTitle(`🐉 ${this.name}${this.day == null ? '' : ` (Day ${this.day})`}${this.rage ? ' (Rage)' : ''}`)
-                    .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.name.split('(')[0].replaceAll(' ', '')}.png`)
+                    .setTitle(`🐉 ${this.name}${this.day == null ? '' : ` (Day ${this.day})`}${this.rage ? ' (Rage)' : ''}${this.paused ? ' (Paused)' : ''}`)
+                    .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.name.split('/')[0].split('(')[0].replaceAll(' ', '')}.png`)
                     .setDescription(`🕒 Starts at <t:${this.timestamp}:D> <t:${this.timestamp}:T> (<t:${this.timestamp}:R>)`)
                     .addFields(
                         ...Array(this.alliances).fill().map((a, i) => [
@@ -321,7 +321,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                     return [
                         new EmbedBuilder()
                             .setTitle(`🐉 ${this.name} (Day ${this.day})${this.rage ? ' (Rage)' : ''}`)
-                            .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.name.split('(')[0].replaceAll(' ', '')}.png`)
+                            .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.name.split('/')[0].split('(')[0].replaceAll(' ', '')}.png`)
                             .setDescription('No participants recorded.')
                     ]
                 } else {
@@ -330,7 +330,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                         this.data.signups.filter(a => !a.active).filter((a, i, arr) => arr.slice(0, i).find(b => b.signup_id == a.signup_id) == null)
                     ].filter(a => a.length > 0).map((a, i) => {
                             let embed = new EmbedBuilder()
-                                .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.name.split('(')[0].replaceAll(' ', '')}.png`)
+                                .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.name.split('/')[0].split('(')[0].replaceAll(' ', '')}.png`)
                             if (i == 0) embed.setTitle(`🐉 ${this.name} (Day ${this.day})${this.rage ? ' (Rage)' : ''}`);
                             embed.setDescription(`${i == 0 ? '🕒 Closed\n\n**Active**\n' : '**Inactive**\n'}\`\`\`\n${
                                 a.map(b => `${b.verified ? '✓' : '✖'} ${b.player_id.username} ${(b.windows == null || this.data.max_windows == 1) ? '' : `- ${b.windows}${this.windows == null ? '' : `/${this.windows}`}`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''}`).join('\n')
@@ -345,6 +345,19 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         }
         createButtons() {
             if (this.verified) return [];
+            if (this.paused) return [
+                new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId(`pause-unpause-${this.name}`)
+                            .setStyle(ButtonStyle.Success)
+                            .setLabel('▶ Unpase'),
+                        new ButtonBuilder()
+                            .setCustomId(`populate-monster-${this.name}`)
+                            .setLabel('💰 Populate')
+                            .setStyle(ButtonStyle.Success)
+                    )
+            ]
             if (this.active) {
                 return [
                     new ActionRowBuilder()
@@ -394,6 +407,10 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                         ),
                     new ActionRowBuilder()
                         .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId(`pause-pause-${this.name}`)
+                                .setStyle(ButtonStyle.Danger)
+                                .setLabel('⏸ Pause'),
                             new ButtonBuilder()
                                 .setCustomId(`populate-monster-${this.name}`)
                                 .setLabel('💰 Populate')
