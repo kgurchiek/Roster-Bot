@@ -116,7 +116,7 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
-                if (monster == 'Tiamat') selections[id] = {}
+                if (monster == 'Tiamat' || monsters[monster].placeholders != null) selections[id] = {};
                 else {
                     if (selections[id] == null) {
                         let embed = new EmbedBuilder()
@@ -159,7 +159,7 @@ module.exports = {
 
                 await interaction.deferReply({ ephemeral: true });
 
-                if (['Tiamat', 'Lord of Onzozo'].includes(monster) || monsters[monster].data.max_windows == 1) {
+                if (monster == 'Tiamat' || monsters[monster].placeholders != null || monsters[monster].data.max_windows == 1) {
                     let { error } = await supabase.from(config.supabase.tables.signups).delete().eq('event_id', monsters[monster].event).eq('player_id', user.id).eq('active', true);
                     if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating database', error.message)] });
                 } else {

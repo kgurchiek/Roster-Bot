@@ -80,7 +80,7 @@ module.exports = {
                     let rules = pointRules.filter(a => a.monster_type == archive[event].data.monster_type);
                     let dkp = 0;
                     let ppp = 0;
-                    ppp += Math.floor(signup.placeholders / 4) * 0.2;
+                    ppp += parseFloat((Math.floor(signup.placeholders / 4) * 0.2).toFixed(1));
                     if (signup.tagged) {
                         let { error } = await supabase.from(config.supabase.tables.tags).insert({ player_id: signup.player_id.id, monster_name: archive[event].name });
                         if (error) console.log(`Error inserting ${archive[event].name} tag log for ${signup.player_id.username}: ${error.message}`);

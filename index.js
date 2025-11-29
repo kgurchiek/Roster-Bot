@@ -311,7 +311,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                     embed.addFields(
                         {
                             name: 'Placeholders',
-                            value: Object.keys(this.placeholders).length == 0 ? '​' : `\`\`\`\n${Object.entries(this.placeholders).sort((a, b) => a > b ? 1 : -1).map(a => `${a[0]}: ${a[1]}${' '.repeat(`${a[0]}: ${a[1]}`.length - longest)} | ${Math.floor(a[1] / 4) * 0.2} PPP`).join('\n')}\n\`\`\``
+                            value: Object.keys(this.placeholders).length == 0 ? '​' : `\`\`\`\n${Object.entries(this.placeholders).sort((a, b) => a > b ? 1 : -1).map(a => `${a[0]}: ${a[1]}${' '.repeat(`${a[0]}: ${a[1]}`.length - longest)} | ${(Math.floor(a[1] / 4) * 0.2).toFixed(1)} PPP`).join('\n')}\n\`\`\``
                         }
                     )
                 };
@@ -488,13 +488,13 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 ({ error } = await supabase.from(config.supabase.tables.deaths).insert({ monster_name: this.name }));
                 if (error) return { error };
             }
-
-            ({ error } = await supabase.from(config.supabase.tables.events).update({ active: false, verified: this.data.signups.length == 0 }).eq('event_id', this.event));
-            if (error) return { error };
             
             ({ data, error } = await supabase.from(config.supabase.tables.signups).select('signup_id, event_id, slot_template_id, player_id (id, username), assigned_job_id, active, windows, tagged, killed, rage, verified, date, placeholders, screenshot, leader').eq('event_id', this.event));
             if (error) return { error };
             this.data.signups = data;
+
+            ({ error } = await supabase.from(config.supabase.tables.events).update({ active: false, verified: this.data.signups.length == 0 }).eq('event_id', this.event));
+            if (error) return { error };
 
             await this.updateMessage();
             delete monsters[this.name];

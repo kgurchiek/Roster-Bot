@@ -20,6 +20,14 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
+                if (!user.staff) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`This action can only be performed by staff`)
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
+
                 monsters[monster].paused = true;
                 await interaction.deferUpdate();
                 await monsters[monster].updateMessage();
@@ -33,6 +41,14 @@ module.exports = {
                         .setTitle('Error')
                         .setColor('#ff0000')
                         .setDescription(`${monster} is not active`)
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
+
+                if (!user.staff) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`This action can only be performed by staff`)
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
