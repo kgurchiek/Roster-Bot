@@ -76,7 +76,11 @@ module.exports = {
                 }
                 
                 await interaction.deferReply({ ephemeral: true });
-                for (let signup of archive[event].data.signups) {
+                archive[event].data.signups.forEach(async (signup, i, arr) => {
+                    if (arr.slice(0, i).find(a => a.player_id.id == signup.player_id.id) == null) {
+                        let { error } = await supabase.rpc('increment_points', { table_name: config.supabase.tables.users, id: signup.player_id.id, type: 'last_camped', amount: 1 });
+                        if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error incrementing dkp', error.message)] });
+                    }
                     let rules = pointRules.filter(a => a.monster_type == archive[event].data.monster_type);
                     let dkp = 0;
                     let ppp = 0;
@@ -102,12 +106,16 @@ module.exports = {
                     if (dkp != 0) {
                         let { error } = await supabase.rpc('increment_points', { table_name: config.supabase.tables.users, id: signup.player_id.id, type: 'dkp', amount: dkp });
                         if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error incrementing dkp', error.message)] });
+                        ({ error } = await supabase.rpc('increment_points', { table_name: config.supabase.tables.users, id: signup.player_id.id, type: 'lifetime_dkp', amount: dkp }));
+                        if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error incrementing lifetime dkp', error.message)] });
                     }
                     if (ppp != 0) {
                         let { error } = await supabase.rpc('increment_points', { table_name: config.supabase.tables.users, id: signup.player_id.id, type: 'ppp', amount: ppp });
-                        if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error incrementing dkp', error.message)] });
+                        if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error incrementing ppp', error.message)] });
+                        ({ error } = await supabase.rpc('increment_points', { table_name: config.supabase.tables.users, id: signup.player_id.id, type: 'lifetime_ppp', amount: ppp }));
+                        if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error incrementing lifetime ppp', error.message)] });
                     }
-                }
+                })
                 
                 let { error } = await supabase.from(config.supabase.tables.events).update({ verified: true }).eq('event_id', event);
                 if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating signup', error.message)] });

@@ -60,7 +60,7 @@ module.exports = {
                 }
 
                 let buttons = [
-                    (monster == 'Tiamat' || monsters[monster].placeholders != null || maxWindows == null || maxWindows >= 25) ? null : new ActionRowBuilder()
+                    (monster == 'Tiamat' || archive[event].placeholders != null || maxWindows == null || maxWindows >= 25) ? null : new ActionRowBuilder()
                         .addComponents(
                             new StringSelectMenuBuilder()
                                 .setPlaceholder('Total Windows')
@@ -150,7 +150,7 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
-                if (monsters[selections[id].monster].placeholders == null) {
+                if (archive[selections[id].event].placeholders == null) {
                     if (selections[id].monster == 'Tiamat') {
                         let { data, error } = await supabase.from(config.supabase.tables.signups).select('*').eq('event_id', selections[id].event);
                         if (error) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching signups', error.message)] });
@@ -206,7 +206,7 @@ module.exports = {
                     return await interaction.editReply({ ephemeral: true, embeds: [embed] });
                 }
                 
-                if (monsters[selections[id].monster].placeholders == null && selections[id].windows == null) {
+                if (archive[selections[id].event].placeholders == null && selections[id].windows == null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')
