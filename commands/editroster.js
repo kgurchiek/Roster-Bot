@@ -259,7 +259,7 @@ module.exports = {
                                 .setCustomId(`editroster-selectslot-party-${interaction.id}`)
                                 .setPlaceholder('Select Party')
                                 .addOptions(
-                                    ...Array(monsters[monster].parties).fill().map((a, i) => 
+                                    ...Array(monsters[monster].parties).fill().map((a, i) =>
                                         new StringSelectMenuOptionBuilder()
                                             .setLabel(`${i + 1}`)
                                             .setValue(`${i + 1}`)
@@ -272,7 +272,7 @@ module.exports = {
                                 .setPlaceholder('Select Slot')
                                 .setCustomId(`editroster-selectslot-slot-${interaction.id}`)
                                 .addOptions(
-                                    ...Array(monsters[monster].slots).fill().map((a, i) => 
+                                    ...Array(monsters[monster].slots).fill().map((a, i) =>
                                         new StringSelectMenuOptionBuilder()
                                             .setLabel(`${i + 1}`)
                                             .setValue(`${i + 1}`)

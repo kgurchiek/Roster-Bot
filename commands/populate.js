@@ -12,7 +12,6 @@ module.exports = {
             case 'monster': {
                 let monster = args[2];
                 selections[interaction.id] = {};
-                if (monsters[monster].data.max_windows == 1) selections[interaction.id].windows = 1;
 
                 if (monsters[monster] == null) {
                     let embed = new EmbedBuilder()
@@ -21,6 +20,8 @@ module.exports = {
                         .setDescription(`${monster} is not active`)
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
+                
+                if (monsters[monster].data.max_windows == 1) selections[interaction.id].windows = 1;
 
                 if (monsters[monster].group == null) {
                     interaction.customId = `populate-confirm-${monster}`;

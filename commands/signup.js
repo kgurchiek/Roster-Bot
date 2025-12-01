@@ -161,8 +161,8 @@ module.exports = {
                 }
 
                 let template = templateList.find(a => a.monster_name == monster && a.alliance_number == alliance && a.party_number == party && a.party_slot_number == slot);
-                let templateId = template.slot_template_id;
-                template = template.allowed_job_ids;
+                let templateId = template?.slot_template_id;
+                template = template?.allowed_job_ids;
                 if (template == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed(`Error fetching jobs`, `Could not find template for monster "${monster}", alliance ${alliance}, party ${party}, slot ${slot}`)] });
                 template = template.map(a => {
                     let job = jobList.find(b => b.job_id == a);
