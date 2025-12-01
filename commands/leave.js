@@ -6,16 +6,18 @@ let selections = {};
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('leave'),
-    async buttonHandler({ interaction, user, supabase, monsters }) {
+    async buttonHandler({ interaction, user, supabase, userList, monsters }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster':  {
-                let monster = args[2];
+                let [monster, userId] = args.slice(2);
+                if (userId == null) userId = user.id;
+                else user = userList.find(a => a.id == userId);
                 selections[interaction.id] = {};
 
                 if (monster == 'Tiamat') {
-                    interaction.customId = `leave-confirm-${monster}-${interaction.id}`;
-                    return this.buttonHandler({ interaction, user, supabase, monsters });
+                    interaction.customId = `leave-confirm-${monster}-${interaction.id}-${userId}`;
+                    return this.buttonHandler({ interaction, user, supabase, userList, monsters });
                 }
 
                 if (monsters[monster] == null) {
@@ -46,7 +48,7 @@ module.exports = {
                 if (monsters[monster].placeholders == null && monsters[monster].name != 'Tiamat') {
                     if (monsters[monster].data.max_windows == null || monsters[monster].data.max_windows >= 25) {
                         let modal = new ModalBuilder()
-                            .setCustomId(`leave-${monster}-${interaction.id}-${monsters[monster].data.max_windows}`)
+                            .setCustomId(`leave-windows-${monster}-${interaction.id}-${monsters[monster].data.max_windows}-${userId}`)
                             .setTitle(`Leave ${monster} Raid`)
                             .addComponents(
                                 new ActionRowBuilder()
@@ -61,13 +63,11 @@ module.exports = {
                         return await interaction.showModal(modal);
                     }
 
-                    let embed = new EmbedBuilder()
-                        .setDescription('How many windows did you camp?')
                     let buttons = [
                         new ActionRowBuilder()
                             .addComponents(
                                 new StringSelectMenuBuilder()
-                                    .setPlaceholder('Select Windows')
+                                    .setPlaceholder('How many windows did you camp?')
                                     .setCustomId(`leave-windows-${interaction.id}`)
                                     .addOptions(
                                         ...Array(8).fill().map((a, i) => 
@@ -80,12 +80,12 @@ module.exports = {
                         new ActionRowBuilder()
                             .addComponents(
                                 new ButtonBuilder()
-                                    .setCustomId(`leave-confirm-${monster}-${interaction.id}`)
+                                    .setCustomId(`leave-confirm-${monster}-${interaction.id}-${userId}`)
                                     .setLabel('✓')
                                     .setStyle(ButtonStyle.Success)
                             )
                     ];
-                    message = { ephemeral: true, embeds: [embed], components: buttons };
+                    message = { ephemeral: true, components: buttons };
                 } else {
                     let embed = new EmbedBuilder()
                         .setTitle('Warning')
@@ -95,7 +95,7 @@ module.exports = {
                         new ActionRowBuilder()
                             .addComponents(
                                 new ButtonBuilder()
-                                    .setCustomId(`leave-confirm-${monster}-${interaction.id}`)
+                                    .setCustomId(`leave-confirm-${monster}-${interaction.id}-${userId}`)
                                     .setLabel('✓')
                                     .setStyle(ButtonStyle.Success)
                             )
@@ -106,7 +106,8 @@ module.exports = {
                 break;
             }
             case 'confirm':  {
-                let [monster, id] = args.slice(2);
+                let [monster, id, userId] = args.slice(2);
+                user = userList.find(a => a.id == userId);
 
                 if (monsters[monster] == null) {
                     let embed = new EmbedBuilder()
@@ -200,30 +201,66 @@ module.exports = {
             }
         }
     },
-    async modalHandler({ interaction, user, supabase, monsters }) {        
+    async modalHandler({ interaction, user, supabase, userList, monsters }) {        
         let args = interaction.customId.split('-');
-        let [monster, id, maxWindows] = args.slice(1);
-        maxWindows = parseInt(maxWindows) || Infinity;
+        switch(args[1]) {
+            case 'user': {
+                let monster = args[2];
+        
+                if (monsters[monster] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`${monster} is not active`)
+                    return await interaction.update({ ephemeral: true, embeds: [embed] });
+                }
+        
+                if (!user.staff) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`This action can only be performed by staff`)
+                    return await interaction.update({ ephemeral: true, embeds: [embed] });
+                }
 
-        if (monsters[monster] == null) {
-            let embed = new EmbedBuilder()
-                .setTitle('Error')
-                .setColor('#ff0000')
-                .setDescription(`${monster} is not active`)
-            return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                let dbUser = userList.find(a => a.username == interaction.fields.getTextInputValue('username'));
+                if (dbUser == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`Could not find user "${interaction.fields.getTextInputValue('username')}".`)
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
+
+                interaction.customId = `leave-monster-${monster}-${dbUser.id}`;
+                this.buttonHandler({ interaction, user, supabase, userList, monsters });
+                break;
+            }
+            case 'windows': {
+                let [monster, id, maxWindows, userId] = args.slice(2);
+                maxWindows = parseInt(maxWindows) || Infinity;
+
+                if (monsters[monster] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`${monster} is not active`)
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
+
+                let windows = parseInt(interaction.fields.getTextInputValue('windows'));
+                if (isNaN(windows) || windows < 0 || windows > maxWindows) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`Please enter a valid number of windows${maxWindows == Infinity ? '' : ` (max: ${maxWindows})`}`)
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
+                selections[id].windows = windows;
+
+                interaction.customId = `leave-confirm-${monster}-${id}-${userId}`;
+                this.buttonHandler({ interaction, user, supabase, userList, monsters });
+            }
         }
-
-        let windows = parseInt(interaction.fields.getTextInputValue('windows'));
-        if (isNaN(windows) || windows < 0 || windows > maxWindows) {
-            let embed = new EmbedBuilder()
-                .setTitle('Error')
-                .setColor('#ff0000')
-                .setDescription(`Please enter a valid number of windows${maxWindows == Infinity ? '' : ` (max: ${maxWindows})`}`)
-            return await interaction.reply({ ephemeral: true, embeds: [embed] });
-        }
-        selections[id].windows = windows;
-
-        interaction.customId = `leave-confirm-${monster}-${id}`;
-        this.buttonHandler({ interaction, user, supabase, monsters });
     }
 }

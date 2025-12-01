@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { errorEmbed } = require('../commonFunctions.js');
 const config = require('../config.json');
 
@@ -6,11 +6,38 @@ let selections = {};
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('quickjoin'),
-    async buttonHandler({ interaction, user, supabase, jobList, templateList, monsters }) {
+    async buttonHandler({ interaction, user, supabase, userList, jobList, templateList, monsters }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
-            case 'job': {
+            case 'user': {
                 let monster = args[2];
+
+                if (monsters[monster] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`${monster} is not active`)
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
+
+                let modal = new ModalBuilder()
+                    .setCustomId(`quickjoin-user-${monster}`)
+                    .setTitle(`Add User`)
+                    .addComponents(
+                        new ActionRowBuilder()
+                            .addComponents(
+                                new TextInputBuilder()
+                                    .setCustomId('username')
+                                    .setLabel('Username')
+                                    .setStyle(TextInputStyle.Short)
+                            )
+                    )
+                await interaction.showModal(modal);
+                break;
+            }
+            case 'job': {
+                let [monster, userId] = args.slice(2);
+                if (userId == null) userId = user.id;
                 selections[interaction.id] = {};
 
                 if (monsters[monster] == null) {
@@ -24,7 +51,7 @@ module.exports = {
                 for (let alliances of monsters[monster].signups) {
                     for (let parties of alliances) {
                         for (let slot of parties) {
-                            if (interaction.user.id == slot?.user.id) {
+                            if (userId == slot?.user.id) {
                                 let embed = new EmbedBuilder()
                                     .setTitle('Error')
                                     .setColor('#ff0000')
@@ -74,7 +101,7 @@ module.exports = {
                      new ActionRowBuilder()
                         .addComponents(
                             new ButtonBuilder()
-                                .setCustomId(`quickjoin-confirm-${monster}-${interaction.id}`)
+                                .setCustomId(`quickjoin-confirm-${monster}-${interaction.id}-${userId}`)
                                 .setLabel('✓')
                                 .setStyle(ButtonStyle.Success)
                         )
@@ -83,7 +110,7 @@ module.exports = {
                 break;
             }
             case 'confirm': {
-                let [monster, id] = args.slice(2);
+                let [monster, id, userId] = args.slice(2);
                 if (monsters[monster] == null) {
                     let embed = new EmbedBuilder()
                     .setTitle('Error')
@@ -92,10 +119,12 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
+                if (userId) user = userList.find(a => a.id == userId);
+
                 for (let alliances of monsters[monster].signups) {
                     for (let parties of alliances) {
                         for (let slot of parties) {
-                            if (interaction.user.id == slot?.user.id) {
+                            if (slot?.user.id == userId) {
                                 let embed = new EmbedBuilder()
                                     .setTitle('Error')
                                     .setColor('#ff0000')
@@ -202,6 +231,34 @@ module.exports = {
                 }
                 interaction.deferUpdate();
                 selections[id].job = interaction.values[0];
+                break;
+            }
+        }
+    },
+    async modalHandler({ interaction, user, supabase, userList, jobList, templateList, monsters }) {
+        let args = interaction.customId.split('-');
+        switch (args[1]) {
+            case 'user': {
+                let monster = args[2];
+
+                if (monsters[monster] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`${monster} is not active`)
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
+
+                let dbUser = userList.find(a => a.username == interaction.fields.getTextInputValue('username'));
+                if (dbUser == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`Could not find user "${interaction.fields.getTextInputValue('username')}".`)
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
+                interaction.customId = `quickjoin-job-${monster}-${dbUser.id}`;
+                this.buttonHandler({ interaction, user, supabase, userList, jobList, templateList, monsters });
                 break;
             }
         }

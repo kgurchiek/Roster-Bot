@@ -365,12 +365,14 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                             new ButtonBuilder()
                                 .setCustomId(`quickjoin-job-${this.name}`)
                                 .setLabel('≫ Quick Join')
-                                .setStyle(ButtonStyle.Primary)
-                            )
-                        .addComponents(
+                                .setStyle(ButtonStyle.Primary),
                             new ButtonBuilder()
                                 .setCustomId(`signup-select-${this.name}`)
                                 .setLabel('📝 Sign Up')
+                                .setStyle(ButtonStyle.Primary),
+                            new ButtonBuilder()
+                                .setCustomId(`editroster-monster-${this.name}`)
+                                .setLabel('🛡️ Edit Roster')
                                 .setStyle(ButtonStyle.Primary)
                         ),
                     this.signups.find((a, i) => a.find((b, j) => this.leaders[i][j] == null)) == null ? null : new ActionRowBuilder()

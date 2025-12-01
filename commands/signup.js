@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { errorEmbed } = require('../commonFunctions.js');
 const config = require('../config.json');
 
@@ -6,11 +6,38 @@ let selections = {};
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('signup'),
-    async buttonHandler({ interaction, user, supabase, jobList, templateList, monsters }) {
+    async buttonHandler({ interaction, user, supabase, userList, jobList, templateList, monsters }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
-            case 'select': {
+            case 'user': {
                 let monster = args[2];
+
+                if (monsters[monster] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`${monster} is not active`)
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
+
+                let modal = new ModalBuilder()
+                    .setCustomId(`signup-user-${monster}`)
+                    .setTitle(`Add User`)
+                    .addComponents(
+                        new ActionRowBuilder()
+                            .addComponents(
+                                new TextInputBuilder()
+                                    .setCustomId('username')
+                                    .setLabel('Username')
+                                    .setStyle(TextInputStyle.Short)
+                            )
+                    )
+                await interaction.showModal(modal);
+                break;
+            }
+            case 'select': {
+                let [monster, userId] = args.slice(2);
+                if (userId == null) userId = user.id;
                 selections[interaction.id] = {};
                 
                 if (monsters[monster] == null) {
@@ -24,7 +51,7 @@ module.exports = {
                 for (let alliances of monsters[monster].signups) {
                     for (let parties of alliances) {
                         for (let slot of parties) {
-                            if (interaction.user.id == slot?.user.id) {
+                            if (userId == slot?.user.id) {
                                 let embed = new EmbedBuilder()
                                     .setTitle('Error')
                                     .setColor('#ff0000')
@@ -78,7 +105,7 @@ module.exports = {
                     new ActionRowBuilder()
                         .addComponents(
                             new ButtonBuilder()
-                                .setCustomId(`signup-job-${monster}-${interaction.id}`)
+                                .setCustomId(`signup-job-${monster}-${interaction.id}-${userId}`)
                                 .setLabel('✓')
                                 .setStyle(ButtonStyle.Success)
                         )
@@ -88,8 +115,7 @@ module.exports = {
                 break;
             }
             case 'job': {
-                let monster = args[2];
-                let id = args[3];
+                let [monster, id, userId] = args.slice(2);
 
                 if (selections[id] == null) {
                     let embed = new EmbedBuilder()
@@ -123,7 +149,7 @@ module.exports = {
                 for (let alliances of monsters[monster].signups) {
                     for (let parties of alliances) {
                         for (let slot of parties) {
-                            if (interaction.user.id == slot?.user.id) {
+                            if (userId == slot?.user.id) {
                                 let embed = new EmbedBuilder()
                                     .setTitle('Error')
                                     .setColor('#ff0000')
@@ -164,7 +190,7 @@ module.exports = {
                      new ActionRowBuilder()
                         .addComponents(
                             new ButtonBuilder()
-                                .setCustomId(`signup-confirm-${monster}-${id}-${templateId}`)
+                                .setCustomId(`signup-confirm-${monster}-${id}-${templateId}-${userId}`)
                                 .setLabel('✓')
                                 .setStyle(ButtonStyle.Success)
                         )
@@ -173,19 +199,21 @@ module.exports = {
                 break;
             }
             case 'confirm': {
-                let [monster, id, templateId] = args.slice(2);
+                let [monster, id, templateId, userId] = args.slice(2);
                 if (monsters[monster] == null) {
                     let embed = new EmbedBuilder()
-                    .setTitle('Error')
-                    .setColor('#ff0000')
-                    .setDescription(`${monster} is not active`)
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`${monster} is not active`)
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
+
+                if (userId) user = userList.find(a => a.id == userId);
 
                 for (let alliances of monsters[monster].signups) {
                     for (let parties of alliances) {
                         for (let slot of parties) {
-                            if (interaction.user.id == slot?.user.id) {
+                            if (userId == slot?.user.id) {
                                 let embed = new EmbedBuilder()
                                     .setTitle('Error')
                                     .setColor('#ff0000')
@@ -215,12 +243,12 @@ module.exports = {
                 if (job == null) return await interaction.reply({ ephemeral: true, embeds: [new EmbedBuilder().setTitle('Error').setColor('#ff0000').setDescription('Select the job you wish to sign up for')] });
 
                 await interaction.deferReply({ ephemeral: true });
-                let { data, error } = await supabase.from(config.supabase.tables.signups).insert({
+                let { error } = await supabase.from(config.supabase.tables.signups).insert({
                     event_id: monsters[monster].event,
                     slot_template_id: templateId,
                     player_id: user.id,
                     assigned_job_id: job
-                }).select('*').single();
+                });
                 if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating database', error.message)] });
                 
                 monsters[monster].signups[alliance - 1][party - 1][slot - 1] = {
@@ -270,6 +298,34 @@ module.exports = {
                 }
                 interaction.deferUpdate();
                 selections[id].job = interaction.values[0];
+                break;
+            }
+        }
+    },
+    async modalHandler({ interaction, user, supabase, userList, jobList, templateList, monsters }) {
+        let args = interaction.customId.split('-');
+        switch (args[1]) {
+            case 'user': {
+                let monster = args[2];
+
+                if (monsters[monster] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`${monster} is not active`)
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
+
+                let dbUser = userList.find(a => a.username == interaction.fields.getTextInputValue('username'));
+                if (dbUser == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`Could not find user "${interaction.fields.getTextInputValue('username')}".`)
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
+                interaction.customId = `signup-select-${monster}-${dbUser.id}`;
+                this.buttonHandler({ interaction, user, supabase, userList, jobList, templateList, monsters });
                 break;
             }
         }
