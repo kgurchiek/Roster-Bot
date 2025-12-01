@@ -160,7 +160,7 @@ module.exports = {
                     }
                 }
 
-                let template = templateList.find(a => a.monster_name == monster && a.alliance_number == alliance && a.party_number == party && a.party_slot_number == slot);
+                let template = templateList.find(a => a.monster_name == monster.split('/')[0] && a.alliance_number == alliance && a.party_number == party && a.party_slot_number == slot);
                 let templateId = template?.slot_template_id;
                 template = template?.allowed_job_ids;
                 if (template == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed(`Error fetching jobs`, `Could not find template for monster "${monster}", alliance ${alliance}, party ${party}, slot ${slot}`)] });
