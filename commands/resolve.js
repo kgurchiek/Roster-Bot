@@ -78,7 +78,7 @@ module.exports = {
                 await interaction.deferReply({ ephemeral: true });
                 archive[event].data.signups.forEach(async (signup, i, arr) => {
                     if (arr.slice(0, i).find(a => a.player_id.id == signup.player_id.id) == null) {
-                        let { error } = await supabase.rpc('increment_points', { table_name: config.supabase.tables.users, id: signup.player_id.id, type: 'last_camped', amount: 1 });
+                        let { error } = await supabase.from(config.supabase.tables.users).update({last_camped: new Date() }).eq('id', signup.player_id.id);
                         if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error incrementing dkp', error.message)] });
                     }
                     let rules = pointRules.filter(a => a.monster_type == archive[event].data.monster_type);
