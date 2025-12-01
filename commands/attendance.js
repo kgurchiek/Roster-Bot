@@ -60,7 +60,7 @@ module.exports = {
                 }
 
                 let buttons = [
-                    (monster == 'Tiamat' || maxWindows == null || maxWindows >= 25) ? null : new ActionRowBuilder()
+                    (monster == 'Tiamat' || monsters[monster].placeholders != null || maxWindows == null || maxWindows >= 25) ? null : new ActionRowBuilder()
                         .addComponents(
                             new StringSelectMenuBuilder()
                                 .setPlaceholder('Total Windows')
@@ -150,43 +150,44 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
-                if (selections[id].monster == 'Tiamat') {
-                    let { data, error } = await supabase.from(config.supabase.tables.signups).select('*').eq('event_id', selections[id].event);
-                    if (error) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching signups', error.message)] });
-                    selections[id].windows = data.length;
-                } else if (selections[id].maxWindows == null || selections[id].maxWindows >= 25) {
-                    let modal = new ModalBuilder()
-                        .setCustomId(`attendance-${id}`)
-                        .setTitle(`${selections[id].monster} Attendance`)
-                        .addComponents(
-                            new ActionRowBuilder()
-                                .addComponents(
-                                    new TextInputBuilder()
-                                        .setCustomId('windows')
-                                        .setLabel('Windows')
-                                        .setStyle(TextInputStyle.Short)
-                                )
-                        )
+                if (monsters[selections[id].monster].placeholders == null) {
+                    if (selections[id].monster == 'Tiamat') {
+                        let { data, error } = await supabase.from(config.supabase.tables.signups).select('*').eq('event_id', selections[id].event);
+                        if (error) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching signups', error.message)] });
+                        selections[id].windows = data.length;
+                    } else if (selections[id].maxWindows == null || selections[id].maxWindows >= 25) {
+                        let modal = new ModalBuilder()
+                            .setCustomId(`attendance-${id}`)
+                            .setTitle(`${selections[id].monster} Attendance`)
+                            .addComponents(
+                                new ActionRowBuilder()
+                                    .addComponents(
+                                        new TextInputBuilder()
+                                            .setCustomId('windows')
+                                            .setLabel('Windows')
+                                            .setStyle(TextInputStyle.Short)
+                                    )
+                            )
 
-                    return await interaction.showModal(modal);
-                } else {
-                    if (selections[id].windows == null) {
-                        let embed = new EmbedBuilder()
-                            .setTitle('Error')
-                            .setColor('#ff0000')
-                            .setDescription('Please select the number of windows')
-                        return await interaction.reply({ ephemeral: true, embeds: [embed] });
-                    }
-    
-                    if (selections[id].windows < 0 || selections[id].windows > selections[id].maxWindows) {
-                        let embed = new EmbedBuilder()
-                            .setTitle('Error')
-                            .setColor('#ff0000')
-                            .setDescription(`Please enter a valid number of windows${selections[id].maxWindows == null ? '' : ` (max: ${selections[id].maxWindows})`}`)
-                        return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                        return await interaction.showModal(modal);
+                    } else {
+                        if (selections[id].windows == null) {
+                            let embed = new EmbedBuilder()
+                                .setTitle('Error')
+                                .setColor('#ff0000')
+                                .setDescription('Please select the number of windows')
+                            return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                        }
+        
+                        if (selections[id].windows < 0 || selections[id].windows > selections[id].maxWindows) {
+                            let embed = new EmbedBuilder()
+                                .setTitle('Error')
+                                .setColor('#ff0000')
+                                .setDescription(`Please enter a valid number of windows${selections[id].maxWindows == null ? '' : ` (max: ${selections[id].maxWindows})`}`)
+                            return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                        }
                     }
                 }
-
                 
                 interaction.customId = `attendance-confirm2-${id}`;
                 this.buttonHandler({ interaction, supabase, monsters, archive });
@@ -205,7 +206,7 @@ module.exports = {
                     return await interaction.editReply({ ephemeral: true, embeds: [embed] });
                 }
                 
-                if (selections[id].windows == null) {
+                if (monsters[selections[id].monster].placeholders == null && selections[id].windows == null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')
