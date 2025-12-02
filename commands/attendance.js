@@ -66,10 +66,10 @@ module.exports = {
                                 .setPlaceholder('Total Windows')
                                 .setCustomId(`attendance-windows-${interaction.id}`)
                                 .addOptions(
-                                    ...Array((maxWindows + 1) - minWindows).fill().map((a, i) => 
+                                    ...Array(maxWindows - minWindows).fill().map((a, i) => 
                                         new StringSelectMenuOptionBuilder()
-                                            .setLabel(`${i + minWindows}`)
-                                            .setValue(`${i}`)
+                                            .setLabel(`${i + minWindows + 1}`)
+                                            .setValue(`${i + 1}`)
                                     )
                                 )
                         ),

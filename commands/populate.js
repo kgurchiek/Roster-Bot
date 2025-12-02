@@ -51,7 +51,7 @@ module.exports = {
                 selections[interaction.id] = {};
                 if (monsters[monster].data.max_windows == 1) selections[interaction.id].windows = 1;
 
-                if (!interaction.deferred) await interaction.deferReply();
+                if (!interaction.deferred) await interaction.deferReply({ ephemeral: true });
                 if (monsters[monster] == null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')

@@ -256,10 +256,11 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         slots = config.roster.slots;
         createEmbeds() {
             if (this.active) {
+                let signups = this.signups.reduce((a, alliance) => a + alliance.reduce((b, party) => b + party.filter(c => c != null).length, 0), 0);
                 let embed = new EmbedBuilder()
                     .setTitle(`🐉 ${this.name}${this.day == null ? '' : ` (Day ${this.day})`}${this.rage ? ' (Rage)' : ''}${this.paused ? ' (Paused)' : ''}`)
                     .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.name.split('/')[0].split('(')[0].replaceAll(' ', '')}.png`)
-                    .setDescription(`🕒 Starts at <t:${this.timestamp}:D> <t:${this.timestamp}:T> (<t:${this.timestamp}:R>)`)
+                    .setDescription(`**${signups} member${signups == 1 ? '' : 's'} signed up**\n🕒 Starts at <t:${this.timestamp}:D> <t:${this.timestamp}:T> (<t:${this.timestamp}:R>)`)
                     .addFields(
                         ...Array(this.alliances).fill().map((a, i) => [
                             Array(this.parties).fill().map((b, j) => {
@@ -357,7 +358,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                             .setLabel('💰 Populate')
                             .setStyle(ButtonStyle.Success)
                     )
-            ]
+            ];
             if (this.active) {
                 return [
                     new ActionRowBuilder()
@@ -421,7 +422,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 ].filter(a => a != null);
             }
             if (this.data.signups.length > 0) {
-                let signups = this.data.signups.filter((a, i, arr) => arr.slice(0, i).find(b => b.player_id.id == a.player_id.id));
+                let signups = this.data.signups.filter((a, i, arr) => arr.slice(0, i).find(b => b.player_id.id == a.player_id.id) == null);
                 return [
                     new ActionRowBuilder()
                         .addComponents(
