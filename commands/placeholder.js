@@ -115,11 +115,6 @@ module.exports = {
                 if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating placeholders', error.message)] });
                 monsters[monster].placeholders[user.username] += selections[id].count;
 
-                let embed = new EmbedBuilder()
-                    .setTitle('Success')
-                    .setColor('#00ff00')
-                    .setDescription(`Claimed ${selections[id].count} placeholder kill${selections.id == 1 ? '' : 's'}.`)
-                await interaction.editReply({ ephemeral: true, embeds: [embed] });
                 await monsters[monster].message.edit({ embeds: monsters[monster].createEmbeds() });
                 break;
             }

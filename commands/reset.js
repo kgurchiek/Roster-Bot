@@ -18,7 +18,7 @@ module.exports = {
         let embed = new EmbedBuilder()
             .setTitle('Warning')
             .setColor('#ffff00')
-            .setDescription('Are you sure you want to reset all active rosters? This will permanently delete all event and signup data that hasn\'t been verified.')
+            .setDescription('Are you sure you want to reset all active rosters? This will permanently delete all event and signup data.')
         let buttons = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
@@ -39,10 +39,10 @@ module.exports = {
 
         await interaction.deferReply({ ephemeral: true });
         for (let event in archive) {
-            let { error } = await supabase.from(config.supabase.tables.signups).delete().eq('event_id', event);
+            let { error } = await supabase.from(config.supabase.tables.signups).delete().gt('event_id', -1);
             if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error deleting signups', error.message)] });
 
-            ({ error } = await supabase.from(config.supabase.tables.events).delete().eq('event_id', event));
+            ({ error } = await supabase.from(config.supabase.tables.events).delete().gt('event_id', -1));
             if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error deleting event', error.message)] });
         }
 

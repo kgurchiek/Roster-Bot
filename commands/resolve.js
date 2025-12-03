@@ -5,7 +5,7 @@ const config = require('../config.json');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('resolve'),
-    async buttonHandler({ interaction, user, supabase, pointRules, archive }) {
+    async buttonHandler({ interaction, user, supabase, campRules, pointRules, archive }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {
@@ -81,24 +81,30 @@ module.exports = {
                         let { error } = await supabase.from(config.supabase.tables.users).update({last_camped: new Date() }).eq('id', signup.player_id.id);
                         if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error incrementing dkp', error.message)] });
                     }
-                    let rules = pointRules.filter(a => a.monster_type == archive[event].data.monster_type);
+                    let campRule = campRules.find(a => a.monster_name == archive[event].name);
+                    if (campRule == null) process.exit();
                     let dkp = 0;
                     let ppp = 0;
                     ppp += parseFloat((Math.floor(signup.placeholders / 4) * 0.2).toFixed(1));
+                    let campPoints = campRule.camp_points[signup.windows - 1] || campRule.camp_points[campRule.camp_points.length - 1] || 0;
+                    if (campRule.bonus_windows) campPoints += Math.min(Math.floor(signup.windows / campRule.bonus_windows) * campRule.bonus_points, campRule.max_bonus);
+                    if (campRule.type.toLowerCase() == 'dkp') dkp += campPoints;
+                    else ppp += campPoints;
+                    let bonusRules = pointRules.filter(a => a.monster_type == archive[event].data.monster_type);
                     if (signup.tagged) {
                         let { error } = await supabase.from(config.supabase.tables.tags).insert({ player_id: signup.player_id.id, monster_name: archive[event].name });
                         if (error) console.log(`Error inserting ${archive[event].name} tag log for ${signup.player_id.username}: ${error.message}`);
-                        let rule = rules.find(a => a.point_code == 't');
+                        let rule = bonusRules.find(a => a.point_code == 't');
                         dkp += rule.dkp_value;
                         ppp += rule.ppp_value;
                     }
                     if (signup.killed) {
-                        let rule = rules.find(a => a.point_code == 'k');
+                        let rule = bonusRules.find(a => a.point_code == 'k');
                         dkp += rule.dkp_value;
                         ppp += rule.ppp_value;
                     }
                     if (signup.rage) {
-                        let rule = rules.find(a => a.point_code == 'r');
+                        let rule = bonusRules.find(a => a.point_code == 'r');
                         dkp += rule.dkp_value;
                         ppp += rule.ppp_value;
                     }

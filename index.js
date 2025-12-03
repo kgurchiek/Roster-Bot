@@ -96,6 +96,28 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         return hadError;
     }
 
+    let campRules;
+    async function updateCampRules() {
+        let hadError = false;
+        try {
+            let { data, error } = await supabase.from(config.supabase.tables.campRules).select('*');
+            if (error == null) {
+                campRules = data;
+                // console.log(`[Camp Rules]: Fetched ${campRules.length} point rules.`);
+            } else {
+                hadError = true;
+                console.log('[Point Rules]: Error:', error.message);
+                await new Promise(res => setTimeout(res, 5000));
+            }
+        } catch (err) {
+            hadError = true;
+            console.log('[Camp Rules]: Error:', err)
+        }
+        
+        setTimeout(updateCampRules, 2000);
+        return hadError;
+    }
+
     let pointRules;
     async function updatePointRules() {
         let hadError = false;
@@ -136,7 +158,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             console.log('[Group List]: Error:', err)
         }
         
-        setTimeout(updatePointRules, 2000);
+        setTimeout(updateGroupList, 2000);
         return hadError;
     }
 
@@ -527,7 +549,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 try {
                     await discordUser.send({ embeds: [embed], components });
                 } catch (error) {
-                    console.log(`Error sending dm to user ${signup.player_id}:`, error);
+                    console.log(`Error sending dm to user ${signup.player_id.id}:`, error);
                 }
             }
 
@@ -731,7 +753,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             }
             
             try {
-                await command.execute({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, Monster, updateTagRates });
+                await command.execute({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, campRules, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, Monster, updateTagRates });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()
@@ -748,7 +770,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             if (!command) return;
 
             try {
-                await command.autocomplete({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, Monster, updateTagRates });
+                await command.autocomplete({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, campRules, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, Monster, updateTagRates });
             } catch (error) {
                 console.log(error);
                 try {
@@ -759,7 +781,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         if (interaction.isButton()) {
             const command = client.commands.get(interaction.customId.split('-')[0]);
             try {
-                if (command?.buttonHandler) command.buttonHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, Monster, updateTagRates });
+                if (command?.buttonHandler) command.buttonHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, campRules, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, Monster, updateTagRates });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()
@@ -774,7 +796,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         if (interaction.isAnySelectMenu()) {
             const command = client.commands.get(interaction.customId.split('-')[0]);
             try {
-                if (command?.selectHandler) command.selectHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, Monster, updateTagRates });
+                if (command?.selectHandler) command.selectHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, campRules, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, Monster, updateTagRates });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()
@@ -793,7 +815,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 return;
             }
             try {
-                if (command?.modalHandler) command.modalHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, Monster, updateTagRates });
+                if (command?.modalHandler) command.modalHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, campRules, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, Monster, updateTagRates });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()
@@ -813,6 +835,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             await updateUsers() ||
             await updateJobs() ||
             await updateTemplates() ||
+            await updateCampRules() ||
             await updatePointRules() ||
             await updateGroupList()
         ) process.exit();

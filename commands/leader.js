@@ -46,7 +46,7 @@ module.exports = {
                                 }
                             }
                             monsters[monster].leaders[i][j] = user;
-                            let { error } = await supabase.from(config.supabase.tables.signups).update({ leader: true }).eq('signup_id', monsters[monster].signups[i][j].find(a => a.user.id == user.id).signupId);
+                            let { error } = await supabase.from(config.supabase.tables.signups).update({ leader: true }).eq('signup_id', monsters[monster].signups[i][j].find(a => a?.user.id == user.id).signupId);
                             if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating signup leader status', error.message)] });
                             await monsters[monster].updateMessage();
                             let embed = new EmbedBuilder()

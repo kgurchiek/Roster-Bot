@@ -158,24 +158,17 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
-                await interaction.deferReply({ ephemeral: true });
-
                 if (monster == 'Tiamat' || monsters[monster].placeholders != null || monsters[monster].data.max_windows == 1) {
                     let { error } = await supabase.from(config.supabase.tables.signups).delete().eq('event_id', monsters[monster].event).eq('player_id', user.id).eq('active', true);
-                    if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating database', error.message)] });
+                    if (error) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error updating database', error.message)] });
                 } else {
                     let { error } = await supabase.from(config.supabase.tables.signups).update(Object.assign({ active: false }, selections[id].windows == null ? {} : { windows: selections[id].windows })).eq('event_id', monsters[monster].event).eq('player_id', user.id).eq('active', true);
-                    if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating database', error.message)] });
+                    if (error) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error updating database', error.message)] });
                 }
 
                 monsters[monster].signups[alliance][party][slot] = null;
                 delete selections[id];
 
-                let embed = new EmbedBuilder()
-                    .setTitle('Success')
-                    .setColor('#00ff00')
-                    .setDescription(`You let the raid`)
-                await interaction.editReply({ ephemeral: true, embeds: [embed] });
                 await monsters[monster].message.edit({ embeds: monsters[monster].createEmbeds() });
                 await monsters[monster].updateLeaders();
                 break;

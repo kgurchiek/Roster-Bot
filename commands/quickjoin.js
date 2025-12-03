@@ -189,14 +189,13 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
-                await interaction.deferReply({ ephemeral: true });
                 let { data, error } = await supabase.from(config.supabase.tables.signups).insert({
                     event_id: monsters[monster].event,
                     slot_template_id: templateId,
                     player_id: user.id,
                     assigned_job_id: job
                 }).select('*').single();
-                if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating database', error.message)] });
+                if (error) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error updating database', error.message)] });
                 
                 monsters[monster].signups[alliance - 1][party - 1][slot - 1] = {
                     user,
@@ -205,11 +204,6 @@ module.exports = {
                 }
                 delete selections[id];
 
-                let embed = new EmbedBuilder()
-                    .setTitle('Success')
-                    .setColor('#00ff00')
-                    .setDescription(`You signed up for alliance ${alliance}, party ${party}, slot ${slot}`)
-                await interaction.editReply({ ephemeral: true, embeds: [embed] });
                 await monsters[monster].message.edit({ embeds: monsters[monster].createEmbeds() });
                 await monsters[monster].updateLeaders();
                 break;
