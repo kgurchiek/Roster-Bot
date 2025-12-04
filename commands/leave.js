@@ -169,6 +169,7 @@ module.exports = {
                 monsters[monster].signups[alliance][party][slot] = null;
                 delete selections[id];
 
+                await interaction.update({ content: '​', embeds: [], components: [] });
                 await monsters[monster].message.edit({ embeds: monsters[monster].createEmbeds() });
                 await monsters[monster].updateLeaders();
                 break;

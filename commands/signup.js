@@ -257,6 +257,7 @@ module.exports = {
                 }
                 delete selections[id];
 
+                await interaction.update({ content: '​', embeds: [], components: [] });
                 await monsters[monster].updateLeaders();
                 break;
             }

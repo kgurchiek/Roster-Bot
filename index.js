@@ -34,7 +34,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
     async function updateUsers() {
         let hadError = false;
         try {
-            let { data, error } = await supabase.from(config.supabase.tables.users).select('id::text, username, dkp, ppp, frozen, lifetime_dkp, lifetime_ppp');
+            let { data, error } = await supabase.from(config.supabase.tables.users).select('*');
             if (error == null) {
                 userList = data;
                 // console.log(`[User List]: Fetched ${userList.length} users.`);
@@ -238,7 +238,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
 
         for (let user in tags) {
             for (let monster in tags[user]) {
-                tags[user][`${monster.toLowerCase().replaceAll(' ', '_')}_tag_rate`] = tags[user][monster] / data.filter(a => a.monster_name == monster).length;
+                tags[user][`${monster.toLowerCase().replaceAll(' ', '')}_tag_rate`] = tags[user][monster] / data.filter(a => a.monster_name == monster).length;
                 delete tags[user][monster];
             }
             ({ error } = await supabase.from(config.supabase.tables.users).update(tags[user]).eq('id', user));
@@ -246,6 +246,37 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         }
     }
     updateTagRates();
+
+    async function updateFreeze() {
+        for (let user of userList || []) {
+            if (user.frozen) {
+                let { data: signups, error } = await supabase.from(config.supabase.tables.signups).select('event_id (monster_name), date').eq('player_id', user.id);
+                if (error) {
+                    console.log(`Error fetching ${user.username}'${user.username.endsWith('s') ? '' : 's'}: ${error.message}`);
+                    continue;
+                }
+                rules = signups.filter(a => new Date(a.date).getTime() > new Date(user.frozen_date).getTime()).map(a => campRules.find(b => b.monster_name == a.event_id.monster_name));
+                if (rules.includes(null)) {
+                    console.log(`[Update Freeze]: Error: cannot find camp rule for monster "${signups[rules.indexOf(null)].event_id.monster_name}"`);
+                    continue;
+                }
+                if (rules.length >= 7) {
+                    user.frozen = false;
+                    let { error } = await supabase.from(config.supabase.tables.users).update({ frozen: false }).eq('id', user.id);
+                    if (error) console.log(`Error unfreezing ${user.username}: ${error.message}`);
+                }
+            } else {
+                if (Date.now() - new Date(user.last_camped).getTime() > 14 * 24 * 60 * 60 * 1000) {
+                    user.frozen = true;
+                    user.frozen_date = new Date().toISOString();
+                    let { error } = await supabase.from(config.supabase.tables.users).update({ frozen: true, frozen_date: new Date().toISOString() }).eq('id', user.id);
+                    if (error) console.log(`Error freezing ${user.username}: ${error.message}`);
+                }
+            }
+        }
+
+        setTimeout(updateFreeze, 60000);
+    }
 
     class Monster {
         constructor(name, timestamp, day, event, threads, rage, thread, message, windows, killer) {
@@ -278,7 +309,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         slots = config.roster.slots;
         createEmbeds() {
             if (this.active) {
-                let signups = this.signups.reduce((a, alliance) => a + alliance.reduce((b, party) => b + party.filter(c => c != null).length, 0), 0);
+                let signups = this.signups.flat().flat().filter((a, i, arr) => a != null && arr.slice(0, i).find(b => a.user.id == b.user.id) == null).length;
                 let embed = new EmbedBuilder()
                     .setTitle(`🐉 ${this.name}${this.day == null ? '' : ` (Day ${this.day})`}${this.rage ? ' (Rage)' : ''}${this.paused ? ' (Paused)' : ''}`)
                     .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.name.split('/')[0].split('(')[0].replaceAll(' ', '')}.png`)
@@ -500,6 +531,10 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                     }
                 }
             }
+
+            let attendance = (this.data.signups ? this.data.signups.map(a => a.signup_id) : this.signups.flat().flat().filter(a => a != null).map(a => a.signupId)).filter((a, i, arr) => arr.slice(0, i).find(b => a == b) == null);
+            let { error } = supabase.from(config.supabase.tables.events).update({ attendance }).eq('event_id', this.event);
+            if (error) console.log(`Error updating attendance for event ${this.event}: ${error.message}`);
         }
         async close() {
             this.active = false;
@@ -527,7 +562,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
 
             for (let signup of this.data.signups.filter(a => a.active)) {
                 let user = signup.player_id;
-                if (this.name == 'Tiamat') signup.windows = this.data.signups.filter(a => a.id == user.id).length;
+                if (this.name == 'Tiamat') signup.windows = this.data.signups.filter(a => a.player_id.id == user.id).length;
                 let discordUser = client.users.cache.get(user.id);
                 let embed = new EmbedBuilder()
                     .setTitle('Confirm Attendance')
@@ -839,6 +874,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             await updatePointRules() ||
             await updateGroupList()
         ) process.exit();
+        updateFreeze();
         client.login(config.discord.token);
     })()
 })();
