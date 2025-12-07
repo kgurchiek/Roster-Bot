@@ -5,7 +5,7 @@ const config = require('../config.json');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('leader'),
-    async buttonHandler({ interaction, user, supabase, monsters }) {
+    async buttonHandler({ interaction, user, supabase, monsters, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {
@@ -53,7 +53,9 @@ module.exports = {
                                 .setTitle('Success')
                                 .setColor('#00ff00')
                                 .setDescription('You are now the leader of your party')
-                            return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                            await interaction.reply({ ephemeral: true, embeds: [embed] });
+                            embed = new EmbedBuilder().setDescription(`${user.username} is now leader of alliance ${i}, party ${k} of the ${monster} raid.`);
+                            return await logChannel.send({ embeds: [embed] });
                         }
                     }
                 }

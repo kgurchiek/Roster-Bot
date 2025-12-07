@@ -6,7 +6,7 @@ let selections = {};
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('leave'),
-    async buttonHandler({ interaction, user, supabase, userList, monsters }) {
+    async buttonHandler({ interaction, user, supabase, userList, monsters, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster':  {
@@ -170,6 +170,8 @@ module.exports = {
                 delete selections[id];
 
                 await interaction.update({ content: '​', embeds: [], components: [] });
+                let embed = new EmbedBuilder().setDescription(`${user.username} has left the ${monster} raid`);
+                await logChannel.send({ embeds: [embed] });
                 await monsters[monster].message.edit({ embeds: monsters[monster].createEmbeds() });
                 await monsters[monster].updateLeaders();
                 break;

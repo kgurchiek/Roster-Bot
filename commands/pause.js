@@ -5,7 +5,7 @@ const config = require('../config.json');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('pause'),
-    async buttonHandler({ interaction, user, monsters }) {
+    async buttonHandler({ interaction, user, monsters, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'pause': {
@@ -29,6 +29,8 @@ module.exports = {
 
                 monsters[monster].paused = true;
                 await interaction.deferUpdate();
+                let embed = new EmbedBuilder().setDescription(`The ${monster} raid has been paused.`);
+                await logChannel.send({ embeds: [embed] });
                 await monsters[monster].updateMessage();
                 break;
             }
@@ -54,6 +56,8 @@ module.exports = {
                 monsters[monster].paused = false;
                 await interaction.deferUpdate();
                 await monsters[monster].updateMessage();
+                let embed = new EmbedBuilder().setDescription(`The ${monster} raid has been unpaused.`);
+                await logChannel.send({ embeds: [embed] });
                 break;
             }
         }

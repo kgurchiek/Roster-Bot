@@ -6,7 +6,7 @@ let selections = {};
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('attendance'),
-    async buttonHandler({ interaction, user, supabase, monsters, archive }) {
+    async buttonHandler({ interaction, user, supabase, monsters, archive, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {
@@ -268,6 +268,8 @@ module.exports = {
                         .setColor('#00ff00')
                         .setDescription(`Your attendence for the ${selection.monster} raid has been recorded`)
                     await selection.message.edit({ embeds: [embed] });
+                    embed = new EmbedBuilder().setDescription(`${user.username} has submitted attendence for the ${selection.monster} raid.`)
+                    await logChannel.send({ embeds: [embed] });
                 }
                 break;
             }

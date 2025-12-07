@@ -4,35 +4,32 @@ const config = require('../config.json');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('createrage')
+        .setName('createroster')
         .setDescription('Opens a roster for a user')
         .addStringOption(option =>
             option.setName('monster')
                 .setDescription('the monster to open a roster for')
                 .setAutocomplete(true)
                 .setRequired(true)
+        )
+        .addBooleanOption(option =>
+            option.setName('rage')
+                .setDescription('whether or not it\'s a rage roster')
         ),
     async autocomplete({ interaction, monsterList }) {
         const focusedValue = interaction.options.getFocused(true);
         await interaction.respond(monsterList.filter(a => a.monster_name.toLowerCase().includes(focusedValue.value.toLowerCase())).map(a => ({ name: a.monster_name, value: a.monster_name })).sort((a, b) => a.name > b.name ? 1 : -1).slice(0, 25));
     },
-    async execute({ interaction, supabase, monsters, rosterChannels, Monster }) {
+    async execute({ interaction, supabase, monsters, rosterChannels, logChannel, Monster }) {
         await interaction.deferReply({ ephemeral: true });
         let monster = interaction.options.getString('monster');
+        let rage = interaction.options.getBoolean('rage');
 
-        if (monsters[monster] == null) {
+        if (rage && monsters[monster]?.rage) {
             let embed = new EmbedBuilder()
                 .setTitle('Error')
                 .setColor('#ff0000')
-                .setDescription(`${monster} is not active`)
-            return await interaction.editReply({ ephemeral: true, embeds: [embed] });
-        }
-
-        if (monsters[monster].rage) {
-            let embed = new EmbedBuilder()
-                .setTitle('Error')
-                .setColor('#ff0000')
-                .setDescription(`The ${monster} raid is already in rage mode`)
+                .setDescription(`The ${monster} raid is already open in rage mode`)
             return await interaction.editReply({ ephemeral: true, embeds: [embed] });
         }
 
@@ -45,7 +42,7 @@ module.exports = {
             let { data, error } = await supabase.from(config.supabase.tables.events).insert({
                 monster_name: monster,
                 start_time: new Date(timestamp * 1000),
-                rage: true
+                rage
             }).select('*').single();
             if (error) return interaction.editReply({ ephemeral: true, embeds: [errorEmbed(`Error creating event for ${monster}:`, error.message)] });
             event = data;
@@ -71,20 +68,22 @@ module.exports = {
             archive[monsters[monster].event] = monsters[monster];
 
             let embed = new EmbedBuilder()
-                .setTitle('Success')
-                .setColor('#00ff00')
-                .setDescription(`Created a rage roster for ${monster}`)
+                .setDescription(`Created a${rage ? ' rage' : ''} roster for ${monster}`)
+            await logChannel.send({ embeds: [embed] });
+            embed.setTitle('Success');
+            embed.setColor('#00ff00');
             await interaction.editReply({ ephemeral: true, embeds: [embed] });
         } else {
             let { error } = await supabase.from(config.supabase.tables.events).update({ rage: true }).eq('event_id', monsters[monster].event);
             if (error) return await interaction.editReply({ ephemeral: true, embeds: [new errorEmbed(`Error updating ${monster} rage status`, error.message)] });
-            monsters[monster].rage = true;
+            monsters[monster].rage = rage;
             await monsters[monster].message.edit({ embeds: monsters[monster].createEmbeds() });
 
             let embed = new EmbedBuilder()
-                .setTitle('Success')
-                .setColor('#00ff00')
-                .setDescription(`The ${monster} raid has been updated to a rage roster`)
+                .setDescription(`The ${monster} raid has been updated`)
+            await logChannel.send({ embeds: [embed] });
+            embed.setTitle('Success');
+            embed.setColor('#00ff00');
             await interaction.editReply({ ephemeral: true, embeds: [embed] });
         }
     }

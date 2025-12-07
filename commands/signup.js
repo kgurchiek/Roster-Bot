@@ -6,7 +6,7 @@ let selections = {};
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('signup'),
-    async buttonHandler({ interaction, user, supabase, userList, jobList, templateList, monsters }) {
+    async buttonHandler({ interaction, user, supabase, userList, jobList, templateList, monsters, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'user': {
@@ -258,6 +258,8 @@ module.exports = {
                 delete selections[id];
 
                 await interaction.update({ content: '​', embeds: [], components: [] });
+                let embed = new EmbedBuilder().setDescription(`${user.username} has joined the ${monster} raid in alliance ${alliance}, party ${party}, slot ${slot} as a ${jobList.find(a => a.job_id == job)?.job_name || `[error: job id ${job} not found]`}.`);
+                await logChannel.send({ embeds: [embed] });
                 await monsters[monster].updateLeaders();
                 break;
             }

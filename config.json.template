@@ -33,7 +33,8 @@
             "PPP": ""
         },
         "screenshotsChannel": "",
-        "staffRoles": []
+        "staffRoles": [],
+        "logChannel": ""
     },
     "roster": {
         "alliances": 4,

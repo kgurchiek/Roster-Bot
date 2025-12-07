@@ -6,7 +6,7 @@ let selections = {};
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('populate'),
-    async buttonHandler({ interaction, supabase, groupList, monsters }) {
+    async buttonHandler({ interaction, supabase, groupList, monsters, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {
@@ -35,6 +35,11 @@ module.exports = {
                                 .setPlaceholder('Which monster spawned?')
                                 .setCustomId(`populate-monster-${monster}`)
                                 .addOptions(
+                                    ...(monsters[monster].group.includes('Adamantoise') ? [
+                                        new StringSelectMenuOptionBuilder()
+                                            .setLabel('Adamantoise_PPP')
+                                            .setValue('Adamantoise_PPP')
+                                    ] : []),
                                     ...monsters[monster].group.map(a =>
                                         new StringSelectMenuOptionBuilder()
                                             .setLabel(a)
@@ -204,6 +209,8 @@ module.exports = {
                         .setColor('#00ff00')
                         .setDescription(`The raid has been closed`)
                     await interaction.editReply({ ephemeral: true, embeds: [embed] });
+                    embed = new EmbedBuilder().setDescription(`The ${monster} raid has been closed`);
+                    await logChannel.send({ embeds: [embed] });
                 } catch (err) {
                     console.log(err);
                     return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error closing monster', err.message)] });
@@ -213,7 +220,7 @@ module.exports = {
             }
         }
     },
-    async selectHandler({ interaction, supabase, groupList, monsters }) {
+    async selectHandler({ interaction, supabase, monsterList, groupList, monsters }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {
@@ -231,8 +238,11 @@ module.exports = {
                 let { error } = await supabase.from(config.supabase.tables.events).update({ monster_name: interaction.values[0] }).eq('event_id', monsters[monster].event);
                 if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating event monster name', error.message)] });
                 monsters[monster].name = interaction.values[0];
-                monsters[interaction.values[0]] = monsters[monster];
+                let data = monsterList.find(a => a.monster_name == interaction.values[0]);
+                if (data == null) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error fetching monster data', `Could not find data for ${interaction.values[0]}`)] });
                 monsters[monster].updateMessage();
+                monsters[interaction.values[0]] = monsters[monster];
+                delete monsters[monster];
                 interaction.customId = `populate-confirm-${interaction.values[0]}`;
                 this.buttonHandler({ interaction, supabase, groupList, monsters });
                 break;

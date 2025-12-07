@@ -4,7 +4,7 @@ const config = require('../config.json');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('clear'),
-    async buttonHandler({ interaction, user, supabase, monsters }) {
+    async buttonHandler({ interaction, user, supabase, monsters, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster':  {
@@ -73,9 +73,10 @@ module.exports = {
                     await interaction.editReply({ ephemeral: true, embeds });
                 } else {
                     let embed = new EmbedBuilder()
-                        .setTitle('Success')
-                        .setColor('#00ff00')
-                        .setDescription(`The raid has been cleared`)
+                        .setDescription(`The ${monster} raid has been cleared`)
+                    await logChannel.send({ embeds: [embed] });
+                    embed.setTitle('Success');
+                    embed.setColor('#00ff00');
                     await interaction.editReply({ ephemeral: true, embeds: [embed] });
                 }
 

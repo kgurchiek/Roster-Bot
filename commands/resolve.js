@@ -5,7 +5,7 @@ const config = require('../config.json');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('resolve'),
-    async buttonHandler({ interaction, user, supabase, campRules, pointRules, archive }) {
+    async buttonHandler({ interaction, user, supabase, campRules, pointRules, archive, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {
@@ -127,6 +127,7 @@ module.exports = {
                 if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating signup', error.message)] });
                 archive[event].verified = true;
                 await archive[event].updateMessage();
+                let name = archive[event].name;
                 delete archive[event];
 
                 let embed = new EmbedBuilder()
@@ -134,6 +135,8 @@ module.exports = {
                     .setColor('#00ff00')
                     .setDescription('Raid verified')
                 await interaction.editReply({ ephemeral: true, embeds: [embed] });
+                embed = new EmbedBuilder().setDescription(`The ${name} raid has been verified.`);
+                await logChannel.send({ embeds: [embed] });
                 break;
             }
         }

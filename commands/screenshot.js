@@ -81,7 +81,7 @@ module.exports = {
             }
         }
     },
-    async modalHandler({ interaction, supabase, archive, ocrCategory }) {
+    async modalHandler({ interaction, supabase, archive, ocrCategory, logChannel }) {
         let args = interaction.customId.split('-');
         let [event, signupId] = args.slice(1);
 
@@ -135,5 +135,7 @@ module.exports = {
             .setDescription('Your screenshot has been uploaded')
             .setFooter({ text: `screenshot id: ${message.id}` })
         await interaction.editReply({ ephemeral: true, embeds: [embed] });
+        embed = new EmbedBuilder().setDescription(`${user.username} has uploaded a screenshot for the ${archive[event].name} raid.`);
+        await logChannel.send({ embeds: [embed] });
     }
 }

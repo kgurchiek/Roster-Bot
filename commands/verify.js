@@ -99,7 +99,7 @@ module.exports = {
             }
         }
     },
-    async buttonHandler({ interaction, supabase, archive }) {
+    async buttonHandler({ interaction, supabase, archive, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'confirm': {
@@ -204,6 +204,8 @@ module.exports = {
                     .setColor('#00ff00')
                     .setDescription('Attendance marked as verified')
                 await interaction.editReply({ ephemeral: true, embeds: [embed] });
+                embed = new EmbedBuilder().setDescription(`${user.username} marked ${signup.player_id.username}'${signup.player_id.username.endsWith('s') ? '' : 's'} attendance for the ${archive[event].name} raid as verified.`);
+                await logChannel.send({ embeds: [embed] });
                 break;
             }
             case 'unverify': {
@@ -230,6 +232,8 @@ module.exports = {
                     .setColor('#00ff00')
                     .setDescription('Attendance marked as unverified')
                 await interaction.editReply({ ephemeral: true, embeds: [embed] });
+                embed = new EmbedBuilder().setDescription(`${user.username} marked ${signup.player_id.username}'${signup.player_id.username.endsWith('s') ? '' : 's'} attendance for the ${archive[event].name} raid as unverified.`);
+                await logChannel.send({ embeds: [embed] });
                 break;
             }
             case 'edit': {

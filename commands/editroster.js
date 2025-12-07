@@ -6,7 +6,7 @@ let selections = {};
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('editroster'),
-    async buttonHandler({ interaction, user, supabase, userList, templateList, monsters }) {
+    async buttonHandler({ interaction, user, supabase, userList, templateList, monsters, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {
@@ -113,8 +113,10 @@ module.exports = {
                 let embed = new EmbedBuilder()
                     .setTitle('Success')
                     .setColor('#00ff00')
-                    .setDescription(`You signed up for alliance ${alliance}, party ${party}, slot ${slot}`)
+                    .setDescription(`Moved ${user.username} to alliance ${alliance}, party ${party}, slot ${slot}`)
                 await interaction.editReply({ ephemeral: true, embeds: [embed] });
+                embed = new EmbedBuilder().setDescription(`Moved ${user.username} in the ${monster} raid to alliance ${alliance}, party ${party}, slot ${slot}`);
+                await logChannel.send({ embeds: [embed] });
                 await monsters[monster].message.edit({ embeds: monsters[monster].createEmbeds() });
                 await monsters[monster].updateLeaders();
                 break;
