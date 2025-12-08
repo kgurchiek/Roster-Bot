@@ -25,7 +25,7 @@ module.exports = {
 
                 if (monsters[monster].group == null) {
                     interaction.customId = `populate-confirm-${monster}`;
-                    return this.buttonHandler({ interaction, supabase, groupList, monsters });
+                    return this.buttonHandler({ interaction, supabase, groupList, monsters, logChannel });
                 }
 
                 let components = [
@@ -157,7 +157,7 @@ module.exports = {
                 }
                 
                 interaction.customId = `populate-confirm3-${monster}-${id}`;
-                this.buttonHandler({ interaction, supabase, groupList, monsters });
+                this.buttonHandler({ interaction, supabase, groupList, monsters, logChannel });
                 break;
             }
             case 'confirm3': {
@@ -220,7 +220,7 @@ module.exports = {
             }
         }
     },
-    async selectHandler({ interaction, supabase, monsterList, groupList, monsters }) {
+    async selectHandler({ interaction, supabase, monsterList, groupList, monsters, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {
@@ -244,7 +244,7 @@ module.exports = {
                 monsters[interaction.values[0]] = monsters[monster];
                 delete monsters[monster];
                 interaction.customId = `populate-confirm-${interaction.values[0]}`;
-                this.buttonHandler({ interaction, supabase, groupList, monsters });
+                this.buttonHandler({ interaction, supabase, groupList, monsters, logChannel });
                 break;
             }
             case 'windows': {
@@ -277,7 +277,7 @@ module.exports = {
             }
         }
     },
-    async modalHandler({ interaction, supabase, groupList, monsters }) {        
+    async modalHandler({ interaction, supabase, groupList, monsters, logChannel }) {        
         let args = interaction.customId.split('-');
         let [monster, id, maxWindows] = args.slice(1);
         maxWindows = parseInt(maxWindows);
@@ -301,6 +301,6 @@ module.exports = {
         selections[id].windows = windows;
 
         interaction.customId = `populate-confirm3-${monster}-${id}`;
-        this.buttonHandler({ interaction, supabase, groupList, monsters });
+        this.buttonHandler({ interaction, supabase, groupList, monsters, logChannel });
     }
 }

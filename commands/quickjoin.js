@@ -232,7 +232,7 @@ module.exports = {
             }
         }
     },
-    async modalHandler({ interaction, user, supabase, userList, jobList, templateList, monsters }) {
+    async modalHandler({ interaction, user, supabase, userList, jobList, templateList, monsters, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'user': {
@@ -255,7 +255,7 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
                 interaction.customId = `quickjoin-job-${monster}-${dbUser.id}`;
-                this.buttonHandler({ interaction, user, supabase, userList, jobList, templateList, monsters });
+                this.buttonHandler({ interaction, user, supabase, userList, jobList, templateList, monsters, logChannel });
                 break;
             }
         }

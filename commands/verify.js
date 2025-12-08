@@ -6,7 +6,7 @@ let selections = {};
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('verify'),
-    async selectHandler({ interaction, user, supabase, archive }) {
+    async selectHandler({ interaction, user, supabase, archive, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'signup': {
@@ -53,7 +53,7 @@ module.exports = {
                 }
 
                 interaction.customId = `verify-confirm-${event}-${interaction.values[0]}`;
-                this.buttonHandler({ interaction, supabase, archive });
+                this.buttonHandler({ interaction, supabase, archive, logChannel });
                 break;
             }
             case 'edit': {
@@ -93,7 +93,7 @@ module.exports = {
                         }
                     }
                     interaction.customId = `verify-edit-${selections[id].event}-${selections[id].index}-${id}-true`;
-                    this.buttonHandler({ interaction, supabase, archive });
+                    this.buttonHandler({ interaction, supabase, archive, logChannel });
                 }
                 break;
             }
@@ -335,12 +335,12 @@ module.exports = {
 
                 selections[id][option] = !selections[id][option];
                 interaction.customId = `verify-edit-${event}-${index}-${id}-true`;
-                this.buttonHandler({ interaction, supabase, archive });
+                this.buttonHandler({ interaction, supabase, archive, logChannel });
                 break;
             }
         }
     },
-    async modalHandler({ interaction, supabase, archive }) {
+    async modalHandler({ interaction, supabase, archive, logChannel }) {
         let args = interaction.customId.split('-');
         let id = args[1];
 
@@ -370,6 +370,6 @@ module.exports = {
         }
         
         interaction.customId = `verify-edit-${selections[id].event}-${selections[id].index}-${id}`;
-        this.buttonHandler({ interaction, supabase, archive });
+        this.buttonHandler({ interaction, supabase, archive, logChannel });
     }
 }

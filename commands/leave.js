@@ -17,7 +17,7 @@ module.exports = {
 
                 if (monster == 'Tiamat') {
                     interaction.customId = `leave-confirm-${monster}-${interaction.id}-${userId}`;
-                    return this.buttonHandler({ interaction, user, supabase, userList, monsters });
+                    return this.buttonHandler({ interaction, user, supabase, userList, monsters, logChannel });
                 }
 
                 if (monsters[monster] == null) {
@@ -197,7 +197,7 @@ module.exports = {
             }
         }
     },
-    async modalHandler({ interaction, user, supabase, userList, monsters }) {        
+    async modalHandler({ interaction, user, supabase, userList, monsters, logChannel }) {        
         let args = interaction.customId.split('-');
         switch(args[1]) {
             case 'user': {
@@ -229,7 +229,7 @@ module.exports = {
                 }
 
                 interaction.customId = `leave-monster-${monster}-${dbUser.id}`;
-                this.buttonHandler({ interaction, user, supabase, userList, monsters });
+                this.buttonHandler({ interaction, user, supabase, userList, monsters, logChannel });
                 break;
             }
             case 'windows': {
@@ -255,7 +255,7 @@ module.exports = {
                 selections[id].windows = windows;
 
                 interaction.customId = `leave-confirm-${monster}-${id}-${userId}`;
-                this.buttonHandler({ interaction, user, supabase, userList, monsters });
+                this.buttonHandler({ interaction, user, supabase, userList, monsters, logChannel });
             }
         }
     }

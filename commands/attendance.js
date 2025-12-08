@@ -190,7 +190,7 @@ module.exports = {
                 }
                 
                 interaction.customId = `attendance-confirm2-${id}`;
-                this.buttonHandler({ interaction, supabase, monsters, archive });
+                this.buttonHandler({ interaction, user, supabase, monsters, archive, logChannel });
                 break;
             }
             case 'confirm2': {
@@ -322,7 +322,7 @@ module.exports = {
             }
         }
     },
-    async modalHandler({ interaction, user, supabase, monsters, archive }) {
+    async modalHandler({ interaction, user, supabase, monsters, archive, logChannel }) {
         let args = interaction.customId.split('-');
         let id = args[1];
 
@@ -344,6 +344,6 @@ module.exports = {
         selections[id].windows = windows;
 
         interaction.customId = `attendance-confirm2-${id}`;
-        this.buttonHandler({ interaction, user, supabase, monsters, archive });
+        this.buttonHandler({ interaction, user, supabase, monsters, archive, logChannel });
     }
 }
