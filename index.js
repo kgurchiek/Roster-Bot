@@ -309,7 +309,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         slots = config.roster.slots;
         createEmbeds() {
             if (this.active) {
-                let signups = this.signups.flat().flat().filter((a, i, arr) => a != null && arr.slice(0, i).find(b => a.user.id == b.user.id) == null).length;
+                let signups = this.signups.flat().flat().filter((a, i, arr) => a != null && arr.slice(0, i).find(b => b != null && a.user.id == b.user.id) == null).length;
                 let embed = new EmbedBuilder()
                     .setTitle(`🐉 ${this.name}${this.day == null ? '' : ` (Day ${this.day})`}${this.rage ? ' (Rage)' : ''}${this.paused ? ' (Paused)' : ''}`)
                     .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.name.split('/')[0].split('(')[0].replaceAll(' ', '')}.png`)
@@ -537,8 +537,6 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             if (error) console.log(`Error updating attendance for event ${this.event}: ${error.message}`);
         }
         async close() {
-            this.active = false;
-
             let data;
             let error;
             if (config.supabase.trackedRates.includes(this.name)) {
@@ -553,17 +551,21 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             if (error) return { error };
             this.data.signups = data;
 
-            ({ error } = await supabase.from(config.supabase.tables.events).update({ active: false, verified: this.data.signups.length == 0 }).eq('event_id', this.event));
+            ({ error } = await supabase.from(config.supabase.tables.events).update({ active: false, verified: this.data.signups.length == 0, close_date: new Date() }).eq('event_id', this.event));
             if (error) return { error };
+            this.active = false;
+            this.verified = this.data.signups.length == 0;
+            this.closeDate = new Date();
 
             await this.updateMessage();
             delete monsters[this.name];
             if (this.group) delete monsters[this.group.join('/')];
+            if (this.verified) delete archive[this.event];
 
             for (let signup of this.data.signups.filter(a => a.active)) {
                 let user = signup.player_id;
                 if (this.name == 'Tiamat') signup.windows = this.data.signups.filter(a => a.player_id.id == user.id).length;
-                let discordUser = client.users.cache.get(user.id);
+                let discordUser = await client.users.fetch(user.id);
                 let embed = new EmbedBuilder()
                     .setTitle('Confirm Attendance')
                     .setColor('#ffff00')
@@ -728,6 +730,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             archive[event.event_id] = new Monster(event.monster_name, event.start_time, event.day, event.event_id, null, event.rage, thread, message, event.windows, event.killer);
             archive[event.event_id].active = false;
             archive[event.event_id].name = event.monster_name;
+            if (event.close_date) archive[event.event_id].closeDate = new Date(event.close_date);
             
             ({ data, error } = await supabase.from(config.supabase.tables.signups).select('signup_id, event_id, slot_template_id, player_id (id, username), assigned_job_id, active, windows, tagged, killed, rage, verified, date, placeholders, screenshot, leader').eq('event_id', event.event_id));
             if (error) {
@@ -747,9 +750,12 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         let { data: user, error } = await supabase.from(config.supabase.tables.users).select('id::text, username, dkp, ppp, frozen').eq('id', id).limit(1);
         return error ? { error } : user[0];
     }
-
+    
+    let messageCallbacks = [];
     client.on(Events.MessageCreate, async message => {
         if (message.channelId == config.discord.monstersChannel && message.embeds.length > 0) scheduleMonster(message);
+        messageCallbacks = messageCallbacks.filter(a => a != null);
+        for (let callback of messageCallbacks) if (message.channelId == callback.channel) callback.callback(message);
     })
 
     client.on(Events.InteractionCreate, async interaction => {
@@ -789,7 +795,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             }
             
             try {
-                await command.execute({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, campRules, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, logChannel, Monster, updateTagRates });
+                await command.execute({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, campRules, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, logChannel, Monster, updateTagRates, messageCallbacks });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()
@@ -806,7 +812,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             if (!command) return;
 
             try {
-                await command.autocomplete({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, campRules, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, logChannel, Monster, updateTagRates });
+                await command.autocomplete({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, campRules, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, logChannel, Monster, updateTagRates, messageCallbacks });
             } catch (error) {
                 console.log(error);
                 try {
@@ -817,7 +823,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         if (interaction.isButton()) {
             const command = client.commands.get(interaction.customId.split('-')[0]);
             try {
-                if (command?.buttonHandler) command.buttonHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, campRules, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, logChannel, Monster, updateTagRates });
+                if (command?.buttonHandler) command.buttonHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, campRules, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, logChannel, Monster, updateTagRates, messageCallbacks });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()
@@ -832,7 +838,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         if (interaction.isAnySelectMenu()) {
             const command = client.commands.get(interaction.customId.split('-')[0]);
             try {
-                if (command?.selectHandler) command.selectHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, campRules, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, logChannel, Monster, updateTagRates });
+                if (command?.selectHandler) command.selectHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, campRules, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, logChannel, Monster, updateTagRates, messageCallbacks });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()
@@ -851,7 +857,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 return;
             }
             try {
-                if (command?.modalHandler) command.modalHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, campRules, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, logChannel, Monster, updateTagRates });
+                if (command?.modalHandler) command.modalHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, campRules, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, logChannel, Monster, updateTagRates, messageCallbacks });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()
