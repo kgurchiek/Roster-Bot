@@ -67,7 +67,7 @@ module.exports = {
                     for (let party = 1; party < monsters[monster].parties + 1; party++) {
                         for (let slot = 1; slot < monsters[monster].slots + 1; slot++) {
                             if (monsters[monster].signups[alliance - 1][party - 1][slot - 1] != null) continue;
-                            let template = templateList.find(a => a.monster_name == monster.split('/')[0] && a.alliance_number == alliance && a.party_number == party && a.party_slot_number == slot)?.allowed_job_ids;
+                            let template = templateList.find(a => a.monster_name == monsters[monster].data.monster_name && a.alliance_number == alliance && a.party_number == party && a.party_slot_number == slot)?.allowed_job_ids;
                             if (template == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed(`Error fetching jobs`, `Could not find template for monster "${monster}", alliance ${alliance}, party ${party}, slot ${slot}`)] });
                             template = template.map(a => {
                                 let job = jobList.find(b => b.job_id == a);
@@ -157,7 +157,7 @@ module.exports = {
                     for (let party = 1; emptySlot == null && party < monsters[monster].parties + 1; party++) {
                         for (let slot = 1; emptySlot == null && slot < monsters[monster].slots + 1; slot++) {
                             if (monsters[monster].signups[alliance - 1][party - 1][slot - 1] != null) continue;
-                            let template = templateList.find(a => a.monster_name == monster.split('/')[0] && a.alliance_number == alliance && a.party_number == party && a.party_slot_number == slot);
+                            let template = templateList.find(a => a.monster_name == monsters[monster].data.monster_name && a.alliance_number == alliance && a.party_number == party && a.party_slot_number == slot);
                             if (template == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed(`Error fetching jobs`, `Could not find template for monster "${monster}", alliance ${alliance}, party ${party}, slot ${slot}`)] });
                             let templateId = template.slot_template_id;
                             template = template.allowed_job_ids;

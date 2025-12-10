@@ -12,7 +12,7 @@ async function uploadFile(interaction, user, supabase, ocrCategory, logChannel, 
                 type: ChannelType.GuildText
             });
         } catch (err) {
-            return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error creating channel:', err)]});
+            return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error creating screenshot channel:', err)]});
         }
     }
     let message;
@@ -37,6 +37,7 @@ async function uploadFile(interaction, user, supabase, ocrCategory, logChannel, 
     await interaction.editReply({ ephemeral: true, embeds: [embed] });
     embed = new EmbedBuilder().setDescription(`${user.username} has uploaded a screenshot for the ${event.name} raid.`);
     await logChannel.send({ embeds: [embed] });
+    await event.updatePanel();
 }
 
 module.exports = {
@@ -190,7 +191,7 @@ module.exports = {
             }
         }
     },
-    async modalHandler({ interaction, supabase, archive, ocrCategory, logChannel }) {
+    async modalHandler({ interaction, user, supabase, archive, ocrCategory, logChannel }) {
         let args = interaction.customId.split('-');
         let [event, signupId] = args.slice(1);
 

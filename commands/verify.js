@@ -197,6 +197,7 @@ module.exports = {
                 signup.killed = selections[id].killed;
                 signup.rage = selections[id].rage;
                 signup.verified = true;
+                delete selections[id];
                 await archive[event].updateMessage();
 
                 let embed = new EmbedBuilder()

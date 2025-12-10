@@ -217,7 +217,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             for (let monster in claims[team]) claims[team][monster] /= deaths[monster];
             claims[team].linkshell_name = team;
             ({ error } = await supabase.from(config.supabase.tables.claimRates).insert(claims[team]));
-            if (error) console.log('Error inserting claim rate:', error);
+            if (error) console.log('Error inserting claim rate:', error, { team, row: claims[team] });
         }
     }
     updateClaimRates();
@@ -312,7 +312,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 let signups = this.signups.flat().flat().filter((a, i, arr) => a != null && arr.slice(0, i).find(b => b != null && a.user.id == b.user.id) == null).length;
                 let embed = new EmbedBuilder()
                     .setTitle(`🐉 ${this.name}${this.day == null ? '' : ` (Day ${this.day})`}${this.rage ? ' (Rage)' : ''}${this.paused ? ' (Paused)' : ''}`)
-                    .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.name.split('/')[0].split('(')[0].replaceAll(' ', '')}.png`)
+                    .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.data.monster_name.split('_')[0].replaceAll(' ', '')}.png`)
                     .setDescription(`**${signups} member${signups == 1 ? '' : 's'} signed up**\n🕒 Starts at <t:${this.timestamp}:D> <t:${this.timestamp}:T> (<t:${this.timestamp}:R>)`)
                     .addFields(
                         ...Array(this.alliances).fill().map((a, i) => [
@@ -323,7 +323,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                     inline: true
                                 };
                                 for (let k = 0; k < this.slots; k++) {
-                                    let template = templateList.find(a => a.monster_name == this.name.split('/')[0] && a.alliance_number == i + 1 && a.party_number == j + 1 && a.party_slot_number == k + 1);
+                                    let template = templateList.find(a => a.monster_name == this.data.monster_name && a.alliance_number == i + 1 && a.party_number == j + 1 && a.party_slot_number == k + 1);
                                     if (template == null) {
                                         console.log(`Error: Cannot find template for ${this.name}, Alliance ${i + 1}, Party ${j + 1}, Slot ${k + 1}`);
                                         template = { allowed_job_ids: [] };
@@ -375,7 +375,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                     return [
                         new EmbedBuilder()
                             .setTitle(`🐉 ${this.name} (Day ${this.day})${this.rage ? ' (Rage)' : ''}`)
-                            .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.name.split('/')[0].split('(')[0].replaceAll(' ', '')}.png`)
+                            .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.data.monster_name.split('_')[0].replaceAll(' ', '')}.png`)
                             .setDescription('No participants recorded.')
                     ]
                 } else {
@@ -384,7 +384,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                         this.data.signups.filter(a => !a.active).filter((a, i, arr) => arr.slice(0, i).find(b => b.signup_id == a.signup_id) == null)
                     ].filter(a => a.length > 0).map((a, i) => {
                             let embed = new EmbedBuilder()
-                                .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.name.split('/')[0].split('(')[0].replaceAll(' ', '')}.png`)
+                                .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.data.monster_name.split('_')[0].replaceAll(' ', '')}.png`)
                             if (i == 0) embed.setTitle(`🐉 ${this.name} (Day ${this.day})${this.rage ? ' (Rage)' : ''}`);
                             embed.setDescription(`${i == 0 ? '🕒 Closed\n\n**Active**\n' : '**Inactive**\n'}\`\`\`\n${
                                 a.map(b => `${b.verified ? '✓' : '✖'} ${b.player_id.username} ${(b.windows == null || this.data.max_windows == 1) ? '' : `- ${b.windows}${this.windows == null ? '' : `/${this.windows}`}`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''}`).join('\n')
@@ -492,8 +492,8 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                         new ActionRowBuilder()
                             .addComponents(
                                 new StringSelectMenuBuilder()
-                                    .setPlaceholder('🛡️ Verify User')
-                                    .setCustomId(`verify-signup-${this.event}-${i}`)
+                                    .setPlaceholder('🛡️ Edit User')
+                                    .setCustomId(`editsignup-signup-${i}-${this.event}`)
                                     .addOptions(
                                         ...Array(Math.min(25, signups.length - i * 25)).fill().map((a, j) => 
                                             new StringSelectMenuOptionBuilder()
@@ -503,7 +503,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                     )
                             )
                     ),
-                    this.data.signups.find(a => !a.verified) ? null : new ActionRowBuilder()
+                    new ActionRowBuilder()
                         .addComponents(
                             new ButtonBuilder()
                                 .setLabel('🛡️ Verify Raid')
@@ -536,6 +536,57 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             let { error } = supabase.from(config.supabase.tables.events).update({ attendance }).eq('event_id', this.event);
             if (error) console.log(`Error updating attendance for event ${this.event}: ${error.message}`);
         }
+        createVerificationEmbeds() {
+            let unverified = this.data.signups.filter(a => !a.verified);
+            if (unverified.length == 0) {
+                return [
+                    new EmbedBuilder()
+                        .setTitle('Tag Verification Complete')
+                        .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.data.monster_name.split('_')[0].replaceAll(' ', '')}.png`)
+                        .setFooter({ text: `Total ${this.data.signups.length} • Verified ${this.data.signups.filter(a => a.verified).length}` })
+                ]
+            } else {
+                return new Array(Math.ceil(unverified.length / 25)).fill().map((a, i) => 
+                    new EmbedBuilder()
+                        .setTitle('Pending Tag Verification')
+                        .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.data.monster_name.split('_')[0].replaceAll(' ', '')}.png`)
+                        .addFields(
+                            ...new Array(Math.min(unverified.slice(i * 25).length, 25)).fill().map((b, j) =>
+                                ({
+                                    name: `${unverified[i * 25 + j].player_id.username}`,
+                                    value: unverified[i * 25 + j].screenshot == null ? 'No screenshot uploaded' : `[Screenshot](https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.screenshots}/${unverified[i * 25 + j].screenshot})`
+                                })
+                            )
+                        )
+                        .setFooter({ text: `Total ${this.data.signups.length} • Verified ${this.data.signups.filter(a => a.verified).length}` })
+                )
+            }
+        }
+        createVerificationComponents() {
+            return [];
+        }
+        async updatePanel() {
+            if (this.panel == null) {
+                let channels = [...(await screenshotPanelCategory.guild.channels.fetch(null, { force: true })).values()].filter(a => a.parentId == screenshotPanelCategory.id);
+                let channel = channels.find(a => a.name == this.name.toLowerCase().replaceAll(' ', '-'));
+                if (channel == null) {
+                    try {
+                        channel = await screenshotPanelCategory.children.create({
+                            name: this.name.toLowerCase().replaceAll(' ', '-'),
+                            type: ChannelType.GuildText
+                        });
+                    } catch (err) {
+                        return console.log('Error creating screenshot panel channel:', err);
+                    }
+                }
+                try {
+                    this.panel = await channel.send({ embeds: this.createVerificationEmbeds(), components: this.createVerificationComponents() });
+                } catch (err) {
+                    return console.log('Error sending screenshot verification panel message:', err);
+                }
+            }
+            return await this.panel.edit({ embeds: this.createVerificationEmbeds(), components: this.createVerificationComponents() });
+        }
         async close() {
             let data;
             let error;
@@ -562,32 +613,11 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             if (this.group) delete monsters[this.group.join('/')];
             if (this.verified) delete archive[this.event];
 
+            await this.updatePanel();
+
             for (let signup of this.data.signups.filter(a => a.active)) {
                 let user = signup.player_id;
                 if (this.name == 'Tiamat') signup.windows = this.data.signups.filter(a => a.player_id.id == user.id).length;
-                let discordUser = await client.users.fetch(user.id);
-                let embed = new EmbedBuilder()
-                    .setTitle('Confirm Attendance')
-                    .setColor('#ffff00')
-                    .setDescription(`The ${this.name} raid has been closed, use the buttons below to confirm your attendance and upload your screenshot.`)
-                let components = [
-                    new ActionRowBuilder()
-                        .addComponents(
-                            new ButtonBuilder()
-                                .setLabel('Confirm')
-                                .setStyle(ButtonStyle.Success)
-                                .setCustomId(`attendance-monster-${this.event}-${signup.signup_id}`),
-                            new ButtonBuilder()
-                                .setLabel('📷 Upload Screenshot')
-                                .setStyle(ButtonStyle.Success)
-                                .setCustomId(`screenshot-monster-${this.event}`)
-                        )
-                ]
-                try {
-                    await discordUser.send({ embeds: [embed], components });
-                } catch (error) {
-                    console.log(`Error sending dm to user ${signup.player_id.id}:`, error);
-                }
             }
 
             await updateClaimRates();
@@ -696,6 +726,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
     let rosterChannels;
     let ocrCategory;
     let logChannel;
+    let screenshotPanelCategory;
     client.once(Events.ClientReady, async () => {
         console.log(`[Bot]: ${client.user.tag}`);
         console.log(`[Servers]: ${client.guilds.cache.size}`);
@@ -707,6 +738,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         }
         ocrCategory = await client.channels.fetch(config.discord.ocrCategory);
         logChannel = await client.channels.fetch(config.discord.logChannel);
+        screenshotPanelCategory = await client.channels.fetch(config.discord.screenshotPanelCategory);
 
         let messages = Array.from((await monstersChannel.messages.fetch({ limit: 100, cache: false })).values()).filter(a => a.embeds.length > 0).reverse();
 
@@ -727,9 +759,10 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 console.log('Error fetching previous monster message:', err);
                 continue;
             }
-            archive[event.event_id] = new Monster(event.monster_name, event.start_time, event.day, event.event_id, null, event.rage, thread, message, event.windows, event.killer);
-            archive[event.event_id].active = false;
+            archive[event.event_id] = new Monster(event.monster_name, event.start_time, event.day, event.event_id, null, event.rage, thread, message, event.windows, event.killed_by);
             archive[event.event_id].name = event.monster_name;
+            if (event.close_date != null) await archive[event.event_id].close();
+            archive[event.event_id].active = false;
             if (event.close_date) archive[event.event_id].closeDate = new Date(event.close_date);
             
             ({ data, error } = await supabase.from(config.supabase.tables.signups).select('signup_id, event_id, slot_template_id, player_id (id, username), assigned_job_id, active, windows, tagged, killed, rage, verified, date, placeholders, screenshot, leader').eq('event_id', event.event_id));
