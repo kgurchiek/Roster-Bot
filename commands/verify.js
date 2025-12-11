@@ -81,7 +81,7 @@ module.exports = {
             }
         }
     },
-    async buttonHandler({ interaction, supabase, archive, logChannel }) {
+    async buttonHandler({ interaction, user, supabase, archive, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'view': {
@@ -197,9 +197,9 @@ module.exports = {
                 break;
             }
             case 'verify': {
-                let id = args[2];
+                let event = args[2];
                 
-                if (selections[id] == null) {
+                if (selections[interaction.message.id] == null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')
@@ -208,7 +208,7 @@ module.exports = {
                     return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
                 }
                 
-                let { event, signup } = selections[id];
+                let signup = selections[interaction.message.id];
 
                 if (archive[event] == null) {
                     let embed = new EmbedBuilder()
@@ -232,9 +232,9 @@ module.exports = {
                 break;
             }
             case 'decline': {
-                let id = args[2];
+                let event = args[2];
                 
-                if (selections[id] == null) {
+                if (selections[interaction.message.id] == null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')
@@ -243,7 +243,7 @@ module.exports = {
                     return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
                 }
                 
-                let { event, signup } = selections[id];
+                let signup = selections[interaction.message.id];
 
                 if (archive[event] == null) {
                     let embed = new EmbedBuilder()
@@ -262,7 +262,7 @@ module.exports = {
                 await archive[event].updatePanel();
 
                 let embed = new EmbedBuilder()
-                    .setDescription(`${user.username} marked ${signup.player_id.username}'${signup.player_id.username.endsWith('s') ? '' : 's'} attendance for the ${archive[event].name} raid as verified.`)
+                    .setDescription(`${user.username} marked ${signup.player_id.username}'${signup.player_id.username.endsWith('s') ? '' : 's'} attendance for the ${archive[event].name} raid as declined.`)
                 await logChannel.send({ embeds: [embed] });
                 break;
             }

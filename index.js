@@ -387,7 +387,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                 .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.data.monster_name.split('_')[0].replaceAll(' ', '')}.png`)
                             if (i == 0) embed.setTitle(`🐉 ${this.name} (Day ${this.day})${this.rage ? ' (Rage)' : ''}`);
                             embed.setDescription(`${i == 0 ? '🕒 Closed\n\n**Active**\n' : '**Inactive**\n'}\`\`\`\n${
-                                a.map(b => `${b.verified ? '✓' : '✖'} ${b.player_id.username} ${(b.windows == null || this.data.max_windows == 1) ? '' : `- ${b.windows}${this.windows == null ? '' : `/${this.windows}`}`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''}`).join('\n')
+                                a.map(b => `${b.verified == null ? '✖' : '✓'} ${b.player_id.username} ${(b.windows == null || this.data.max_windows == 1) ? '' : `- ${b.windows}${this.windows == null ? '' : `/${this.windows}`}`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''}`).join('\n')
                             }\n\`\`\``);
                             if (this.verified) embed.setFooter({ text: '✓ Verified' })
 
@@ -543,7 +543,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                     new EmbedBuilder()
                         .setTitle('Tag Verification Complete')
                         .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.data.monster_name.split('_')[0].replaceAll(' ', '')}.png`)
-                        .setFooter({ text: `Total ${this.data.signups.length} • Verified ${this.data.signups.filter(a => a.verified).length}` })
+                        .setFooter({ text: `Total ${this.data.signups.length} • Reviewed ${this.data.signups.filter(a => a.verified != null).length}` })
                 ]
             } else {
                 return new Array(Math.ceil(unverified.length / 25)).fill().map((a, i) => 
@@ -558,12 +558,12 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                 })
                             )
                         )
-                        .setFooter({ text: `Total ${this.data.signups.length} • Verified ${this.data.signups.filter(a => a.verified).length}` })
+                        .setFooter({ text: `Total ${this.data.signups.length} • Reviewed ${this.data.signups.filter(a => a.verified != null).length}` })
                 )
             }
         }
         createVerificationComponents() {
-            let unverified = this.data.signups.filter(a => !a.verified);
+            let unverified = this.data.signups.filter(a => a.verified == null);
             if (unverified.length == 0) return [];
             else {
                 return [
