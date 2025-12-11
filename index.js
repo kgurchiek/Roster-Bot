@@ -537,7 +537,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             if (error) console.log(`Error updating attendance for event ${this.event}: ${error.message}`);
         }
         createVerificationEmbeds() {
-            let unverified = this.data.signups.filter(a => !a.verified);
+            let unverified = this.data.signups.filter(a => a.verified == null);
             if (unverified.length == 0) {
                 return [
                     new EmbedBuilder()
@@ -563,7 +563,42 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             }
         }
         createVerificationComponents() {
-            return [];
+            let unverified = this.data.signups.filter(a => !a.verified);
+            if (unverified.length == 0) return [];
+            else {
+                return [
+                    ...new Array(Math.ceil(unverified.length / 25)).fill().map((a, i) =>
+                            new ActionRowBuilder()
+                                .addComponents(
+                                    new StringSelectMenuBuilder()
+                                        .setPlaceholder('🛡️ Verify User')
+                                        .setCustomId(`verify-signup-${this.event}-${i}`)
+                                        .addOptions(
+                                            ...Array(Math.min(25, unverified.length - i * 25)).fill().map((a, j) => 
+                                                new StringSelectMenuOptionBuilder()
+                                                    .setLabel(`${unverified[i * 25 + j].player_id.username}`)
+                                                    .setValue(`${i * 25 + j}`)
+                                            )
+                                        )
+                                )
+                        ),
+                    new ActionRowBuilder()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId(`verify-view-${this.event}`)
+                                .setLabel('Preview')
+                                .setStyle(ButtonStyle.Primary),
+                            new ButtonBuilder()
+                                .setCustomId(`verify-verify-${this.event}`)
+                                .setLabel('Approve')
+                                .setStyle(ButtonStyle.Success),
+                            new ButtonBuilder()
+                                .setCustomId(`verify-decline-${this.event}`)
+                                .setLabel('Decline')
+                                .setStyle(ButtonStyle.Danger)
+                        )
+                ]
+            }
         }
         async updatePanel() {
             if (this.panel == null) {
@@ -748,7 +783,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             events = [];
         }
 
-        for (let event of events.filter(a => !a.verified)) {
+        for (let event of events.filter(a => a.verified == null)) {
             if (event.channel == null) continue;
             let thread;
             let message;
@@ -761,7 +796,6 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             }
             archive[event.event_id] = new Monster(event.monster_name, event.start_time, event.day, event.event_id, null, event.rage, thread, message, event.windows, event.killed_by);
             archive[event.event_id].name = event.monster_name;
-            if (event.close_date != null) await archive[event.event_id].close();
             archive[event.event_id].active = false;
             if (event.close_date) archive[event.event_id].closeDate = new Date(event.close_date);
             

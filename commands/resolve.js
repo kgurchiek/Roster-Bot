@@ -5,7 +5,7 @@ const config = require('../config.json');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('resolve'),
-    async buttonHandler({ interaction, user, supabase, campRules, pointRules, archive, logChannel }) {
+    async buttonHandler({ interaction, user, supabase, campRules, archive, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {
@@ -90,24 +90,6 @@ module.exports = {
                     if (campRule.bonus_windows) campPoints += Math.min(Math.floor(signup.windows / campRule.bonus_windows) * campRule.bonus_points, campRule.max_bonus);
                     if (campRule.type.toLowerCase() == 'dkp') dkp += campPoints;
                     else ppp += campPoints;
-                    let bonusRules = pointRules.filter(a => a.monster_type == archive[event].data.monster_type);
-                    if (signup.tagged) {
-                        let { error } = await supabase.from(config.supabase.tables.tags).insert({ player_id: signup.player_id.id, monster_name: archive[event].name });
-                        if (error) console.log(`Error inserting ${archive[event].name} tag log for ${signup.player_id.username}: ${error.message}`);
-                        let rule = bonusRules.find(a => a.point_code == 't');
-                        dkp += rule.dkp_value;
-                        ppp += rule.ppp_value;
-                    }
-                    if (signup.killed) {
-                        let rule = bonusRules.find(a => a.point_code == 'k');
-                        dkp += rule.dkp_value;
-                        ppp += rule.ppp_value;
-                    }
-                    if (signup.rage) {
-                        let rule = bonusRules.find(a => a.point_code == 'r');
-                        dkp += rule.dkp_value;
-                        ppp += rule.ppp_value;
-                    }
                     
                     if (dkp != 0) {
                         let { error } = await supabase.rpc('increment_points', { table_name: config.supabase.tables.users, id: signup.player_id.id, type: 'dkp', amount: dkp });
@@ -127,15 +109,13 @@ module.exports = {
                 if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating signup', error.message)] });
                 archive[event].verified = true;
                 await archive[event].updateMessage();
-                let name = archive[event].name;
-                delete archive[event];
 
                 let embed = new EmbedBuilder()
                     .setTitle('Success')
                     .setColor('#00ff00')
                     .setDescription('Raid verified')
                 await interaction.editReply({ ephemeral: true, embeds: [embed] });
-                embed = new EmbedBuilder().setDescription(`The ${name} raid has been verified.`);
+                embed = new EmbedBuilder().setDescription(`The ${archive[event].name} raid has been verified.`);
                 await logChannel.send({ embeds: [embed] });
                 break;
             }

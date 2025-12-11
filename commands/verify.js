@@ -11,8 +11,6 @@ module.exports = {
         switch (args[1]) {
             case 'signup': {
                 let event = args[2];
-                await interaction.deferReply({ ephemeral: true });
-                await interaction.message.edit({ components: interaction.message.components });
         
                 if (archive[event] == null) {
                     let embed = new EmbedBuilder()
@@ -20,7 +18,7 @@ module.exports = {
                         .setColor('#ff0000')
                         .setDescription(`This raid has been closed`)
                         .setFooter({ text: `raid id: ${event}` })
-                    return await interaction.editReply({ ephemeral: true, embeds: [embed] });
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
                 if (!user.staff) {
@@ -28,32 +26,16 @@ module.exports = {
                         .setTitle('Error')
                         .setColor('#ff0000')
                         .setDescription(`This action can only be performed by staff`)
-                    return await interaction.editReply({ ephemeral: true, embeds: [embed] });
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
         
                 let signup = archive[event].data.signups[interaction.values[0]];
                 let errors = [];
                 if (signup.tagged == null) errors.push('User has not confirmed attendance');
                 if (signup.screenshot == null) errors.push('User has not uploaded screenshot');
-                if (errors.length > 0) {
-                    let embed = new EmbedBuilder()
-                        .setTitle('Warning')
-                        .setColor('#ffff00')
-                        .setDescription(`${errors.map(a => `- ${a}`).join('\n')}\n\n Are you sure you want to continue?`)
-                    let components = [
-                        new ActionRowBuilder()
-                            .addComponents(
-                                new ButtonBuilder()
-                                    .setCustomId(`verify-confirm-${event}-${interaction.values[0]}`)
-                                    .setStyle(ButtonStyle.Success)
-                                    .setLabel('✓')
-                            )
-                    ]
-                    return await interaction.editReply({ ephemeral: true, embeds: [embed], components });
-                }
 
-                interaction.customId = `verify-confirm-${event}-${interaction.values[0]}`;
-                this.buttonHandler({ interaction, supabase, archive, logChannel });
+                selections[interaction.message.id] = signup;
+                await interaction.deferUpdate();
                 break;
             }
             case 'edit': {
@@ -64,7 +46,7 @@ module.exports = {
                         .setTitle('Error')
                         .setColor('#ff0000')
                         .setDescription('This message has expired, please use the verify user dropdown again')
-                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                    return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
                 }
 
                 if (interaction.values[0] == 'custom') {
@@ -92,7 +74,7 @@ module.exports = {
                             break;
                         }
                     }
-                    interaction.customId = `verify-edit-${selections[id].event}-${selections[id].index}-${id}-true`;
+                    interaction.customId = `verify-edit-${id}`;
                     this.buttonHandler({ interaction, supabase, archive, logChannel });
                 }
                 break;
@@ -102,11 +84,10 @@ module.exports = {
     async buttonHandler({ interaction, supabase, archive, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
-            case 'confirm': {
-                let [event, index, id] = args.slice(2);
-                if (id == null) id = interaction.id;
+            case 'view': {
+                let [event, id] = args.slice(2);
                 if (!interaction.deferred) await interaction.deferReply({ ephemeral: true });
-                
+
                 if (archive[event] == null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
@@ -116,17 +97,42 @@ module.exports = {
                     return await interaction.editReply({ ephemeral: true, embeds: [embed] });
                 }
 
-                let signup = archive[event].data.signups[index];
-                if (selections[id] == null) selections[id] = {
-                    event,
-                    index,
-                    signupId: signup.signup_id,
-                    windows: signup.windows,
-                    tagged: signup.tagged,
-                    killed: signup.killed,
-                    rage: signup.rage,
-                    placeholders: signup.placeholders
+                let signup;
+                if (id == null) {
+                    id = interaction.id;
+
+                    signup = selections[interaction.message.id];
+                    if (signup == null) {
+                        let embed = new EmbedBuilder()
+                            .setTitle('Error')
+                            .setColor('#ff0000')
+                            .setDescription(`Please select a user from the dropdown`)
+                        await interaction.message.edit({ components: interaction.message.components });
+                        return await interaction.editReply({ ephemeral: true, embeds: [embed] });
+                    }
+                    
+                    if (selections[id] == null) selections[id] = {
+                        event,
+                        signup,
+                        signupId: signup.signup_id,
+                        windows: signup.windows,
+                        tagged: signup.tagged,
+                        killed: signup.killed,
+                        rage: signup.rage,
+                        placeholders: signup.placeholders
+                    }
+                } else {
+                    if (selections[id] == null) {
+                        let embed = new EmbedBuilder()
+                            .setTitle('Error')
+                            .setColor('#ff0000')
+                            .setDescription(`This message has expired, please use the verify user dropdown again`)
+                        return await interaction.editReply({ ephemeral: true, embeds: [embed], components: [] });
+                    }
+
+                    ({ signup } = selections[id]);
                 }
+
                 let embed = new EmbedBuilder()
                     .setTitle(`${signup.player_id.username}'${signup.player_id.username.endsWith('s') ? '' : 's'} Attendance (${signup.verified ? 'Verified' : 'Unverified'})`)
                     .addFields(
@@ -140,115 +146,128 @@ module.exports = {
                 let components = [
                     new ActionRowBuilder()
                         .addComponents(
-                            ...signup.verified ?
-                                [
-                                    new ButtonBuilder()
-                                        .setCustomId(`verify-unverify-${event}-${signup.signup_id}-${interaction.id}`)
-                                        .setStyle(ButtonStyle.Danger)
-                                        .setLabel('✖')
-                                ] :
-                                [
-                                    new ButtonBuilder()
-                                        .setCustomId(`verify-edit-${event}-${index}-${interaction.id}`)
-                                        .setStyle(ButtonStyle.Primary)
-                                        .setLabel('📝'),
-                                    new ButtonBuilder()
-                                        .setCustomId(`verify-verify-${event}-${signup.signup_id}-${interaction.id}`)
-                                        .setStyle(ButtonStyle.Success)
-                                        .setLabel('✓')
-                                ]
+                            new ButtonBuilder()
+                                .setCustomId(`verify-edit-${id}`)
+                                .setStyle(ButtonStyle.Primary)
+                                .setLabel('📝')
                         )
                 ]
                 await interaction.editReply({ ephemeral: true, embeds: [embed], components });
                 break;
             }
-            case 'verify': {
-                let [event, signupId, id] = args.slice(2);
+            case 'confirm': {
+                let id = args[2];
                 
-                if (archive[event] == null) {
-                    let embed = new EmbedBuilder()
-                        .setTitle('Error')
-                        .setColor('#ff0000')
-                        .setDescription(`This raid has been closed`)
-                        .setFooter({ text: `raid id: ${event}` })
-                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
-                }
-
                 if (selections[id] == null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')
-                        .setDescription('This message has expired, please use the verify user dropdown again')
-                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                        .setDescription(`This message has expired, please use the verify user dropdown again`)
+                    return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
                 }
                 
-                await interaction.deferReply({ ephemeral: true });
+                let { event, signup } = selections[id];
+
+                if (archive[event] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`This raid has been closed`)
+                        .setFooter({ text: `raid id: ${event}` })
+                    return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
+                }
+                
+                await interaction.deferUpdate();
                 let { error } = await supabase.from(config.supabase.tables.signups).update({
                     windows: selections[id].windows,
                     tagged: selections[id].tagged,
                     killed: selections[id].killed,
-                    rage: selections[id].rage,
-                    verified: true
-                }).eq('signup_id', signupId);
-                if (error) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error updating signup', error.message)] });
-                let signup = archive[event].data.signups.find(a => a.signup_id == signupId);
+                    rage: selections[id].rage
+                }).eq('signup_id', signup.signup_id);
+                if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating signup', error.message)], components: [] });
                 signup.windows = selections[id].windows;
                 signup.tagged = selections[id].tagged;
                 signup.killed = selections[id].killed;
                 signup.rage = selections[id].rage;
-                signup.verified = true;
-                delete selections[id];
                 await archive[event].updateMessage();
+                await archive[event].updatePanel();
 
-                let embed = new EmbedBuilder()
-                    .setTitle('Success')
-                    .setColor('#00ff00')
-                    .setDescription('Attendance marked as verified')
-                await interaction.editReply({ ephemeral: true, embeds: [embed] });
-                embed = new EmbedBuilder().setDescription(`${user.username} marked ${signup.player_id.username}'${signup.player_id.username.endsWith('s') ? '' : 's'} attendance for the ${archive[event].name} raid as verified.`);
-                await logChannel.send({ embeds: [embed] });
+                interaction.customId = `interaction-view-${event}-${id}`;
+                this.buttonHandler({ interaction, supabase, archive, logChannel });
                 break;
             }
-            case 'unverify': {
-                let [event, signupId] = args.slice(2);
+            case 'verify': {
+                let id = args[2];
                 
+                if (selections[id] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`This message has expired, please use the verify user dropdown again`)
+                        .setFooter({ text: `raid id: ${event}` })
+                    return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
+                }
+                
+                let { event, signup } = selections[id];
+
                 if (archive[event] == null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')
                         .setDescription(`This raid has been closed`)
                         .setFooter({ text: `raid id: ${event}` })
-                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                    return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
                 }
                 
-                await interaction.deferReply({ ephemeral: true });
-                let { error } = await supabase.from(config.supabase.tables.signups).update({ verified: false }).eq('signup_id', signupId);
-                if (error) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error updating signup', error.message)] });
-                let signup = archive[event].data.signups.find(a => a.signup_id == signupId);
-                signup.verified = false;
+                await interaction.deferUpdate();
+                let { error } = await supabase.from(config.supabase.tables.signups).update({ verified: true }).eq('signup_id', signup.signup_id);
+                if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating signup', error.message)], components: [] });
+                signup.verified = true;
                 await archive[event].updateMessage();
+                await archive[event].updatePanel();
 
                 let embed = new EmbedBuilder()
-                    .setTitle('Success')
-                    .setColor('#00ff00')
-                    .setDescription('Attendance marked as unverified')
-                await interaction.editReply({ ephemeral: true, embeds: [embed] });
-                embed = new EmbedBuilder().setDescription(`${user.username} marked ${signup.player_id.username}'${signup.player_id.username.endsWith('s') ? '' : 's'} attendance for the ${archive[event].name} raid as unverified.`);
+                    .setDescription(`${user.username} marked ${signup.player_id.username}'${signup.player_id.username.endsWith('s') ? '' : 's'} attendance for the ${archive[event].name} raid as verified.`)
+                await logChannel.send({ embeds: [embed] });
+                break;
+            }
+            case 'decline': {
+                let id = args[2];
+                
+                if (selections[id] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`This message has expired, please use the verify user dropdown again`)
+                        .setFooter({ text: `raid id: ${event}` })
+                    return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
+                }
+                
+                let { event, signup } = selections[id];
+
+                if (archive[event] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`This raid has been closed`)
+                        .setFooter({ text: `raid id: ${event}` })
+                    return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
+                }
+                
+                await interaction.deferUpdate();
+                let { error } = await supabase.from(config.supabase.tables.signups).update({ verified: false }).eq('signup_id', signup.signup_id);
+                if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating signup', error.message)], components: [] });
+                signup.verified = false;
+                await archive[event].updateMessage();
+                await archive[event].updatePanel();
+
+                let embed = new EmbedBuilder()
+                    .setDescription(`${user.username} marked ${signup.player_id.username}'${signup.player_id.username.endsWith('s') ? '' : 's'} attendance for the ${archive[event].name} raid as verified.`)
                 await logChannel.send({ embeds: [embed] });
                 break;
             }
             case 'edit': {
-                let [event, index, id, update] = args.slice(2);
-                update = update == 'true';
-
-                if (archive[event] == null) {
-                    let embed = new EmbedBuilder()
-                        .setTitle('Error')
-                        .setColor('#ff0000')
-                        .setDescription(`This raid has been closed`)
-                        .setFooter({ text: `raid id: ${event}` })
-                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
-                }
+                let id = args[2];
 
                 if (selections[id] == null) {
                     let embed = new EmbedBuilder()
@@ -256,10 +275,20 @@ module.exports = {
                         .setColor('#ff0000')
                         .setDescription(`This message has expired, please use the verify user dropdown again`)
                         .setFooter({ text: `raid id: ${event}` })
-                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                    return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
                 }
                 
-                let signup = archive[event].data.signups[index];
+                let { event, signup } = selections[id];
+
+                if (archive[event] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`This raid has been closed`)
+                        .setFooter({ text: `raid id: ${event}` })
+                    return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
+                }
+                
                 let components = [
                     new ActionRowBuilder()
                         .addComponents(
@@ -296,46 +325,45 @@ module.exports = {
                     new ActionRowBuilder()
                         .addComponents(
                             new ButtonBuilder()
-                                .setCustomId(`verify-toggle-tagged-${event}-${index}-${id}`)
+                                .setCustomId(`verify-toggle-tagged-${id}`)
                                 .setStyle(selections[id].tagged == null ? ButtonStyle.Secondary : selections[id].tagged ? ButtonStyle.Success : ButtonStyle.Danger)
                                 .setLabel(`Tagged${selections[id].tagged == null ? '' : selections[id].tagged ? ': ✓' : ': ✖'}`),
                             new ButtonBuilder()
-                                .setCustomId(`verify-toggle-killed-${event}-${index}-${id}`)
+                                .setCustomId(`verify-toggle-killed-${id}`)
                                 .setStyle(selections[id].killed == null ? ButtonStyle.Secondary : selections[id].killed ? ButtonStyle.Success : ButtonStyle.Danger)
                                 .setLabel(`Killed${selections[id].killed == null ? '' : selections[id].killed ? ': ✓' : ': ✖'}`),
                             new ButtonBuilder()
-                                .setCustomId(`verify-toggle-rage-${event}-${index}-${id}`)
+                                .setCustomId(`verify-toggle-rage-${id}`)
                                 .setStyle(selections[id].rage ? ButtonStyle.Success : ButtonStyle.Danger)
                                 .setLabel(`Rage${selections[id].rage ? ': ✓' : ': ✖'}`)
                         ),
                     new ActionRowBuilder()
                     .addComponents(
                             new ButtonBuilder()
-                                .setCustomId(`verify-verify-${event}-${selections[id].signupId}-${id}`)
+                                .setCustomId(`verify-confirm-${id}`)
                                 .setStyle(ButtonStyle.Success)
                                 .setLabel('✓')
                         )
                 ].filter(a => a != null);
                 let message = { ephemeral: true, components };
                 if (signup.screenshot != null) message.content = `https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.screenshots}/${signup.screenshot}`;
-                if (update) await interaction.update(message);
-                else await interaction.reply(message);
+                await interaction.update(message);
                 break;
             }
             case 'toggle': {
-                let [option, event, index, id] = args.slice(2);
+                let [option, id] = args.slice(2);
 
-                if (archive[event] == null) {
+                if (selections[id] == null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')
-                        .setDescription(`This raid has been closed`)
+                        .setDescription(`This message has expired, please use the verify user dropdown again`)
                         .setFooter({ text: `raid id: ${event}` })
-                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                    return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
                 }
 
                 selections[id][option] = !selections[id][option];
-                interaction.customId = `verify-edit-${event}-${index}-${id}-true`;
+                interaction.customId = `verify-edit-${id}`;
                 this.buttonHandler({ interaction, supabase, archive, logChannel });
                 break;
             }
@@ -370,7 +398,7 @@ module.exports = {
             }
         }
         
-        interaction.customId = `verify-edit-${selections[id].event}-${selections[id].index}-${id}`;
+        interaction.customId = `verify-edit-${id}`;
         this.buttonHandler({ interaction, supabase, archive, logChannel });
     }
 }
