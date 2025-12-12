@@ -4,7 +4,7 @@ const { errorEmbed } = require('../commonFunctions.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('user')
+    .setName('checkuser')
     .setDescription('Gets information about a user')
     .addUserOption(option =>
         option.setName('user')

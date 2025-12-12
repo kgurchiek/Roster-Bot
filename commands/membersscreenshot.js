@@ -5,7 +5,7 @@ const config = require('../config.json');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('membersscreenshot'),
-    async buttonHandler({ interaction, user, archive, logChannel, messageCallbacks }) {
+    async buttonHandler({ interaction, user, archive, memberScreenshotsChannel, messageCallbacks }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'modal': {
@@ -70,7 +70,7 @@ module.exports = {
                         let embed = new EmbedBuilder()
                             .setDescription(`${user.username} uploaded a member list screenshot for window ${window + 1} of the ${archive[event].name} raid:`)
                             .setImage(`attachment://${name}`)
-                        await logChannel.send({ embeds: [embed], files: [attachment] });
+                        await memberScreenshotsChannel.send({ embeds: [embed], files: [attachment] });
                         archive[event].verifiedClears.push(window);
                         await archive[event].updateMessage();
                         embed = new EmbedBuilder()
@@ -113,7 +113,7 @@ module.exports = {
 
         await interaction.reply({ ephemeral: true, embeds: [], components });
     },
-    async modalHandler({ interaction, user, supabase, archive, ocrCategory, logChannel }) {
+    async modalHandler({ interaction, user, archive, memberScreenshotsChannel }) {
         let args = interaction.customId.split('-');
         let [event, window] = args.slice(1);
         window = parseInt(window);
@@ -141,7 +141,7 @@ module.exports = {
         let embed = new EmbedBuilder()
             .setDescription(`${user.username} uploaded a member list screenshot for window ${window + 1} of the ${archive[event].name} raid:`)
             .setImage(`attachment://${name}`)
-        await logChannel.send({ embeds: [embed], files: [attachment] });
+        await memberScreenshotsChannel.send({ embeds: [embed], files: [attachment] });
         archive[event].verifiedClears.push(window);
         await archive[event].updateMessage();
         embed = new EmbedBuilder()

@@ -830,6 +830,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
     let ocrCategory;
     let logChannel;
     let screenshotPanelCategory;
+    let memberScreenshotsChannel;
     client.once(Events.ClientReady, async () => {
         console.log(`[Bot]: ${client.user.tag}`);
         console.log(`[Servers]: ${client.guilds.cache.size}`);
@@ -842,6 +843,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         ocrCategory = await client.channels.fetch(config.discord.ocrCategory);
         logChannel = await client.channels.fetch(config.discord.logChannel);
         screenshotPanelCategory = await client.channels.fetch(config.discord.screenshotPanelCategory);
+        memberScreenshotsChannel = await client.channels.fetch(config.discord.memberScreenshots);
 
         let messages = Array.from((await monstersChannel.messages.fetch({ limit: 100, cache: false })).values()).filter(a => a.embeds.length > 0).reverse();
 
@@ -930,7 +932,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             }
             
             try {
-                await command.execute({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, campRules, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, logChannel, Monster, updateTagRates, messageCallbacks });
+                await command.execute({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, campRules, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, logChannel, memberScreenshotsChannel, Monster, updateTagRates, messageCallbacks });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()
@@ -947,7 +949,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             if (!command) return;
 
             try {
-                await command.autocomplete({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, campRules, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, logChannel, Monster, updateTagRates, messageCallbacks });
+                await command.autocomplete({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, campRules, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, logChannel, memberScreenshotsChannel, Monster, updateTagRates, messageCallbacks });
             } catch (error) {
                 console.log(error);
                 try {
@@ -958,7 +960,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         if (interaction.isButton()) {
             const command = client.commands.get(interaction.customId.split('-')[0]);
             try {
-                if (command?.buttonHandler) command.buttonHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, campRules, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, logChannel, Monster, updateTagRates, messageCallbacks });
+                if (command?.buttonHandler) command.buttonHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, campRules, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, logChannel, memberScreenshotsChannel, Monster, updateTagRates, messageCallbacks });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()
@@ -973,7 +975,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         if (interaction.isAnySelectMenu()) {
             const command = client.commands.get(interaction.customId.split('-')[0]);
             try {
-                if (command?.selectHandler) command.selectHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, campRules, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, logChannel, Monster, updateTagRates, messageCallbacks });
+                if (command?.selectHandler) command.selectHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, campRules, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, logChannel, memberScreenshotsChannel, Monster, updateTagRates, messageCallbacks });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()
@@ -992,7 +994,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 return;
             }
             try {
-                if (command?.modalHandler) command.modalHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, campRules, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, logChannel, Monster, updateTagRates, messageCallbacks });
+                if (command?.modalHandler) command.modalHandler({ interaction, client, user, supabase, monsterList, userList, jobList, templateList, campRules, pointRules, groupList, monsters, archive, rosterChannels, ocrCategory, logChannel, memberScreenshotsChannel, Monster, updateTagRates, messageCallbacks });
             } catch (error) {
                 console.log(error);
                 var errorEmbed = new EmbedBuilder()

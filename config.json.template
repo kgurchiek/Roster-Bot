@@ -35,7 +35,8 @@
         "screenshotsChannel": "",
         "staffRoles": [],
         "logChannel": "",
-        "screenshotPanelCategory": ""
+        "screenshotPanelCategory": "",
+        "memberScreenshots": ""
     },
     "roster": {
         "alliances": 4,
