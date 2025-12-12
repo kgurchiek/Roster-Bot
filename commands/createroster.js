@@ -53,7 +53,7 @@ module.exports = {
 
             if (monsters[monster].thread == null) {
                 monsters[monster].thread = await rosterChannels[monsters[monster].data.channel_type].threads.create({
-                    name: monsters[monster].name,
+                    name: monsters[monster].group ? monsters[monster].group.map(a => a).join('/') : monsters[monster].name,
                     type: ChannelType.PublicThread,
                     autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek
                 });

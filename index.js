@@ -670,12 +670,13 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         }
         async updatePanel() {
             if (this.panel == null) {
+                let channelName = (this.group ? this.group.map(a => a).join('—') : this.name).replaceAll(' ', '-').toLowerCase();
                 let channels = [...(await screenshotPanelCategory.guild.channels.fetch(null, { force: true })).values()].filter(a => a.parentId == screenshotPanelCategory.id);
-                let channel = channels.find(a => a.name == this.name.toLowerCase().replaceAll(' ', '-'));
+                let channel = channels.find(a => a.name == channelName);
                 if (channel == null) {
                     try {
                         channel = await screenshotPanelCategory.children.create({
-                            name: this.name.toLowerCase().replaceAll(' ', '-'),
+                            name: channelName,
                             type: ChannelType.GuildText
                         });
                     } catch (err) {
@@ -808,7 +809,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         if (monsters[monster].message == null) {
             if (monsters[monster].thread == null) {
                 monsters[monster].thread = await rosterChannels[monsters[monster].data.channel_type].threads.create({
-                    name: monsters[monster].name,
+                    name: monsters[monster].group ? monsters[monster].group.map(a => a).join('/') : monsters[monster].name,
                     type: ChannelType.PublicThread,
                     autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek
                 });

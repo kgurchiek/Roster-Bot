@@ -3,12 +3,13 @@ const { errorEmbed } = require('../commonFunctions.js');
 const config = require('../config.json');
 
 async function uploadFile(interaction, user, supabase, ocrCategory, logChannel, event, signupId, attachment, file) {
+    let channelName = (event.group ? event.group.map(a => a).join('—') : event.name).replaceAll(' ', '-').toLowerCase()
     let channels = [...(await ocrCategory.guild.channels.fetch(null, { force: true })).values()].filter(a => a.parentId == ocrCategory.id);
-    let channel = channels.find(a => a.name == event.name.toLowerCase().replaceAll(' ', '-'));
+    let channel = channels.find(a => a.name == channelName);
     if (channel == null) {
         try {
             channel = await ocrCategory.children.create({
-                name: event.name.toLowerCase().replaceAll(' ', '-'),
+                name: channelName,
                 type: ChannelType.GuildText
             });
         } catch (err) {
