@@ -56,6 +56,7 @@ module.exports = {
                     channel: interaction.channelId,
                     callback: async message => {
                         if (message.author.id != user.id || message.attachments.size == 0) return;
+                        messageCallbacks[messageCallbacks.findIndex(a => a.id == interaction.id)] = null;
                         let { contentType, url} = message.attachments.entries().next().value[1];
                         let file;
                         try {
@@ -78,7 +79,6 @@ module.exports = {
                             .setDescription(`Uploaded member list screenshot for window ${window + 1}`)
                             .setImage(`attachment://${name}`)
                         await interaction.editReply({ ephemeral: true, embeds: [embed], files: [attachment], components: [] });
-                        messageCallbacks[messageCallbacks.findIndex(a => a.id == interaction.id)] = null;
                     }
                 })
             }
