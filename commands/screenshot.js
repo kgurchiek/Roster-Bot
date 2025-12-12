@@ -25,7 +25,7 @@ async function uploadFile(interaction, user, supabase, ocrCategory, logChannel, 
     let { error } = await supabase.storage.from(config.supabase.buckets.screenshots).upload(message.id, file, { contentType: attachment.contentType });
     if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error uploading screenshot:', error.message)]});
 
-    ({ error } = await supabase.from(config.supabase.tables.signups).update({ screenshot: message.id }).eq('signup_id', signupId));
+    ({ error } = await supabase.from(config.supabase.tables.signups).update({ screenshot: message.id }).eq('event_id', event.event).eq('player_id', user.id));
     if (error) return console.log('Error updating screenshot:', error);
     event.data.signups.find(a => a.signup_id == signupId).screenshot = message.id;
 
@@ -181,7 +181,6 @@ module.exports = {
                         } catch (err) {
                             return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching attachment', err)]});
                         }
-                        console.log(message)
                         await message.delete();
                         
                         uploadFile(interaction, user, supabase, ocrCategory, logChannel, archive[event], signupId, attachment, file);

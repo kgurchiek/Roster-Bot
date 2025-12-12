@@ -18,7 +18,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 // console.log(`[Monster List]: Fetched ${monsterList.length} monsers.`);
             } else {
                 hadError = true;
-                console.log('[Monster List]: Error:', error.message);
+                console.log('[Monster List]: Error:', error.message == null ? '' : (error.message.includes('<!DOCTYPE html>') || error.message.includes('<html>')) ? 'Server Error' : error.message);
                 await new Promise(res => setTimeout(res, 5000));
             }
         } catch (err) {
@@ -40,7 +40,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 // console.log(`[User List]: Fetched ${userList.length} users.`);
             } else {
                 hadError = true;
-                console.log('[User List]: Error:', error.message);
+                console.log('[User List]: Error:', error.message == null ? '' : (error.message.includes('<!DOCTYPE html>') || error.message.includes('<html>')) ? 'Server Error' : error.message);
                 await new Promise(res => setTimeout(res, 5000));
             }
         } catch (err) {
@@ -62,7 +62,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 // console.log(`[Job List]: Fetched ${jobList.length} jobs.`);
             } else {
                 hadError = true;
-                console.log('[Job List]: Error:', error.message);
+                console.log('[Job List]: Error:', error.message == null ? '' : (error.message.includes('<!DOCTYPE html>') || error.message.includes('<html>')) ? 'Server Error' : error.message);
                 await new Promise(res => setTimeout(res, 5000));
             }
         } catch (err) {
@@ -84,7 +84,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 // console.log(`[Template List]: Fetched ${templateList.length} templates.`);
             } else {
                 hadError = true;
-                console.log('[Template List]: Error:', error.message);
+                console.log('[Template List]: Error:', error.message == null ? '' : (error.message.includes('<!DOCTYPE html>') || error.message.includes('<html>')) ? 'Server Error' : error.message);
                 await new Promise(res => setTimeout(res, 5000));
             }
         } catch (err) {
@@ -106,7 +106,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 // console.log(`[Camp Rules]: Fetched ${campRules.length} point rules.`);
             } else {
                 hadError = true;
-                console.log('[Point Rules]: Error:', error.message);
+                console.log('[Point Rules]: Error:', error.message == null ? '' : (error.message.includes('<!DOCTYPE html>') || error.message.includes('<html>')) ? 'Server Error' : error.message);
                 await new Promise(res => setTimeout(res, 5000));
             }
         } catch (err) {
@@ -128,7 +128,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 // console.log(`[Point Rules]: Fetched ${pointRules.length} point rules.`);
             } else {
                 hadError = true;
-                console.log('[Point Rules]: Error:', error.message);
+                console.log('[Point Rules]: Error:', error.message == null ? '' : (error.message.includes('<!DOCTYPE html>') || error.message.includes('<html>')) ? 'Server Error' : error.message);
                 await new Promise(res => setTimeout(res, 5000));
             }
         } catch (err) {
@@ -150,7 +150,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 // console.log(`[Group List]: Fetched ${groupList.length} groups.`);
             } else {
                 hadError = true;
-                console.log('[Group List]: Error:', error.message);
+                console.log('[Group List]: Error:', error.message == null ? '' : (error.message.includes('<!DOCTYPE html>') || error.message.includes('<html>')) ? 'Server Error' : error.message);
                 await new Promise(res => setTimeout(res, 5000));
             }
         } catch (err) {
@@ -299,6 +299,9 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             this.windows = windows;
             this.killer = killer;
 
+            this.clears = 0;
+            this.verifiedClears = [];
+
             this.data = monsterList.find(a => a.monster_name == this.name.split('/')[0]);
             if (this.data == null) console.log(`Error: could not find data for monster "${this.name}"`);
             else if (thread == null) this.thread = threads[this.data.channel_type].find(a => a.name == this.name);
@@ -313,7 +316,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 let embed = new EmbedBuilder()
                     .setTitle(`🐉 ${this.name}${this.day == null ? '' : ` (Day ${this.day})`}${this.rage ? ' (Rage)' : ''}${this.paused ? ' (Paused)' : ''}`)
                     .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.data.monster_name.split('_')[0].replaceAll(' ', '')}.png`)
-                    .setDescription(`**${signups} member${signups == 1 ? '' : 's'} signed up**\n🕒 Starts at <t:${this.timestamp}:D> <t:${this.timestamp}:T> (<t:${this.timestamp}:R>)`)
+                    .setDescription(`**${signups} member${signups == 1 ? '' : 's'} signed up**\n🕒 Starts at <t:${this.timestamp}:D> <t:${this.timestamp}:T> (<t:${this.timestamp}:R>)${this.lastCleared == null ? '' : `\nLast Cleared: <t:${Math.floor(this.lastCleared.getTime() / 1000)}:R>`}`)
                     .addFields(
                         ...Array(this.alliances).fill().map((a, i) => [
                             Array(this.parties).fill().map((b, j) => {
@@ -381,24 +384,38 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 } else {
                     return [
                         this.data.signups.filter(a => a.active),
-                        this.data.signups.filter(a => !a.active).filter((a, i, arr) => arr.slice(0, i).find(b => b.signup_id == a.signup_id) == null)
+                        this.data.signups.filter(a => !a.active && this.data.signups.find(b => b.active && b.player_id.id == a.player_id.id) == null)
                     ].filter(a => a.length > 0).map((a, i) => {
-                            let embed = new EmbedBuilder()
-                                .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.data.monster_name.split('_')[0].replaceAll(' ', '')}.png`)
-                            if (i == 0) embed.setTitle(`🐉 ${this.name} (Day ${this.day})${this.rage ? ' (Rage)' : ''}`);
-                            embed.setDescription(`${i == 0 ? '🕒 Closed\n\n**Active**\n' : '**Inactive**\n'}\`\`\`\n${
-                                a.map(b => `${b.verified == null ? '✖' : '✓'} ${b.player_id.username} ${(b.windows == null || this.data.max_windows == 1) ? '' : `- ${b.windows}${this.windows == null ? '' : `/${this.windows}`}`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''}`).join('\n')
-                            }\n\`\`\``);
-                            if (this.verified) embed.setFooter({ text: '✓ Verified' })
+                        let embed = new EmbedBuilder()
+                            .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.data.monster_name.split('_')[0].replaceAll(' ', '')}.png`)
+                        if (i == 0) embed.setTitle(`🐉 ${this.name} (Day ${this.day})${this.rage ? ' (Rage)' : ''}`);
+                        embed.setDescription(`${i == 0 ? '🕒 Closed\n\n**Current Window**\n' : '**Previous Windows**\n'}\`\`\`\n${
+                            a.filter((b, i, arr) => arr.slice(0, i).find(c => c.player_id.id == b.player_id.id) == null).map(b => `${b.windows == null && b.tagged == null && b.killed == null ? '✖' : '✓'} ${b.player_id.username}${this.data.signups.filter(c => c != null && c.player_id.id == b.player_id.id).length > 1 ? ` x${this.data.signups.filter(a => a.player_id.id == b.player_id.id).length}` : ''} ${(b.windows == null || this.data.max_windows == 1) ? '' : `- ${b.windows}${this.windows == null ? '' : `/${this.windows}`}`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''}`).join('\n')
+                        }\n\`\`\``);
+                        if (this.verified) embed.setFooter({ text: '✓ Verified' });
 
-                            return embed;
-                        }
-                    )
+                        return embed;
+                    }).filter(a => a != null);
                 }
             }
         }
         createButtons() {
-            if (this.verified) return [];
+            let unverifiedClears = new Array(this.clears).fill().map((a, i) => i).filter(a => !this.verifiedClears.includes(a));
+            if (this.verified) return [
+                unverifiedClears.length == 0 ? null : new ActionRowBuilder()
+                    .addComponents(
+                        new StringSelectMenuBuilder()
+                            .setCustomId(`membersscreenshot-${this.event}`)
+                            .setPlaceholder('📷 Upload Tiamat Attendance')
+                            .addOptions(
+                                unverifiedClears.map(a => 
+                                    new StringSelectMenuOptionBuilder()
+                                        .setLabel(`Window ${a + 1}`)
+                                        .setValue(`${a}`)
+                                )
+                            )
+                    )
+            ].filter(a => a != null);
             if (this.paused) return [
                 new ActionRowBuilder()
                     .addComponents(
@@ -410,46 +427,57 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                             .setCustomId(`populate-monster-${this.name}`)
                             .setLabel('💰 Populate')
                             .setStyle(ButtonStyle.Success)
+                    ),
+                unverifiedClears.length == 0 ? null : new ActionRowBuilder()
+                    .addComponents(
+                        new StringSelectMenuBuilder()
+                            .setCustomId(`membersscreenshot-${this.event}`)
+                            .setPlaceholder('📷 Upload Tiamat Attendance')
+                            .addOptions(
+                                unverifiedClears.map(a => 
+                                    new StringSelectMenuOptionBuilder()
+                                        .setLabel(`Window ${a + 1}`)
+                                        .setValue(`${a}`)
+                                )
+                            )
                     )
-            ];
+            ].filter(a => a != null);
             if (this.active) {
                 return [
                     new ActionRowBuilder()
                         .addComponents(
-                            new ButtonBuilder()
-                                .setCustomId(`quickjoin-job-${this.name}`)
-                                .setLabel('≫ Quick Join')
-                                .setStyle(ButtonStyle.Primary),
-                            new ButtonBuilder()
-                                .setCustomId(`signup-select-${this.name}`)
-                                .setLabel('📝 Sign Up')
-                                .setStyle(ButtonStyle.Primary),
-                            new ButtonBuilder()
-                                .setCustomId(`editroster-monster-${this.name}`)
-                                .setLabel('🛡️ Edit Roster')
-                                .setStyle(ButtonStyle.Primary)
-                        ),
-                    this.signups.find((a, i) => a.find((b, j) => this.leaders[i][j] == null)) == null ? null : new ActionRowBuilder()
-                        .addComponents(
-                            new ButtonBuilder()
-                                .setCustomId(`leader-monster-${this.name}`)
-                                .setLabel('👑 Leader')
-                                .setStyle(ButtonStyle.Secondary)
+                            ...[
+                                new ButtonBuilder()
+                                    .setCustomId(`quickjoin-job-${this.name}`)
+                                    .setLabel('≫ Quick Join')
+                                    .setStyle(ButtonStyle.Primary),
+                                new ButtonBuilder()
+                                    .setCustomId(`signup-select-${this.name}`)
+                                    .setLabel('📝 Sign Up')
+                                    .setStyle(ButtonStyle.Primary),
+                                new ButtonBuilder()
+                                    .setCustomId(`editroster-monster-${this.name}`)
+                                    .setLabel('🛡️ Edit Roster')
+                                    .setStyle(ButtonStyle.Primary),
+                                this.signups.find((a, i) => a.find((b, j) => this.leaders[i][j] == null)) == null ? null : new ButtonBuilder()
+                                    .setCustomId(`leader-monster-${this.name}`)
+                                    .setLabel('👑 Leader')
+                                    .setStyle(ButtonStyle.Secondary)
+                            ].filter(a => a != null)
                         ),
                     new ActionRowBuilder()
                         .addComponents(
-                            new ButtonBuilder()
-                                .setCustomId(`leave-monster-${this.name}`)
-                                .setLabel('✖ Leave')
-                                .setStyle(ButtonStyle.Danger)
+                            ...[
+                                new ButtonBuilder()
+                                    .setCustomId(`leave-monster-${this.name}`)
+                                    .setLabel('✖ Leave')
+                                    .setStyle(ButtonStyle.Danger),
+                                this.name == 'Tiamat' ? new ButtonBuilder()
+                                    .setCustomId(`clear-monster-${this.name}`)
+                                    .setLabel('🗑️ Clear')
+                                    .setStyle(ButtonStyle.Secondary) : null
+                            ].filter(a => a != null)
                         ),
-                    this.name == 'Tiamat' ? new ActionRowBuilder()
-                        .addComponents(
-                            new ButtonBuilder()
-                                .setCustomId(`clear-monster-${this.name}`)
-                                .setLabel('🗑️ Clear')
-                                .setStyle(ButtonStyle.Secondary)
-                        ) : null,
                     this.placeholders == null ? null : new ActionRowBuilder()
                         .addComponents(
                             new ButtonBuilder()
@@ -471,6 +499,19 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                 .setCustomId(`populate-monster-${this.name}`)
                                 .setLabel('💰 Populate')
                                 .setStyle(ButtonStyle.Success)
+                        ),
+                    unverifiedClears.length == 0 ? null : new ActionRowBuilder()
+                        .addComponents(
+                            new StringSelectMenuBuilder()
+                                .setCustomId(`membersscreenshot-${this.event}`)
+                                .setPlaceholder('📷 Upload Tiamat Attendance')
+                                .addOptions(
+                                    unverifiedClears.map(a => 
+                                        new StringSelectMenuOptionBuilder()
+                                            .setLabel(`Window ${a + 1}`)
+                                            .setValue(`${a}`)
+                                    )
+                                )
                         )
                 ].filter(a => a != null);
             }
@@ -484,7 +525,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                 .setStyle(ButtonStyle.Primary)
                                 .setCustomId(`attendance-monster-${this.event}`),
                             new ButtonBuilder()
-                                .setLabel('📷 Upload Screenshot')
+                                .setLabel('📷 Upload Tag Screenshot')
                                 .setStyle(ButtonStyle.Primary)
                                 .setCustomId(`screenshot-monster-${this.event}`),
                         ),
@@ -509,10 +550,37 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                 .setLabel('🛡️ Verify Raid')
                                 .setStyle(ButtonStyle.Success)
                                 .setCustomId(`resolve-monster-${this.event}`)
+                        ),
+                    unverifiedClears.length == 0 ? null : new ActionRowBuilder()
+                        .addComponents(
+                            new StringSelectMenuBuilder()
+                                .setCustomId(`membersscreenshot-${this.event}`)
+                                .setPlaceholder('📷 Upload Tiamat Attendance')
+                                .addOptions(
+                                    unverifiedClears.map(a => 
+                                        new StringSelectMenuOptionBuilder()
+                                            .setLabel(`Window ${a + 1}`)
+                                            .setValue(`${a}`)
+                                    )
+                                )
                         )
                 ].filter(a => a != null)
             }
-            return [];
+            return [
+                unverifiedClears.length == 0 ? null : new ActionRowBuilder()
+                    .addComponents(
+                        new StringSelectMenuBuilder()
+                            .setCustomId(`membersscreenshot-${this.event}`)
+                            .setPlaceholder('📷 Upload Tiamat Attendance')
+                            .addOptions(
+                                unverifiedClears.map(a => 
+                                    new StringSelectMenuOptionBuilder()
+                                        .setLabel(`Window ${a + 1}`)
+                                        .setValue(`${a}`)
+                                )
+                            )
+                    )
+            ].filter(a => a != null);
         }
         async updateMessage() {
             return await this.message.edit({ embeds: this.createEmbeds(), components: this.createButtons() });
@@ -537,13 +605,13 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             if (error) console.log(`Error updating attendance for event ${this.event}: ${error.message}`);
         }
         createVerificationEmbeds() {
-            let unverified = this.data.signups.filter(a => a.verified == null);
+            let unverified = this.data.signups.filter(a => a.active && a.verified == null);
             if (unverified.length == 0) {
                 return [
                     new EmbedBuilder()
                         .setTitle('Tag Verification Complete')
                         .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.data.monster_name.split('_')[0].replaceAll(' ', '')}.png`)
-                        .setFooter({ text: `Total ${this.data.signups.length} • Reviewed ${this.data.signups.filter(a => a.verified != null).length}` })
+                        .setFooter({ text: `Total ${this.data.signups.filter(a => a.active).length} • Reviewed ${this.data.signups.filter(a => a.active && a.verified != null).length}` })
                 ]
             } else {
                 return new Array(Math.ceil(unverified.length / 25)).fill().map((a, i) => 
@@ -558,7 +626,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                 })
                             )
                         )
-                        .setFooter({ text: `Total ${this.data.signups.length} • Reviewed ${this.data.signups.filter(a => a.verified != null).length}` })
+                        .setFooter({ text: `Total ${this.data.signups.filter(a => a.active).length} • Reviewed ${this.data.signups.filter(a => a.active && a.verified != null).length}` })
                 )
             }
         }

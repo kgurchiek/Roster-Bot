@@ -41,10 +41,10 @@ module.exports = {
                         .setTitle('Error')
                         .setColor('#ff0000')
                         .setDescription(`${monster} is not active`)
-                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                    return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
                 }
                 
-                await interaction.deferReply({ ephemeral: true });
+                await interaction.deferUpdate();
                 let promises = [];
                 for (let alliance = 0; alliance < monsters[monster].signups.length; alliance++) {
                     for (let party = 0; party < monsters[monster].signups[alliance].length; party++) {
@@ -70,14 +70,17 @@ module.exports = {
                                 .setColor('#ff0000')
                                 .setDescription(`${a.error.message}`)
                         )
-                    await interaction.editReply({ ephemeral: true, embeds });
+                    await interaction.editReply({ ephemeral: true, embeds, components: [] });
                 } else {
+                    monsters[monster].lastCleared = new Date();
+                    monsters[monster].clears++;
+                    await monsters[monster].updateMessage();
                     let embed = new EmbedBuilder()
                         .setDescription(`The ${monster} raid has been cleared`)
                     await logChannel.send({ embeds: [embed] });
                     embed.setTitle('Success');
                     embed.setColor('#00ff00');
-                    await interaction.editReply({ ephemeral: true, embeds: [embed] });
+                    await interaction.editReply({ ephemeral: true, embeds: [embed], components: [] });
                 }
 
                 await monsters[monster].message.edit({ embeds: monsters[monster].createEmbeds() });

@@ -28,17 +28,6 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
-                let unverified = archive[event].data.signups.filter(a => !a.verified).length;
-                if (unverified > 0) {
-                    let embed = new EmbedBuilder()
-                        .setTitle('Error')
-                        .setColor('#ff0000')
-                        .setDescription(`${unverified} user${unverified == 1 ? '' : 's'} have not been verified yet`)
-                    await interaction.reply({ ephemeral: true, embeds: [embed] });
-                    await archive[event].updateMessage();
-                    return
-                }
-
                 let embed = new EmbedBuilder()
                     .setColor('#ffff00')
                     .setDescription('Are you sure you want to verify this raid?')
@@ -62,17 +51,6 @@ module.exports = {
                         .setDescription(`This raid has been closed`)
                         .setFooter({ text: `raid id: ${event}` })
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
-                }
-
-                let unverified = archive[event].data.signups.filter(a => !a.verified).length;
-                if (unverified > 0) {
-                    let embed = new EmbedBuilder()
-                        .setTitle('Error')
-                        .setColor('#ff0000')
-                        .setDescription(`${unverified} user${unverified == 1 ? '' : 's'} have not been verified yet`)
-                    await interaction.reply({ ephemeral: true, embeds: [embed] });
-                    await archive[event].updateMessage();
-                    return
                 }
                 
                 await interaction.deferReply({ ephemeral: true });

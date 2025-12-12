@@ -312,7 +312,13 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
-                let dbUser = userList.find(a => a.username == interaction.fields.getTextInputValue('username'));
+                let dbUser = userList.find(a => {
+                    if (a.username.toLowerCase() == interaction.fields.getTextInputValue('username').toLowerCase()) return true;
+                    let names = [a.username.slice(0, a.username.indexOf('('))];
+                    let name = a.username.slice(a.username.indexOf('(')).trim();
+                    if (name.endsWith(')')) name = name.slice(0, -1);
+                    names = names.concat(name.split(',')).map(a => a.trim().toLowerCase());
+                });
                 if (dbUser == null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')

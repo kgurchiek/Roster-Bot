@@ -6,7 +6,7 @@ let selections = {};
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('verify'),
-    async selectHandler({ interaction, user, supabase, archive, logChannel }) {
+    async selectHandler({ interaction, user, supabase, archive, logChannel, pointRules }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'signup': {
@@ -75,13 +75,13 @@ module.exports = {
                         }
                     }
                     interaction.customId = `verify-edit-${id}`;
-                    this.buttonHandler({ interaction, supabase, archive, logChannel });
+                    this.buttonHandler({ interaction, user, supabase, archive, logChannel, pointRules });
                 }
                 break;
             }
         }
     },
-    async buttonHandler({ interaction, user, supabase, archive, logChannel }) {
+    async buttonHandler({ interaction, user, supabase, archive, logChannel, pointRules }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'view': {
@@ -193,7 +193,7 @@ module.exports = {
                 await archive[event].updatePanel();
 
                 interaction.customId = `interaction-view-${event}-${id}`;
-                this.buttonHandler({ interaction, supabase, archive, logChannel });
+                this.buttonHandler({ interaction, user, supabase, archive, logChannel, pointRules });
                 break;
             }
             case 'verify': {
@@ -219,7 +219,45 @@ module.exports = {
                     return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
                 }
                 
+                let type = archive[event].data.monster_type;
+                if (type == 'NQ' && archive[event].day >= 4) type = 'HQ'; 
+                let rules = pointRules.filter(a => a.monster_type == type);
+                let dkp = 0;
+                let ppp = 0;
+                if (signup.tagged) {
+                    let rule = rules.find(a => a.point_code == 't');
+                    if (rule == null) return await interaction.update({ ephemeral: true, embeds: [errorEmbed('Error fetching point rule', `Couldn't find tag point rule for monster type ${type}`)], components: [] });
+                    dkp += rule.dkp_value;
+                    ppp += rule.ppp_value;
+                }
+                if (signup.killed) {
+                    let rule = rules.find(a => a.point_code == 'k');
+                    if (rule == null) return await interaction.update({ ephemeral: true, embeds: [errorEmbed('Error fetching point rule', `Couldn't find kill point rule for monster type ${type}`)], components: [] });
+                    dkp += rule.dkp_value;
+                    ppp += rule.ppp_value;
+
+                    if (signup.rage) {
+                        let rule = rules.find(a => a.point_code == 'r');
+                        if (rule == null) return await interaction.update({ ephemeral: true, embeds: [errorEmbed('Error fetching point rule', `Couldn't find rage point rule for monster type ${type}`)], components: [] });
+                        dkp += rule.dkp_value;
+                        ppp += rule.ppp_value;
+                    }
+                }
+
                 await interaction.deferUpdate();
+                if (dkp != 0) {
+                    let { error } = await supabase.rpc('increment_points', { table_name: config.supabase.tables.users, id: signup.player_id.id, type: 'dkp', amount: dkp });
+                    if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error incrementing dkp', error.message)], components: [] });
+                    ({ error } = await supabase.rpc('increment_points', { table_name: config.supabase.tables.users, id: signup.player_id.id, type: 'lifetime_dkp', amount: dkp }));
+                    if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error incrementing lifetime dkp', error.message)], components: [] });
+                }
+                if (ppp != 0) {
+                    let { error } = await supabase.rpc('increment_points', { table_name: config.supabase.tables.users, id: signup.player_id.id, type: 'ppp', amount: ppp });
+                    if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error incrementing ppp', error.message)], components: [] });
+                    ({ error } = await supabase.rpc('increment_points', { table_name: config.supabase.tables.users, id: signup.player_id.id, type: 'lifetime_ppp', amount: ppp }));
+                    if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error incrementing lifetime ppp', error.message)], components: [] });
+                }
+
                 let { error } = await supabase.from(config.supabase.tables.signups).update({ verified: true }).eq('signup_id', signup.signup_id);
                 if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating signup', error.message)], components: [] });
                 signup.verified = true;
@@ -364,12 +402,12 @@ module.exports = {
 
                 selections[id][option] = !selections[id][option];
                 interaction.customId = `verify-edit-${id}`;
-                this.buttonHandler({ interaction, supabase, archive, logChannel });
+                this.buttonHandler({ interaction, user, supabase, archive, logChannel, pointRules });
                 break;
             }
         }
     },
-    async modalHandler({ interaction, supabase, archive, logChannel }) {
+    async modalHandler({ interaction, user, supabase, archive, logChannel, pointRules }) {
         let args = interaction.customId.split('-');
         let id = args[1];
 
@@ -399,6 +437,6 @@ module.exports = {
         }
         
         interaction.customId = `verify-edit-${id}`;
-        this.buttonHandler({ interaction, supabase, archive, logChannel });
+        this.buttonHandler({ interaction, user, supabase, archive, logChannel, pointRules });
     }
 }
