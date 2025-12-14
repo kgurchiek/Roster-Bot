@@ -40,7 +40,7 @@ module.exports = {
                                 } else {
                                     let embed = new EmbedBuilder()
                                         .setTitle('Error')
-                                        .setColor('#ff000')
+                                        .setColor('#ff0000')
                                         .setDescription(`${monsters[monster].leaders[i][j].username} is already leader of your party`)
                                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                                 }
@@ -79,7 +79,7 @@ module.exports = {
 
                 for (let i = 0; i < monsters[monster].signups.length; i++) {
                     for (let j = 0; j < monsters[monster].signups[i].length; j++) {
-                        if (monsters[monster].leaders[i][j].id != user.id) continue;
+                        if (monsters[monster].leaders[i][j]?.id != user.id) continue;
                         monsters[monster].removedLeader[i][j] = user.id;
                         monsters[monster].leaders[i][j] = null;
                         await interaction.deferReply({ ephemeral: true });
