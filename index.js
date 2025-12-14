@@ -542,7 +542,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                     .setCustomId(`editsignup-signup-${i}-${this.event}`)
                                     .addOptions(
                                         ...Array(Math.min(25, signups.length - i * 25)).fill().map((a, j) => 
-                                            signups.find((b, k) => b.player_id.id == signups[i * 25 + j].player_id.id && (b.active || k < i * 25 + j)) ? null : new StringSelectMenuOptionBuilder()
+                                            !signups[i * 25 + j].active && signups.find((b, k) => b.player_id.id == signups[i * 25 + j].player_id.id && (b.active || k < i * 25 + j)) ? null : new StringSelectMenuOptionBuilder()
                                                 .setLabel(`${signups[i * 25 + j].player_id.username}`)
                                                 .setValue(`${i * 25 + j}`)
                                         ).filter(a => a != null)
