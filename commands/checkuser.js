@@ -27,7 +27,7 @@ module.exports = {
 
         const newEmbed = new EmbedBuilder()
             .setTitle(account.username)
-            .setDescription(`**DKP:** ${account.dkp}\n**PPP:** ${account.ppp}\n**Frozen:** ${account.frozen}\n**Last Camp**:<t:${Math.floor(new Date(account.last_camped).getTime() / 1000)}:R>\n**Tag Rates:**${config.supabase.trackedRates.map(a => `\n${a}: ${(account[`${a.toLowerCase().replaceAll(' ', '')}_tag_rate`] || 0).toFixed(2)}`)}`);
+            .setDescription(`**DKP:** ${account.dkp}\n**PPP:** ${account.ppp}\n**Frozen:** ${account.frozen}${account.last_camped == null ? '' : `\n**Last Camp**:<t:${Math.floor(new Date(account.last_camped).getTime() / 1000)}:R>`}\n**Tag Rates:**${config.supabase.trackedRates.map(a => `\n${a}: ${(account[`${a.toLowerCase().replaceAll(' ', '')}_tag_rate`] || 0).toFixed(2)}`)}`);
         await interaction.editReply({ embeds: [newEmbed] });
     }
 }

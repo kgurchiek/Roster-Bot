@@ -66,7 +66,7 @@ module.exports = {
                 }
 
                 let buttons = [
-                    (monster == 'Tiamat' || monsters[monster].placeholders != null || monsters[monster].data.max_windows == null || monsters[monster].data.max_windows == 1 || monsters[monster].data.max_windows >= 25) ? null : new ActionRowBuilder()
+                    (monsters[monster].placeholders != null || monsters[monster].data.max_windows == null || monsters[monster].data.max_windows == 1 || monsters[monster].data.max_windows >= 25) ? null : new ActionRowBuilder()
                         .addComponents(
                             new StringSelectMenuBuilder()
                                 .setPlaceholder('Windows')
@@ -129,7 +129,7 @@ module.exports = {
                     return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
                 }
 
-                if (monster != 'Tiamat' && monsters[monster].placeholders == null) {
+                if (monsters[monster].placeholders == null) {
                     if (monsters[monster].data.max_windows == null || monsters[monster].data.max_windows >= 25) {
                         let modal = new ModalBuilder()
                             .setCustomId(`populate-${monster}-${id}-${monsters[monster].windows}`)
@@ -186,7 +186,7 @@ module.exports = {
                         .setDescription('Please select the group that killed the monster')
                     return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
                 }
-                if (monster != 'Tiamat' && monsters[monster].placeholders == null && selections[id].windows == null) {
+                if (monsters[monster].placeholders == null && selections[id].windows == null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')

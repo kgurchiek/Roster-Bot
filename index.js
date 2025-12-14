@@ -390,7 +390,12 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                             .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.data.monster_name.split('_')[0].replaceAll(' ', '')}.png`)
                         if (i == 0) embed.setTitle(`🐉 ${this.name} (Day ${this.day})${this.rage ? ' (Rage)' : ''}`);
                         embed.setDescription(`${i == 0 ? '🕒 Closed\n\n**Current Window**\n' : '**Previous Windows**\n'}\`\`\`\n${
-                            a.filter((b, i, arr) => arr.slice(0, i).find(c => c.player_id.id == b.player_id.id) == null).map(b => `${b.windows == null && b.tagged == null && b.killed == null ? '✖' : '✓'} ${b.player_id.username}${this.data.signups.filter(c => c != null && c.player_id.id == b.player_id.id).length > 1 ? ` x${this.data.signups.filter(a => a.player_id.id == b.player_id.id).length}` : ''} ${(b.windows == null || this.data.max_windows == 1) ? '' : `- ${b.windows}${this.windows == null ? '' : `/${this.windows}`}`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''}`).join('\n')
+                            a.filter((b, i, arr) => arr.slice(0, i).find(c => c.player_id.id == b.player_id.id) == null).map(b => {
+                                let userSignups = this.data.signups.filter(c => c != null && c.player_id.id == b.player_id.id); 
+                                let totalWindows = userSignups.reduce((a, b) => a + b?.windows || 0, 0);
+                                return `${b.windows == null && b.tagged == null && b.killed == null ? '✖' : '✓'} ${b.player_id.username}${userSignups.length > 1 ? ` x${userSignups.length}` : ''} ${(totalWindows == null || this.data.max_windows == 1) ? '' : `- ${totalWindows}${this.windows == null ? '' : `/${this.windows}`} windows`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''}`
+                            }
+                        ).join('\n')
                         }\n\`\`\``);
                         if (this.verified) embed.setFooter({ text: '✓ Verified' });
 
@@ -537,10 +542,10 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                     .setCustomId(`editsignup-signup-${i}-${this.event}`)
                                     .addOptions(
                                         ...Array(Math.min(25, signups.length - i * 25)).fill().map((a, j) => 
-                                            new StringSelectMenuOptionBuilder()
+                                            signups.find((b, k) => b.player_id.id == signups[i * 25 + j].player_id.id && (b.active || k < i * 25 + j)) ? null : new StringSelectMenuOptionBuilder()
                                                 .setLabel(`${signups[i * 25 + j].player_id.username}`)
                                                 .setValue(`${i * 25 + j}`)
-                                        )
+                                        ).filter(a => a != null)
                                     )
                             )
                     ),
@@ -631,7 +636,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             }
         }
         createVerificationComponents() {
-            let unverified = this.data.signups.filter(a => a.verified == null);
+            let unverified = this.data.signups.filter(a => a.active == true && a.verified == null);
             if (unverified.length == 0) return [];
             else {
                 return [
