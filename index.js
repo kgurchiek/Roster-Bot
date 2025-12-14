@@ -594,7 +594,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                         await this.updateMessage();
                         let embed = new EmbedBuilder()
                             .setTitle('Leader Chosen')
-                            .setDescription(`${this.leaders[i][j].username} is now leader of alliance ${i} party ${j}.`)
+                            .setDescription(`${this.leaders[i][j].username} is now leader of alliance ${i + 1} party ${j + 1}.`)
                         await this.message.reply({ embeds: [embed] });
                     }
                 }

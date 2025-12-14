@@ -77,7 +77,7 @@ module.exports = {
                             if (userId == monsters[monster].signups[alliance][party][slot]?.user.id) {
                                 signupId = monsters[monster].signups[alliance][party][slot].signupId;
                                 template = templateList.find(a => a.monster_name == monster && a.alliance_number == alliance + 1 && a.party_number == party + 1 && a.party_slot_number == slot + 1);
-                                if (template == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching slot template', `Couldn't find template for ${monster} alliance ${alliance}, party ${party}, slot ${slot}`)] })
+                                if (template == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching slot template', `Couldn't find template for ${monster} alliance ${alliance + 1}, party ${party + 1}, slot ${slot + 1}`)] })
                                 rosterSlot = { alliance, party, slot };
                             }
                         }

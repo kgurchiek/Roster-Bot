@@ -54,7 +54,7 @@ module.exports = {
                                 .setColor('#00ff00')
                                 .setDescription('You are now the leader of your party')
                             await interaction.reply({ ephemeral: true, embeds: [embed] });
-                            embed = new EmbedBuilder().setDescription(`${user.username} is now leader of alliance ${i}, party ${k} of the ${monster} raid.`);
+                            embed = new EmbedBuilder().setDescription(`${user.username} is now leader of alliance ${i + 1}, party ${k + 1} of the ${monster} raid.`);
                             return await logChannel.send({ embeds: [embed] });
                         }
                     }
