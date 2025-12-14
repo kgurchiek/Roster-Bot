@@ -392,7 +392,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                         embed.setDescription(`${i == 0 ? '🕒 Closed\n\n**Current Window**\n' : '**Previous Windows**\n'}\`\`\`\n${
                             a.filter((b, i, arr) => arr.slice(0, i).find(c => c.player_id.id == b.player_id.id) == null).map(b => {
                                 let userSignups = this.data.signups.filter(c => c != null && c.player_id.id == b.player_id.id); 
-                                let totalWindows = userSignups.reduce((a, b) => a + b?.windows || 0, 0);
+                                let totalWindows = this.name == 'Tiamat' ? userSignups.length : userSignups.reduce((a, b) => a + b?.windows || 0, 0);
                                 return `${b.windows == null && b.tagged == null && b.killed == null ? '✖' : '✓'} ${b.player_id.username}${userSignups.length > 1 ? ` x${userSignups.length}` : ''} ${(totalWindows == null || this.data.max_windows == 1) ? '' : `- ${totalWindows}${this.windows == null ? '' : `/${this.windows}`} windows`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''}`
                             }
                         ).join('\n')
