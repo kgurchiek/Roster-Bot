@@ -107,12 +107,12 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
                 
-                await interaction.deferReply({ ephemeral: true });
+                await interaction.deferUpdate();
                 if (monsters[monster].placeholders[user.username] == null) monsters[monster].placeholders[user.username] = 0;
                 let { error } = await supabase.from(config.supabase.tables.signups).update({
                     placeholders: monsters[monster].placeholders[user.username] + selections[id].count
                 }).eq('signup_id', signupId);
-                if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating placeholders', error.message)] });
+                if (error) return console.log('Error updating placeholders:', error.message);
                 monsters[monster].placeholders[user.username] += selections[id].count;
 
                 await monsters[monster].message.edit({ embeds: monsters[monster].createEmbeds() });

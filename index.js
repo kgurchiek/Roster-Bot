@@ -393,7 +393,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                             a.filter((b, i, arr) => arr.slice(0, i).find(c => c.player_id.id == b.player_id.id) == null).map(b => {
                                 let userSignups = this.data.signups.filter(c => c != null && c.player_id.id == b.player_id.id); 
                                 let totalWindows = this.name == 'Tiamat' ? userSignups.length : userSignups.reduce((a, b) => a + b?.windows || 0, 0);
-                                return `${b.windows == null && b.tagged == null && b.killed == null ? '✖' : '✓'} ${b.player_id.username}${this.name != 'Tiamat' && userSignups.length > 1 ? ` x${userSignups.length}` : ''} ${(totalWindows == null || this.data.max_windows == 1) ? '' : `- ${totalWindows}${this.windows == null ? '' : `/${this.windows}`} windows`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''}`
+                                return `${b.windows == null && b.tagged == null && b.killed == null ? '✖' : '✓'} ${b.player_id.username}${this.name != 'Tiamat' && userSignups.length > 1 ? ` x${userSignups.length}` : ''}${this.placeholders == null ? ((totalWindows == null || this.data.max_windows == 1) ? '' : ` - ${totalWindows}${this.windows == null ? '' : `/${this.windows}`} windows`) : ` - ${this.placeholders[b.player_id.username] || 0} PH`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''}`
                             }
                         ).join('\n')
                         }\n\`\`\``);
@@ -407,6 +407,13 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         createButtons() {
             let unverifiedClears = new Array(this.clears).fill().map((a, i) => i).filter(a => !this.verifiedClears.includes(a));
             if (this.verified) return [
+                new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setLabel('📷 Upload Tag Screenshot')
+                            .setStyle(ButtonStyle.Primary)
+                            .setCustomId(`screenshot-monster-${this.event}`),
+                    ),
                 unverifiedClears.length == 0 ? null : new ActionRowBuilder()
                     .addComponents(
                         new StringSelectMenuBuilder()
@@ -543,7 +550,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                     .addOptions(
                                         ...Array(Math.min(25, signups.length - i * 25)).fill().map((a, j) =>
                                             new StringSelectMenuOptionBuilder()
-                                                .setLabel(`${signups[i * 25 + j].player_id.username} (${signups[i * 25 + j].signup_id})`)
+                                                .setLabel(`${signups[i * 25 + j].player_id.username}`)
                                                 .setValue(`${signups[i * 25 + j].signup_id}`)
                                         )
                                     )
