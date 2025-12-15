@@ -38,7 +38,7 @@ module.exports = {
                 }
         
                 if (selections[id] == null) {
-                    let signup = archive[event].data.signups[interaction.values[0]];
+                    let signup = archive[event].data.signups.find(a => a.signup_id == interaction.values[0]);
                     selections[id] = {
                         event,
                         signupId: signup.signup_id,
@@ -47,7 +47,8 @@ module.exports = {
                         killed: signup.killed,
                         rage: signup.rage,
                         placeholders: signup.placeholders,
-                        screenshot: signup.screenshot
+                        screenshot: signup.screenshot,
+                        userId: signup.player_id.id
                     }
                 }
                 let components = [
@@ -193,22 +194,30 @@ module.exports = {
                         .setDescription('This message has expired, please use the verify user dropdown again')
                     return await interaction.update({ ephemeral: true, embeds: [embed], components: [], content: '' });
                 }
-                
+
+                let signup = archive[event].data.signups.find(a => a.signup_id == signupId);
+
                 await interaction.deferUpdate({ ephemeral: true });
-                let { error } = await supabase.from(config.supabase.tables.signups).update({
+                let userSignups = archive[event].data.signups.filter(a => a.player_id.id == signup.player_id.id);
+                let { error } = await supabase.from(config.supabase.tables.signups).update({ windows: 0 }).eq('event_id', event).eq('player_id', signup.player_id.id);
+                if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating past signups', error.message)], components: [], content: '' });
+                let embed = new EmbedBuilder()
+                    .setDescription(`${signup.player_id.username}'${signup.player_id.username.endsWith('s') ? '' : 's'} signups for the ${archive[event].name} raid have been set to 0 windows (previousely ${userSignups.map(a => a.windows).join(', ')})`)
+                await logChannel.send({ embeds: [embed] });
+                userSignups.forEach(a => a.windows = 0);
+                ({ error } = await supabase.from(config.supabase.tables.signups).update({
                     windows: selections[id].windows,
                     tagged: selections[id].tagged,
                     killed: selections[id].killed,
                     rage: selections[id].rage
-                }).eq('signup_id', signupId);
+                }).eq('signup_id', signupId));
                 if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating signup', error.message)], components: [], content: '' });
-                let signup = archive[event].data.signups.find(a => a.signup_id == signupId);
                 signup.windows = selections[id].windows;
                 signup.tagged = selections[id].tagged;
                 signup.killed = selections[id].killed;
                 signup.rage = selections[id].rage;
                 await archive[event].updateMessage();
-                let embed = new EmbedBuilder()
+                embed = new EmbedBuilder()
                     .setTitle('Success')
                     .setColor('#00ff00')
                     .setDescription('Attendance updated')

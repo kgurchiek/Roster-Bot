@@ -115,7 +115,7 @@ module.exports = {
                         event,
                         signup,
                         signupId: signup.signup_id,
-                        windows: signup.windows,
+                        windows: archive[event].name == 'Tiamat' ? archive[event].data.signups.filter(a => a.signup_id == signup.signup_id && a.player_id.id == signup.player_id.id) : archive[event].data.signups.filter(a => a.signup_id == signup.signup_id && a.player_id.id == signup.player_id.id).reduce((a, b) => a + b?.windows || 0, 0),
                         tagged: signup.tagged,
                         killed: signup.killed,
                         rage: signup.rage,

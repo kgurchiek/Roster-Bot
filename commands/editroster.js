@@ -93,11 +93,11 @@ module.exports = {
                 }
 
                 let { alliance, party, slot } = selections[id];
-                if (monsters[monster].signups[alliance][party][slot] != null) {
+                if (monsters[monster].signups[alliance - 1][party - 1][slot - 1] != null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')
-                        .setDescription(`Slot already filled by ${monsters[monster].signups[alliance][party][slot].user.username}`)
+                        .setDescription(`Slot already filled by ${monsters[monster].signups[alliance - 1][party - 1][slot - 1].user.username}`)
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 

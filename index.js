@@ -368,7 +368,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                     embed.addFields(
                         {
                             name: 'Placeholders',
-                            value: Object.keys(this.placeholders).length == 0 ? '​' : `\`\`\`\n${Object.entries(this.placeholders).sort((a, b) => a > b ? 1 : -1).map(a => `${a[0]}: ${a[1]}${' '.repeat(`${a[0]}: ${a[1]}`.length - longest)} | ${(Math.floor(a[1] / 4) * 0.2).toFixed(1)} PPP`).join('\n')}\n\`\`\``
+                            value: Object.keys(this.placeholders).length == 0 ? '​' : `\`\`\`\n${Object.entries(this.placeholders).sort((a, b) => a > b ? 1 : -1).map(a => `${a[0]}: ${a[1]}${' '.repeat(longest - `${a[0]}: ${a[1]}`.length)} | ${(Math.floor(a[1] / 4) * 0.2).toFixed(1)} PPP`).join('\n')}\n\`\`\``
                         }
                     )
                 };
@@ -393,7 +393,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                             a.filter((b, i, arr) => arr.slice(0, i).find(c => c.player_id.id == b.player_id.id) == null).map(b => {
                                 let userSignups = this.data.signups.filter(c => c != null && c.player_id.id == b.player_id.id); 
                                 let totalWindows = this.name == 'Tiamat' ? userSignups.length : userSignups.reduce((a, b) => a + b?.windows || 0, 0);
-                                return `${b.windows == null && b.tagged == null && b.killed == null ? '✖' : '✓'} ${b.player_id.username}${userSignups.length > 1 ? ` x${userSignups.length}` : ''} ${(totalWindows == null || this.data.max_windows == 1) ? '' : `- ${totalWindows}${this.windows == null ? '' : `/${this.windows}`} windows`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''}`
+                                return `${b.windows == null && b.tagged == null && b.killed == null ? '✖' : '✓'} ${b.player_id.username}${this.name != 'Tiamat' && userSignups.length > 1 ? ` x${userSignups.length}` : ''} ${(totalWindows == null || this.data.max_windows == 1) ? '' : `- ${totalWindows}${this.windows == null ? '' : `/${this.windows}`} windows`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''}`
                             }
                         ).join('\n')
                         }\n\`\`\``);
@@ -521,7 +521,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 ].filter(a => a != null);
             }
             if (this.data.signups.length > 0) {
-                let signups = this.data.signups.filter((a, i, arr) => arr.slice(0, i).find(b => b.player_id.id == a.player_id.id) == null);
+                let signups = this.data.signups.filter((a, i, arr) => a.active || this.data.signups.find((b, j) => b.player_id.id == a.player_id.id && (b.active || j > i)) == null);
                 return [
                     new ActionRowBuilder()
                         .addComponents(
@@ -541,11 +541,11 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                     .setPlaceholder('🛡️ Edit User')
                                     .setCustomId(`editsignup-signup-${i}-${this.event}`)
                                     .addOptions(
-                                        ...Array(Math.min(25, signups.length - i * 25)).fill().map((a, j) => 
-                                            !signups[i * 25 + j].active && signups.find((b, k) => b.player_id.id == signups[i * 25 + j].player_id.id && (b.active || k < i * 25 + j)) ? null : new StringSelectMenuOptionBuilder()
-                                                .setLabel(`${signups[i * 25 + j].player_id.username}`)
-                                                .setValue(`${i * 25 + j}`)
-                                        ).filter(a => a != null)
+                                        ...Array(Math.min(25, signups.length - i * 25)).fill().map((a, j) =>
+                                            new StringSelectMenuOptionBuilder()
+                                                .setLabel(`${signups[i * 25 + j].player_id.username} (${signups[i * 25 + j].signup_id})`)
+                                                .setValue(`${signups[i * 25 + j].signup_id}`)
+                                        )
                                     )
                             )
                     ),
