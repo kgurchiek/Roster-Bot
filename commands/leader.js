@@ -5,7 +5,7 @@ const config = require('../config.json');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('leader'),
-    async buttonHandler({ interaction, user, supabase, monsters, logChannel }) {
+    async buttonHandler({ interaction, user, supabase, monsters, logChannel, jobList }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {
@@ -23,6 +23,9 @@ module.exports = {
                     for (let j = 0; j < monsters[monster].signups[i].length; j++) {
                         for (let k = 0; k < monsters[monster].signups[i][j].length; k++) {
                             if (monsters[monster].signups[i][j][k] == null || monsters[monster].signups[i][j][k].user.id != user.id) continue;
+                            let job = jobList.find(a => a.job_id == monsters[monster].signups[i][j][k].job);
+                            if (job == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching job data', `Couldn't find job with id ${monsters[monster].signups[i][j][k].job}`)] });
+                            
                             if (monsters[monster].leaders[i][j] != null) {
                                 if (monsters[monster].leaders[i][j].id == user.id) {
                                     let embed = new EmbedBuilder()
@@ -44,6 +47,13 @@ module.exports = {
                                         .setDescription(`${monsters[monster].leaders[i][j].username} is already leader of your party`)
                                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                                 }
+                            }
+                            if (job.role_type == 'Tank') {
+                                let embed = new EmbedBuilder()
+                                    .setTitle('Error')
+                                    .setColor('#ff0000')
+                                    .setDescription('Tanks cannot be party leaders')
+                                return await interaction.reply({ ephemeral: true, embeds: [embed] });
                             }
                             monsters[monster].leaders[i][j] = user;
                             let { error } = await supabase.from(config.supabase.tables.signups).update({ leader: true }).eq('signup_id', monsters[monster].signups[i][j].find(a => a?.user.id == user.id).signupId);
@@ -86,7 +96,6 @@ module.exports = {
                         let { error } = await supabase.from(config.supabase.tables.signups).update({ leader: false }).eq('signup_id', monsters[monster].signups[i][j].find(a => a.user.id == user.id).signupId);
                         if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating signup leader status', error.message)] });
                         await monsters[monster].updateMessage();
-                        await monsters[monster].updateLeaders();
                         let embed = new EmbedBuilder()
                             .setTitle('Success')
                             .setColor('#00ff00')

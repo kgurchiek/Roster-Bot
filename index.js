@@ -408,8 +408,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                 let userSignups = this.data.signups.filter(c => c != null && c.player_id.id == b.player_id.id); 
                                 let totalWindows = this.name == 'Tiamat' ? userSignups.length : userSignups.reduce((a, b) => a + b?.windows || 0, 0);
                                 return `${b.active && b.windows == null && b.tagged == null && b.killed == null ? '✖' : '✓'} ${b.player_id.username}${this.name != 'Tiamat' && userSignups.length > 1 ? ` x${userSignups.length}` : ''}${this.placeholders == null ? ((totalWindows == null || this.data.max_windows == 1) ? '' : ` - ${totalWindows}${this.windows == null ? '' : `/${this.windows}`} windows`) : ` - ${this.placeholders[b.player_id.username] || 0} PH`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''} ${this.placeholders != null ? `${(Math.floor((this.placeholders[b.player_id.username] || 0) / 4) * 0.2).toFixed(1)} PPP` : `${this.calculatePoints(b.player_id.id)} ${this.getPointType()}`}`;
-                            }
-                        ).join('\n')
+                            }).join('\n')
                         }\n\`\`\``);
                         if (this.verified) embed.setFooter({ text: '✓ Verified' });
 
@@ -616,7 +615,9 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 for (let j = 0; j < this.signups[i].length; j++) {
                     if (this.leaders[i][j] != null && !this.signups[i][j].filter(a => a != null).find(a => a.user.id == this.leaders[i][j].id)) this.leaders[i][j] = null;
                     if (this.signups[i][j].filter(a => a == null).length == 0 && this.leaders[i][j] == null) {
-                        while (this.leaders[i][j] == null || this.leaders[i][j].id == this.removedLeader[i][j]) this.leaders[i][j] = this.signups[i][j][Math.floor(Math.random() * this.signups[i][j].length)].user;
+                        let candidates = this.signups[i][j].filter(a => a != this.removedLeader[i][j] && jobList.find(b => b.job_id == a.job)?.role_type != 'Tank');
+                        if (candidates.length == 0) continue;
+                        this.leaders[i][j] = candidates[Math.floor(Math.random() * candidates.length)].user;
                         await this.updateMessage();
                         let embed = new EmbedBuilder()
                             .setTitle('Leader Chosen')
