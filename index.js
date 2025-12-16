@@ -928,7 +928,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         if (!interaction.isAutocomplete()) {
             if (user == null) {
                 let errorEmbed = new EmbedBuilder()
-                    .setColor('#190d0dff')
+                    .setColor('#ff0000')
                     .addFields({ name: 'Error', value: 'User not found.' });
                 await interaction.reply({ embeds: [errorEmbed], components: [], ephemeral: true });
                 return;
