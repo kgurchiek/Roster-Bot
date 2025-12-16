@@ -29,7 +29,7 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
         
-                let signup = archive[event].data.signups[interaction.values[0]];
+                let signup = archive[event].data.signups.find(a => a.signup_id == interaction.values[0]);
                 let errors = [];
                 if (signup.tagged == null) errors.push('User has not confirmed attendance');
                 if (signup.screenshot == null) errors.push('User has not uploaded screenshot');
@@ -115,7 +115,7 @@ module.exports = {
                         event,
                         signup,
                         signupId: signup.signup_id,
-                        windows: archive[event].name == 'Tiamat' ? archive[event].data.signups.filter(a => a.signup_id == signup.signup_id && a.player_id.id == signup.player_id.id) : archive[event].data.signups.filter(a => a.signup_id == signup.signup_id && a.player_id.id == signup.player_id.id).reduce((a, b) => a + b?.windows || 0, 0),
+                        windows: archive[event].name == 'Tiamat' ? archive[event].data.signups.filter(a => a.player_id.id == signup.player_id.id) : archive[event].data.signups.filter(a => a.player_id.id == signup.player_id.id).reduce((a, b) => a + b?.windows || 0, 0),
                         tagged: signup.tagged,
                         killed: signup.killed,
                         rage: signup.rage,

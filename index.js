@@ -310,6 +310,20 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         alliances = config.roster.alliances;
         parties = config.roster.parties;
         slots = config.roster.slots;
+        calculatePoints(playerId) {
+            let campRule = campRules.find(a => a.monster_name == this.data.monster_name);
+            if (campRule == null) console.log(`Error: couldn't fetch camp point rule for ${this.data.monster_name}`);
+            else {
+                let signups = this.data.signups.filter(a => a.player_id.id == playerId);
+                let windows = signups.reduce((a, b) => a + b.windows || 0, 0);
+                return campRule.camp_points[windows];
+            }
+        }
+        getPointType() {
+            let campRule = campRules.find(a => a.monster_name == this.data.monster_name);
+            if (campRule == null) console.log(`Error: couldn't fetch camp point rule for ${this.data.monster_name}`);
+            else return campRule.type;
+        }
         createEmbeds() {
             if (this.active) {
                 let signups = this.signups.flat().flat().filter((a, i, arr) => a != null && arr.slice(0, i).find(b => b != null && a.user.id == b.user.id) == null).length;
@@ -393,7 +407,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                             a.filter((b, i, arr) => arr.slice(0, i).find(c => c.player_id.id == b.player_id.id) == null).map(b => {
                                 let userSignups = this.data.signups.filter(c => c != null && c.player_id.id == b.player_id.id); 
                                 let totalWindows = this.name == 'Tiamat' ? userSignups.length : userSignups.reduce((a, b) => a + b?.windows || 0, 0);
-                                return `${b.windows == null && b.tagged == null && b.killed == null ? '✖' : '✓'} ${b.player_id.username}${this.name != 'Tiamat' && userSignups.length > 1 ? ` x${userSignups.length}` : ''}${this.placeholders == null ? ((totalWindows == null || this.data.max_windows == 1) ? '' : ` - ${totalWindows}${this.windows == null ? '' : `/${this.windows}`} windows`) : ` - ${this.placeholders[b.player_id.username] || 0} PH`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''}`
+                                return `${b.active && b.windows == null && b.tagged == null && b.killed == null ? '✖' : '✓'} ${b.player_id.username}${this.name != 'Tiamat' && userSignups.length > 1 ? ` x${userSignups.length}` : ''}${this.placeholders == null ? ((totalWindows == null || this.data.max_windows == 1) ? '' : ` - ${totalWindows}${this.windows == null ? '' : `/${this.windows}`} windows`) : ` - ${this.placeholders[b.player_id.username] || 0} PH`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''} ${this.placeholders != null ? `${(Math.floor((this.placeholders[b.player_id.username] || 0) / 4) * 0.2).toFixed(1)} PPP` : `${this.calculatePoints(b.player_id.id)} ${this.getPointType()}`}`;
                             }
                         ).join('\n')
                         }\n\`\`\``);
@@ -528,7 +542,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 ].filter(a => a != null);
             }
             if (this.data.signups.length > 0) {
-                let signups = this.data.signups.filter((a, i, arr) => a.active || this.data.signups.find((b, j) => b.player_id.id == a.player_id.id && (b.active || j > i)) == null);
+                let signups = this.data.signups.filter((a, i) => a.active || this.data.signups.find((b, j) => b.player_id.id == a.player_id.id && (b.active || j > i)) == null);
                 return [
                     new ActionRowBuilder()
                         .addComponents(
@@ -657,7 +671,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                             ...Array(Math.min(25, unverified.length - i * 25)).fill().map((a, j) => 
                                                 new StringSelectMenuOptionBuilder()
                                                     .setLabel(`${unverified[i * 25 + j].player_id.username}`)
-                                                    .setValue(`${i * 25 + j}`)
+                                                    .setValue(`${unverified[i * 25 + j].signup_id}`)
                                             )
                                         )
                                 )
