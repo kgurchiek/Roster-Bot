@@ -202,14 +202,15 @@ module.exports = {
                 let { error } = await supabase.from(config.supabase.tables.signups).update({ windows: 0 }).eq('event_id', event).eq('player_id', signup.player_id.id);
                 if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating past signups', error.message)], components: [], content: '' });
                 let embed = new EmbedBuilder()
-                    .setDescription(`${signup.player_id.username}'${signup.player_id.username.endsWith('s') ? '' : 's'} signups for the ${archive[event].name} raid have been set to 0 windows (previousely ${userSignups.map(a => a.windows).join(', ')})`)
+                    .setDescription(`${signup.player_id.username}'${signup.player_id.username.endsWith('s') ? '' : 's'} signups for the ${archive[event].name} raid have been set to ${selections[id].windows} windows (previousely ${userSignups.map(a => a.windows).join(', ')})`)
                 await logChannel.send({ embeds: [embed] });
                 userSignups.forEach(a => a.windows = 0);
                 ({ error } = await supabase.from(config.supabase.tables.signups).update({
                     windows: selections[id].windows,
                     tagged: selections[id].tagged,
                     killed: selections[id].killed,
-                    rage: selections[id].rage
+                    rage: selections[id].rage,
+                    placeholders: selections[id].placeholders
                 }).eq('signup_id', signupId));
                 if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating signup', error.message)], components: [], content: '' });
                 signup.windows = selections[id].windows;

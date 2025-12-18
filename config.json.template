@@ -35,13 +35,15 @@
         "staffRoles": [],
         "logChannel": "",
         "screenshotPanelCategory": "",
-        "memberScreenshots": ""
+        "memberScreenshots": "",
+        "rewardHistoryChannel": ""
     },
     "roster": {
         "alliances": 4,
         "parties": 3,
         "slots": 6,
         "team": "",
-        "monsterGroups": []
+        "monsterGroups": [],
+        "placeholderMonsters": []
     }
 }

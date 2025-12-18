@@ -5,7 +5,7 @@ const config = require('../config.json');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('resolve'),
-    async buttonHandler({ interaction, user, supabase, campRules, archive, logChannel }) {
+    async buttonHandler({ interaction, user, supabase, campRules, archive, logChannel, rewardHistoryChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {
@@ -54,21 +54,25 @@ module.exports = {
                 }
                 
                 await interaction.deferReply({ ephemeral: true });
+                let total = { dkp: 0, ppp: 0 };
                 archive[event].data.signups.forEach(async (signup, i, arr) => {
                     if (arr.slice(0, i).find(a => a.player_id.id == signup.player_id.id) == null) {
                         let { error } = await supabase.from(config.supabase.tables.users).update({last_camped: new Date() }).eq('id', signup.player_id.id);
                         if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error incrementing dkp', error.message)] });
                     }
                     let campRule = campRules.find(a => a.monster_name == archive[event].name);
-                    if (campRule == null) process.exit();
+                    if (campRule == null) return console.log(`Error: couldn't find camp rule for monster ${archive[event].monster_name}`);
                     let dkp = 0;
                     let ppp = 0;
                     ppp += parseFloat((Math.floor(signup.placeholders / 4) * 0.2).toFixed(1));
-                    let campPoints = campRule.camp_points[signup.windows - 1] || campRule.camp_points[campRule.camp_points.length - 1] || 0;
+                    let campPoints = campRule.camp_points[Math.min(signup.windows - 1, campRule.camp_points.length - 1)] || 0;
                     if (campRule.bonus_windows) campPoints += Math.min(Math.floor(signup.windows / campRule.bonus_windows) * campRule.bonus_points, campRule.max_bonus);
                     if (campRule.type.toLowerCase() == 'dkp') dkp += campPoints;
                     else ppp += campPoints;
                     
+                    total.dkp += dkp;
+                    total.ppp += ppp;
+
                     if (dkp != 0) {
                         let { error } = await supabase.rpc('increment_points', { table_name: config.supabase.tables.users, id: signup.player_id.id, type: 'dkp', amount: dkp });
                         if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error incrementing dkp', error.message)] });
@@ -84,11 +88,35 @@ module.exports = {
                 })
                 
                 let { error } = await supabase.from(config.supabase.tables.events).update({ verified: true }).eq('event_id', event);
-                if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating signup', error.message)] });
+                if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating event', error.message)] });
                 archive[event].verified = true;
                 await archive[event].updateMessage();
 
                 let embed = new EmbedBuilder()
+                    .setTitle(archive[event].name)
+                    .addFields(
+                        ...[
+                            { name: 'Members', value: String(archive[event].data.signups.filter((a, i, arr) => arr.slice(0, i).find(b => a.player_id.id == b.player_id.id) == null).length) },
+                            total.dkp == 0 ? null : { name: 'Total DKP', value: String(total.dkp) },
+                            total.ppp == 0 ? null : { name: 'Total PPP', value: String(total.ppp) }
+                        ].filter(a => a != null)
+                    )
+                let components = [
+                    new ActionRowBuilder()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId(`rewarddetails-${event}`)
+                                .setLabel('Details')
+                                .setStyle(ButtonStyle.Primary),
+                            new ButtonBuilder()
+                                .setCustomId(`editevent-event-${event}`)
+                                .setLabel('🛡️ Edit')
+                                .setStyle(ButtonStyle.Primary)
+                        )
+                ]
+                await rewardHistoryChannel.send({ embeds: [embed], components });
+
+                embed = new EmbedBuilder()
                     .setTitle('Success')
                     .setColor('#00ff00')
                     .setDescription('Raid verified')

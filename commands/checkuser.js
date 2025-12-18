@@ -15,7 +15,7 @@ module.exports = {
         const user = (interaction.options.getUser('user') || interaction.user);
         let { data: account, error } = await supabase.from(config.supabase.tables.users).select('*').eq('id', user.id).limit(1);
 
-        if (error) return await interaction.editReply({ content: '', embeds: [errorEmbed('Error Fetching User'. error.message)] });
+        if (error) return await interaction.editReply({ content: '', embeds: [errorEmbed('Error Fetching User', error.message)] });
         account = account[0];
         if (account == null) {
             const errorEmbed = new EmbedBuilder()
