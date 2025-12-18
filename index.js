@@ -316,7 +316,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             else {
                 let signups = this.data.signups.filter(a => a.player_id.id == playerId);
                 let windows = signups.reduce((a, b) => a + b.windows || 0, 0);
-                return campRule.camp_points[windows];
+                return campRule.camp_points[Math.min(windows - 1, campRule.camp_points.length - 1)] || 0;
             }
         }
         getPointType() {
