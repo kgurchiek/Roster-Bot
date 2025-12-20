@@ -217,6 +217,7 @@ module.exports = {
                 signup.tagged = selections[id].tagged;
                 signup.killed = selections[id].killed;
                 signup.rage = selections[id].rage;
+                signup.placeholders = selections[id].placeholders;
                 await archive[event].updateMessage();
                 embed = new EmbedBuilder()
                     .setTitle('Success')
