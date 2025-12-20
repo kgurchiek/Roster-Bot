@@ -512,6 +512,10 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                             new ButtonBuilder()
                                 .setCustomId(`placeholder-enter-${this.name}`)
                                 .setLabel('Enter Placeholders')
+                                .setStyle(ButtonStyle.Secondary),
+                            new ButtonBuilder()
+                                .setCustomId(`placeholder-remove-${this.name}`)
+                                .setLabel('Remove Placeholders')
                                 .setStyle(ButtonStyle.Secondary)
                         ),
                     new ActionRowBuilder()

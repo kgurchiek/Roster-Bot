@@ -73,7 +73,54 @@ module.exports = {
                     new ActionRowBuilder()
                         .addComponents(
                             new ButtonBuilder()
-                                .setCustomId(`placeholder-confirm-${monster}-${interaction.id}-${signupId}`)
+                                .setCustomId(`placeholder-confirm-${monster}-${interaction.id}-${signupId}-true`)
+                                .setLabel('✓')
+                                .setStyle(ButtonStyle.Success)
+                        )
+                ].filter(a => a != null)
+                await interaction.reply({ ephemeral: true, components: buttons });
+                break;
+            }
+            case 'remove': {
+                let monster = args[2];
+                selections[interaction.id] = {};
+
+                if (monsters[monster] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`${monster} is not active`)
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
+
+                let signupId = monsters[monster].signups.filter(alliance => alliance.filter(party => party.filter(slot => slot?.user.id == user.id)))[0][0][0].signupId;
+                if (signupId == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription('You are not signed up for this raid')
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
+
+
+                let buttons = [
+                    new ActionRowBuilder()
+                        .addComponents(
+                            new StringSelectMenuBuilder()
+                                .setPlaceholder('How many placeholders do you want to remove?')
+                                .setCustomId(`placeholder-count-${interaction.id}`)
+                                .addOptions(
+                                    ...Array(25).fill().map((a, i) => 
+                                        new StringSelectMenuOptionBuilder()
+                                            .setLabel(`${i + 1}`)
+                                            .setValue(`-${i + 1}`)
+                                    )
+                                )
+                        ),
+                    new ActionRowBuilder()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId(`placeholder-confirm-${monster}-${interaction.id}-${signupId}-true`)
                                 .setLabel('✓')
                                 .setStyle(ButtonStyle.Success)
                         )
@@ -82,7 +129,7 @@ module.exports = {
                 break;
             }
             case 'confirm':  {
-                let [monster, id, signupId] = args.slice(2);
+                let [monster, id, signupId, update] = args.slice(2);
 
                 if (monsters[monster] == null) {
                     let embed = new EmbedBuilder()
@@ -116,6 +163,13 @@ module.exports = {
                 monsters[monster].placeholders[user.username] += selections[id].count;
 
                 await monsters[monster].message.edit({ embeds: monsters[monster].createEmbeds() });
+                if (update == 'true') {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Success')
+                        .setColor('#00ff00')
+                        .setDescription('Your placeholders have been updated')
+                    await interaction.editReply({ embeds: [embed], components: [] });
+                }
                 break;
             }
         }
