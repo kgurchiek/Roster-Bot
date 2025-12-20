@@ -919,10 +919,60 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
     }
     
     let messageCallbacks = [];
+
     client.on(Events.MessageCreate, async message => {
         if (message.channelId == config.discord.monstersChannel && message.embeds.length > 0) scheduleMonster(message);
         messageCallbacks = messageCallbacks.filter(a => a != null);
         for (let callback of messageCallbacks) if (message.channelId == callback.channel) callback.callback(message);
+
+        if (message.channel.parentId == config.discord.ocrCategory && message.content.toLowerCase() == 'findme') {
+            let reference = await message.fetchReference();
+            if (reference.attachments.size == 0) {
+                let embed = new EmbedBuilder()
+                    .setTitle('Error')
+                    .setColor('#ff0000')
+                    .setDescription('No attachment was detected in the replied message')
+                return await message.reply({ embeds: [embed] });
+            }
+            
+            let { data, error } = await supabase.from(config.supabase.tables.signups).select('*, event_id (event_id, close_date)').eq('screenshot', reference.id).limit(1);
+            if (error) console.log(`Error fetching signups for screenshot ${reference.id}: ${error.message}`);
+            if (data.length == 0) {
+                let embed = new EmbedBuilder()
+                    .setTitle('Error')
+                    .setColor('#ff0000')
+                    .setDescription('No signup referencing this screenshot was found')
+                return await message.reply({ embeds: [embed] });
+            }
+            let signup = data[0];
+            if (Date.now() - new Date(signup.event_id.close_date).getTime() > 6 * 60 * 60 * 1000) {
+                let embed = new EmbedBuilder()
+                    .setTitle('Error')
+                    .setColor('#ff0000')
+                    .setDescription('This raid is no longer accepting attendance screenshots')
+                return await message.reply({ embeds: [embed] });
+            }
+
+            ({ data, error } = await supabase.from(config.supabase.tables.signups).select('*').eq('event_id', signup.event_id.event_id).eq('player_id', message.author.id));
+            if (error) console.log(`Error fetching ${message.author.username}'${message.author.username.endsWith('s') ? '' : 's'} signup for event ${signup.event_id.event_id}: ${error.message}`);
+            if (data.length == 0) {
+                let embed = new EmbedBuilder()
+                    .setTitle('Error')
+                    .setColor('#ff0000')
+                    .setDescription(`You did not participate in this raid (event id: ${signup.event_id.event_id})`)
+                return await message.reply({ embeds: [embed] });
+            }
+            let signupId = data.map(a => ({ signup_id: a.signup_id, date: new Date(a.date).getTime() })).sort((a, b) => b.date - a.date)[0].signup_id;
+
+            ({ data, error } = await supabase.from(config.supabase.tables.signups).update({ screenshot: reference.id }).eq('signup_id', signupId));
+            if (error) return console.log(`Error updating ${message.author.username}'${message.author.username.endsWith('s') ? '' : 's'} screenshot: ${error.message}`);
+            
+            let embed = new EmbedBuilder()
+                .setTitle('Success')
+                .setColor('#00ff00')
+                .setDescription('Your attendance screenshot has been updated')
+            await message.reply({ embeds: [embed] });
+        }
     })
 
     client.on(Events.InteractionCreate, async interaction => {
