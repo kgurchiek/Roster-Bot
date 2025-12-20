@@ -494,6 +494,10 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                         .addComponents(
                             ...[
                                 new ButtonBuilder()
+                                    .setCustomId(`editsignup-monster-${this.event}`)
+                                    .setLabel('✏️ Edit Signup')
+                                    .setStyle(ButtonStyle.Secondary),
+                                new ButtonBuilder()
                                     .setCustomId(`leave-monster-${this.name}`)
                                     .setLabel('✖ Leave')
                                     .setStyle(ButtonStyle.Danger),
@@ -557,6 +561,10 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                 .setLabel('📷 Upload Tag Screenshot')
                                 .setStyle(ButtonStyle.Primary)
                                 .setCustomId(`screenshot-monster-${this.event}`),
+                            new ButtonBuilder()
+                                    .setCustomId(`editsignup-monster-${this.event}`)
+                                    .setLabel('✏️ Edit Signup')
+                                    .setStyle(ButtonStyle.Secondary)
                         ),
                     ...new Array(Math.ceil(signups.length / 25)).fill().map((a, i) =>
                         new ActionRowBuilder()
