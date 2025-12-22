@@ -200,44 +200,6 @@ module.exports = {
     async modalHandler({ interaction, user, supabase, userList, monsters, logChannel }) {        
         let args = interaction.customId.split('-');
         switch(args[1]) {
-            case 'user': {
-                let monster = args[2];
-        
-                if (monsters[monster] == null) {
-                    let embed = new EmbedBuilder()
-                        .setTitle('Error')
-                        .setColor('#ff0000')
-                        .setDescription(`${monster} is not active`)
-                    return await interaction.update({ ephemeral: true, embeds: [embed] });
-                }
-        
-                if (!user.staff) {
-                    let embed = new EmbedBuilder()
-                        .setTitle('Error')
-                        .setColor('#ff0000')
-                        .setDescription(`This action can only be performed by staff`)
-                    return await interaction.update({ ephemeral: true, embeds: [embed] });
-                }
-
-                let dbUser = userList.find(a => {
-                    if (a.username.toLowerCase() == interaction.fields.getTextInputValue('username').toLowerCase()) return true;
-                    let names = [a.username.slice(0, a.username.indexOf('('))];
-                    let name = a.username.slice(a.username.indexOf('(')).trim();
-                    if (name.endsWith(')')) name = name.slice(0, -1);
-                    names = names.concat(name.split(',')).map(a => a.trim().toLowerCase());
-                });
-                if (dbUser == null) {
-                    let embed = new EmbedBuilder()
-                        .setTitle('Error')
-                        .setColor('#ff0000')
-                        .setDescription(`Could not find user "${interaction.fields.getTextInputValue('username')}".`)
-                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
-                }
-
-                interaction.customId = `leave-monster-${monster}-${dbUser.id}`;
-                this.buttonHandler({ interaction, user, supabase, userList, monsters, logChannel });
-                break;
-            }
             case 'windows': {
                 let [monster, id, maxWindows, userId] = args.slice(2);
                 maxWindows = parseInt(maxWindows) || Infinity;

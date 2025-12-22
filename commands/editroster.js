@@ -1,6 +1,40 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const { errorEmbed } = require('../commonFunctions.js');
+const { errorEmbed, scoreMatch } = require('../commonFunctions.js');
 const config = require('../config.json');
+
+async function findUser(interaction, userList) {
+    let args = interaction.customId.split('-');
+    let [command, monster] = args.slice(1);
+    
+    let input = interaction.fields.getTextInputValue('username').toLowerCase();
+    let usernames = userList.map(a => a.username);
+    usernames.sort((a, b) =>
+        scoreMatch(a.toLowerCase(), input) -
+        scoreMatch(b.toLowerCase(), input)
+    )
+    
+    usernames = usernames.slice(0, 25);
+    let embed = new EmbedBuilder()
+        .setTitle('Error')
+        .setColor('#ff0000')
+        .setDescription(`User "${input}" not found, try selecting a similar username below:`)
+    let components = [
+        new ActionRowBuilder()
+            .addComponents(
+                new StringSelectMenuBuilder()
+                    .setCustomId(`editroster-username-${command}-${monster}`)
+                    .setPlaceholder('Similar usernames')
+                    .addOptions(
+                        usernames.map(a => 
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel(a)
+                                .setValue(a.toLowerCase())
+                        )
+                    )
+            )
+    ]
+    return await interaction.editReply({ content: '', embeds: [embed], components });
+}
 
 let selections = {};
 module.exports = {
@@ -76,8 +110,8 @@ module.exports = {
                         for (let slot = 0; slot < monsters[monster].signups[alliance][party].length; slot++) {
                             if (userId == monsters[monster].signups[alliance][party][slot]?.user.id) {
                                 signupId = monsters[monster].signups[alliance][party][slot].signupId;
-                                template = templateList.find(a => a.monster_name == monster && a.alliance_number == alliance + 1 && a.party_number == party + 1 && a.party_slot_number == slot + 1);
-                                if (template == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching slot template', `Couldn't find template for ${monster} alliance ${alliance + 1}, party ${party + 1}, slot ${slot + 1}`)] })
+                                template = templateList.find(a => a.monster_name == monsters[monster].data.monster_name && a.alliance_number == alliance + 1 && a.party_number == party + 1 && a.party_slot_number == slot + 1);
+                                if (template == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching slot template', `Couldn't find template for ${monsters[monster].data.monster_name} alliance ${alliance + 1}, party ${party + 1}, slot ${slot + 1}`)] })
                                 rosterSlot = { alliance, party, slot };
                             }
                         }
@@ -123,7 +157,7 @@ module.exports = {
             }
         }
     },
-    async selectHandler({ interaction, user, monsters }) {
+    async selectHandler({ interaction, client, user, supabase, userList, monsters, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'action': {
@@ -147,20 +181,16 @@ module.exports = {
 
                 switch(interaction.values[0]) {
                     case 'add': {
-                        let components = [
-                            new ActionRowBuilder()
-                                .addComponents(
-                                new ButtonBuilder()
-                                    .setCustomId(`quickjoin-user-${monster}`)
-                                    .setLabel('≫ Quick Join')
-                                    .setStyle(ButtonStyle.Primary),
-                                new ButtonBuilder()
-                                    .setCustomId(`signup-user-${monster}`)
-                                    .setLabel('📝 Sign Up')
-                                    .setStyle(ButtonStyle.Primary)
-                                )
-                        ]
-                        await interaction.update({ components });
+                        let modal = new ModalBuilder()
+                            .setTitle('Add User')
+                            .setCustomId(`editroster-add-${monster}`)
+                            .addComponents(
+                                new TextInputBuilder()
+                                    .setCustomId('username')
+                                    .setLabel('Username')
+                                    .setStyle(TextInputStyle.Short)
+                            )
+                        await interaction.showModal(modal);
                         break;
                     }
                     case 'move': {
@@ -179,7 +209,7 @@ module.exports = {
                     case 'remove': {
                         let modal = new ModalBuilder()
                             .setTitle('Remove User')
-                            .setCustomId(`leave-user-${monster}`)
+                            .setCustomId(`editroster-leave-${monster}`)
                             .addComponents(
                                 new TextInputBuilder()
                                     .setCustomId('username')
@@ -206,14 +236,71 @@ module.exports = {
                 selections[id][type] = parseInt(interaction.values[0]);
                 break;
             }
+            case 'username': {
+                let [command, monster] = args.slice(2);
+                
+                interaction.customId = `editroster-${command}-${monster}-${interaction.values[0]}`;
+                await this.modalHandler({ interaction, client, user, supabase, userList, monsters, logChannel });
+                break;
+            }
         }
     },
-    async modalHandler({ interaction, user, userList, monsters }) {
+    async modalHandler({ interaction, client, user, supabase, userList, monsters, logChannel }) {
         let args = interaction.customId.split('-');
 
         switch (args[1]) {
+            case 'add': {
+                let [monster, username] = args.slice(2);
+                if (!username) username == interaction.fields.getTextInputValue('username').toLowerCase();
+
+                if (monsters[monster] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`${monster} is not active`)
+                    return await interaction.update({ ephemeral: true, embeds: [embed] });
+                }
+        
+                if (!user.staff) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`This action can only be performed by staff`)
+                    return await interaction.update({ ephemeral: true, embeds: [embed] });
+                }
+
+                let dbUser = userList.find(a => {
+                    if (a.username.toLowerCase() == username) return true;
+                    let names = [a.username.slice(0, a.username.indexOf('('))];
+                    let altNames = a.username.slice(a.username.indexOf('(')).trim();
+                    if (altNames.endsWith(')')) altNames = altNames.slice(0, -1);
+                    names = names.concat(altNames.split(',')).map(a => a.trim().toLowerCase());
+                    if (names.includes(username)) return true;
+                });
+                if (dbUser == null) {
+                    await interaction.deferUpdate();
+                    return await findUser(interaction, userList);
+                }
+
+                let components = [
+                    new ActionRowBuilder()
+                        .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId(`quickjoin-user-${monster}-${dbUser.id}`)
+                            .setLabel('≫ Quick Join')
+                            .setStyle(ButtonStyle.Primary),
+                        new ButtonBuilder()
+                            .setCustomId(`signup-user-${monster}-${dbUser.id}`)
+                            .setLabel('📝 Sign Up')
+                            .setStyle(ButtonStyle.Primary)
+                        )
+                ];
+                await interaction.update({ content: '', embeds: [], components });
+                break;
+            }
             case 'move': {
-                let monster = args[2];
+                let [monster, username] = args.slice(2);
+                if (!username) username == interaction.fields.getTextInputValue('username').toLowerCase();
 
                 if (monsters[monster] == null) {
                     let embed = new EmbedBuilder()
@@ -232,18 +319,16 @@ module.exports = {
                 }
 
                 let dbUser = userList.find(a => {
-                    if (a.username.toLowerCase() == interaction.fields.getTextInputValue('username').toLowerCase()) return true;
+                    if (a.username.toLowerCase() == username) return true;
                     let names = [a.username.slice(0, a.username.indexOf('('))];
-                    let name = a.username.slice(a.username.indexOf('(')).trim();
-                    if (name.endsWith(')')) name = name.slice(0, -1);
-                    names = names.concat(name.split(',')).map(a => a.trim().toLowerCase());
+                    let altNames = a.username.slice(a.username.indexOf('(')).trim();
+                    if (altNames.endsWith(')')) altNames = altNames.slice(0, -1);
+                    names = names.concat(altNames.split(',')).map(a => a.trim().toLowerCase());
+                    if (names.includes(username)) return true;
                 });
                 if (dbUser == null) {
-                    let embed = new EmbedBuilder()
-                        .setTitle('Error')
-                        .setColor('#ff0000')
-                        .setDescription(`Could not find user "${interaction.fields.getTextInputValue('username')}".`)
-                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                    await interaction.deferUpdate();
+                    return await findUser(interaction, userList);
                 }
 
                 selections[interaction.id] = {};
@@ -296,6 +381,45 @@ module.exports = {
                         )
                 ]
                 await interaction.update({ embeds: [], components: buttons });
+                break;
+            }
+            case 'leave': {
+                let [monster, username] = args.slice(2);
+                if (!username) username == interaction.fields.getTextInputValue('username').toLowerCase();
+
+                if (monsters[monster] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`${monster} is not active`)
+                    return await interaction.update({ ephemeral: true, embeds: [embed] });
+                }
+        
+                if (!user.staff) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`This action can only be performed by staff`)
+                    return await interaction.update({ ephemeral: true, embeds: [embed] });
+                }
+
+                let dbUser = userList.find(a => {
+                    if (a.username.toLowerCase() == username) return true;
+                    let names = [a.username.slice(0, a.username.indexOf('('))];
+                    let altNames = a.username.slice(a.username.indexOf('(')).trim();
+                    if (altNames.endsWith(')')) altNames = altNames.slice(0, -1);
+                    names = names.concat(altNames.split(',')).map(a => a.trim().toLowerCase());
+                    if (names.includes(username)) return true;
+                });
+                if (dbUser == null) {
+                    await interaction.deferUpdate();
+                    return await findUser(interaction, userList);
+                }
+
+                let command = client.commands.get('leave');
+                if (command == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching command', 'Could not fetch leave command')] });
+                interaction.customId = `leave-monster-${monster}-${dbUser.id}`;
+                command.buttonHandler({ interaction, user, supabase, userList, monsters, logChannel });
                 break;
             }
         }

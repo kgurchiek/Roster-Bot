@@ -10,7 +10,7 @@ module.exports = {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'user': {
-                let monster = args[2];
+                let [monster, userId] = args.slice(2);
 
                 if (monsters[monster] == null) {
                     let embed = new EmbedBuilder()
@@ -20,19 +20,8 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
-                let modal = new ModalBuilder()
-                    .setCustomId(`signup-user-${monster}`)
-                    .setTitle(`Add User`)
-                    .addComponents(
-                        new ActionRowBuilder()
-                            .addComponents(
-                                new TextInputBuilder()
-                                    .setCustomId('username')
-                                    .setLabel('Username')
-                                    .setStyle(TextInputStyle.Short)
-                            )
-                    )
-                await interaction.showModal(modal);
+                interaction.customId = `signup-select-${monster}-${userId}`;
+                this.buttonHandler({ interaction, user, supabase, userList, jobList, templateList, monsters, logChannel });
                 break;
             }
             case 'select': {
@@ -260,6 +249,7 @@ module.exports = {
                 await interaction.update({ content: '​', embeds: [], components: [] });
                 let embed = new EmbedBuilder().setDescription(`${user.username} has joined the ${monster} raid in alliance ${alliance}, party ${party}, slot ${slot} as a ${jobList.find(a => a.job_id == job)?.job_name || `[error: job id ${job} not found]`}.`);
                 await logChannel.send({ embeds: [embed] });
+                await monsters[monster].updateMessage();
                 await monsters[monster].updateLeaders();
                 break;
             }
@@ -294,40 +284,6 @@ module.exports = {
                 }
                 interaction.deferUpdate();
                 selections[id].job = interaction.values[0];
-                break;
-            }
-        }
-    },
-    async modalHandler({ interaction, user, supabase, userList, jobList, templateList, monsters, logChannel }) {
-        let args = interaction.customId.split('-');
-        switch (args[1]) {
-            case 'user': {
-                let monster = args[2];
-
-                if (monsters[monster] == null) {
-                    let embed = new EmbedBuilder()
-                        .setTitle('Error')
-                        .setColor('#ff0000')
-                        .setDescription(`${monster} is not active`)
-                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
-                }
-
-                let dbUser = userList.find(a => {
-                    if (a.username.toLowerCase() == interaction.fields.getTextInputValue('username').toLowerCase()) return true;
-                    let names = [a.username.slice(0, a.username.indexOf('('))];
-                    let name = a.username.slice(a.username.indexOf('(')).trim();
-                    if (name.endsWith(')')) name = name.slice(0, -1);
-                    names = names.concat(name.split(',')).map(a => a.trim().toLowerCase());
-                });
-                if (dbUser == null) {
-                    let embed = new EmbedBuilder()
-                        .setTitle('Error')
-                        .setColor('#ff0000')
-                        .setDescription(`Could not find user "${interaction.fields.getTextInputValue('username')}".`)
-                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
-                }
-                interaction.customId = `signup-select-${monster}-${dbUser.id}`;
-                this.buttonHandler({ interaction, user, supabase, userList, jobList, templateList, monsters, logChannel });
                 break;
             }
         }

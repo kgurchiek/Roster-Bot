@@ -28,8 +28,10 @@ module.exports = {
                     if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error fetching signups', error.message)] });
                     signups = data;
                 }
+                signups.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                let signup = signups[0];
 
-                if (signups.length == 0) {
+                if (signup == null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')
@@ -37,21 +39,22 @@ module.exports = {
                     return await interaction.editReply({ ephemeral: true, embeds: [embed] });
                 }
 
-                let components = [
-                    new ActionRowBuilder()
-                        .addComponents(
-                            new StringSelectMenuBuilder()
-                                .setCustomId(`editsignup-selfsignup-${event}`)
-                                .setPlaceholder(`Select a sigup...`)
-                                .addOptions(
-                                    ...signups.map((a, i) =>
-                                        new StringSelectMenuOptionBuilder()
-                                            .setLabel(`Signup ${i + 1}: ${a.windows} window${a.windows == 1 ? '' : 's'}`)
-                                            .setValue(`${a.signup_id}`)
-                                    )
-                                )
-                        )
-                ]
+                selections[interaction.id] = {
+                    self: true,
+                    event,
+                    signup,
+                    signupId: signup.signup_id,
+                    windows: signup.windows,
+                    tagged: signup.tagged,
+                    killed: signup.killed,
+                    rage: signup.rage,
+                    placeholders: signup.placeholders,
+                    screenshot: signup.screenshot,
+                    userId: signup.player_id.id
+                };
+
+                interaction.customId = `editsignup-signup--${event}-${interaction.id}-true`;
+                await this.selectHandler({ interaction, user, supabase, archive, logChannel });
 
                 await interaction.editReply({ components });
                 break;
@@ -94,15 +97,22 @@ module.exports = {
                 }
 
                 await interaction.deferUpdate({ ephemeral: true });
-                if (!selections[id].self) {
-                    let userSignups = archive[event].data.signups.filter(a => a.player_id.id == selections[id].signup.player_id.id);
-                    let { error } = await supabase.from(config.supabase.tables.signups).update({ windows: 0 }).eq('event_id', event).eq('player_id', selections[id].signup.player_id.id);
-                    if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating past signups', error.message)], components: [], content: '' });
-                    let embed = new EmbedBuilder()
-                        .setDescription(`${selections[id].signup.player_id.username}'${selections[id].signup.player_id.username.endsWith('s') ? '' : 's'} signups for the ${archive[event].name} raid have been set to ${selections[id].windows} windows (previousely ${userSignups.map(a => a.windows).join(', ')})`)
-                    await logChannel.send({ embeds: [embed] });
-                    userSignups.forEach(a => a.windows = 0);
+                let userSignups;
+                if (archive[event].data.signups) userSignups = archive[event].data.signups.filter(a => a.player_id.id == selections[id].signup.player_id.id);
+                else {
+                    let { data, error } = await supabase.from(config.supabase.tables.signups).select('*, player_id (id, username)').eq('event_id', event).eq('player_id', user.id);
+                    if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error fetching user signups', error.message)] });
+                    userSignups = data;
                 }
+                let { error } = await supabase.from(config.supabase.tables.signups).update({ windows: 0 }).eq('event_id', event).eq('player_id', selections[id].signup.player_id.id);
+                if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating past signups', error.message)], components: [], content: '' });
+                let embed = new EmbedBuilder()
+                    .setDescription(`${selections[id].signup.player_id.username}'${selections[id].signup.player_id.username.endsWith('s') ? '' : 's'} signups for the ${archive[event].name} raid have been set to ${selections[id].windows} windows (previousely ${userSignups.map(a => a.windows).join(', ')})`)
+                await logChannel.send({ embeds: [embed] });
+                if (!archive[event].active) userSignups.forEach(a => {
+                    let signup = archive[event].data.signups.find(b => a.signup_id == b.signup_id);
+                    if (signup != null) signup.windows = 0;
+                });
                 ({ error } = await supabase.from(config.supabase.tables.signups).update({
                     windows: selections[id].windows,
                     tagged: selections[id].tagged,
@@ -129,40 +139,6 @@ module.exports = {
     async selectHandler({ interaction, user, supabase, archive, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
-            case 'selfsignup': {
-                let event = args[2];
-                await interaction.deferUpdate();
-
-                if (archive[event] == null) {
-                    let embed = new EmbedBuilder()
-                        .setTitle('Error')
-                        .setColor('#ff0000')
-                        .setDescription(`This raid has been closed`)
-                    return await interaction.editReply({ ephemeral: true, embeds: [embed], components: [], content: '' });
-                }
-
-                let { data, error } = await supabase.from(config.supabase.tables.signups).select('*, player_id (id, username)').eq('signup_id', interaction.values[0]);
-                if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error fetching signup', error.message)], components: [], content: '' });
-                let signup = data[0];
-
-                selections[interaction.id] = {
-                    self: true,
-                    event,
-                    signup,
-                    signupId: signup.signup_id,
-                    windows: signup.windows,
-                    tagged: signup.tagged,
-                    killed: signup.killed,
-                    rage: signup.rage,
-                    placeholders: signup.placeholders,
-                    screenshot: signup.screenshot,
-                    userId: signup.player_id.id
-                };
-
-                interaction.customId = `editsignup-signup--${event}-${interaction.id}-true`;
-                await this.selectHandler({ interaction, user, supabase, archive, logChannel });
-                break;
-            }
             case 'signup': {
                 let [event, id, update] = args.slice(3);
                 if (!id) id = interaction.id;

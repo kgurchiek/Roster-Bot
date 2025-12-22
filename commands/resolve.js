@@ -93,7 +93,7 @@ module.exports = {
                 await archive[event].updateMessage();
 
                 let embed = new EmbedBuilder()
-                    .setTitle(archive[event].name)
+                    .setTitle(`${archive[event].name} <t:${archive[event].timestamp}:d>`)
                     .addFields(
                         ...[
                             { name: 'Members', value: String(archive[event].data.signups.filter((a, i, arr) => arr.slice(0, i).find(b => a.player_id.id == b.player_id.id) == null).length) },

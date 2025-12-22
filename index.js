@@ -648,14 +648,16 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             if (unverified.length == 0) {
                 return [
                     new EmbedBuilder()
-                        .setTitle('Tag Verification Complete')
+                        .setTitle(`${this.data.monster_name.split('_')[0]} Verification Complete`)
+                        .setDescription(`<t:${this.timestamp}:d>`)
                         .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.data.monster_name.split('_')[0].replaceAll(' ', '')}.png`)
                         .setFooter({ text: `Total ${this.data.signups.filter(a => a.active).length} • Reviewed ${this.data.signups.filter(a => a.active && a.verified != null).length}` })
                 ]
             } else {
                 return new Array(Math.ceil(unverified.length / 25)).fill().map((a, i) => 
                     new EmbedBuilder()
-                        .setTitle('Pending Tag Verification')
+                        .setTitle(`${this.data.monster_name.split('_')[0]} Tag Verification`)
+                        .setDescription(`<t:${this.timestamp}:d>`)
                         .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.data.monster_name.split('_')[0].replaceAll(' ', '')}.png`)
                         .addFields(
                             ...new Array(Math.min(unverified.slice(i * 25).length, 25)).fill().map((b, j) =>
@@ -771,6 +773,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
     let archive = {};
     async function scheduleMonster(message, events = []) {
         let monster = message.embeds[0].title;
+        let group = config.roster.monsterGroups.find(a => a.includes(monster)) || [monster];
         let timestamp = parseInt(message.embeds[0].fields[0].value.split(':')[1]);
         let day = parseInt(message.embeds[0].fields[1].value);
         let delay = timestamp - (Date.now() / 1000);
@@ -781,7 +784,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             DKP: Array.from((await rosterChannels.DKP.threads.fetchActive(false)).threads.values()).concat(Array.from((await rosterChannels.DKP.threads.fetchArchived(false)).threads.values())),
             PPP: Array.from((await rosterChannels.PPP.threads.fetchActive(false)).threads.values()).concat(Array.from((await rosterChannels.PPP.threads.fetchArchived(false)).threads.values()))
         }
-        let event = events.find(a => a.monster_name == monster && new Date(a.start_time).getTime() / 1000 == timestamp);
+        let event = events.find(a => group.includes(a.monster_name) && new Date(a.start_time).getTime() / 1000 == timestamp);
         if (event == null) {
             let { data, error } = await supabase.from(config.supabase.tables.events).insert({
                 monster_name: monster,
@@ -984,6 +987,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 .setColor('#00ff00')
                 .setDescription('Your attendance screenshot has been updated')
             await message.reply({ embeds: [embed] });
+            await archive[signup.event_id.event_id].updatePanel();
         }
     })
 
