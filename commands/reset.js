@@ -1,12 +1,11 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonStyle, ButtonBuilder } = require('discord.js');
 const { errorEmbed } = require('../commonFunctions.js');
-const config = require('../config.json');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('reset')
         .setDescription('Resets all signups and posts new embeds (staff only)'),
-    async execute({ interaction, user }) {
+    async execute({ config, interaction, user }) {
         if (!user.staff) {
             let embed = new EmbedBuilder()
                 .setTitle('Error')
@@ -28,7 +27,7 @@ module.exports = {
             )
         await interaction.reply({ ephemeral: true, embeds: [embed], components: [buttons] });
     },
-    async buttonHandler({ interaction, user, supabase, archive }) {
+    async buttonHandler({ config, interaction, user, supabase, archive }) {
         if (!user.staff) {
             let embed = new EmbedBuilder()
                 .setTitle('Error')

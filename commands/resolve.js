@@ -1,11 +1,10 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
 const { errorEmbed } = require('../commonFunctions.js');
-const config = require('../config.json');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('resolve'),
-    async buttonHandler({ interaction, user, supabase, campRules, archive, logChannel, rewardHistoryChannel }) {
+    async buttonHandler({ config, interaction, user, supabase, campRules, archive, logChannel, rewardHistoryChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {

@@ -1,6 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, FileUploadBuilder, LabelBuilder, ChannelType } = require('discord.js');
 const { errorEmbed } = require('../commonFunctions.js');
-const config = require('../config.json');
 
 async function uploadFile(interaction, user, supabase, ocrCategory, logChannel, event, signupId, attachment, file) {
     let channelName = (event.group ? event.group.map(a => a).join('—') : event.name).replaceAll(' ', '-').toLowerCase()
@@ -44,7 +43,7 @@ async function uploadFile(interaction, user, supabase, ocrCategory, logChannel, 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('screenshot'),
-    async buttonHandler({ interaction, user, supabase, archive, ocrCategory, logChannel, messageCallbacks }) {
+    async buttonHandler({ config, interaction, user, supabase, archive, ocrCategory, logChannel, messageCallbacks }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {
@@ -94,7 +93,7 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed], components: [buttons] });
                 }
                 interaction.customId = `screenshot-confirm-${event}-${signupId}`;
-                this.buttonHandler({ interaction, user, supabase, archive });
+                this.buttonHandler({ config, interaction, user, supabase, archive });
                 break;
             }
             case 'confirm': {
@@ -191,7 +190,7 @@ module.exports = {
             }
         }
     },
-    async modalHandler({ interaction, user, supabase, archive, ocrCategory, logChannel }) {
+    async modalHandler({ config, interaction, user, supabase, archive, ocrCategory, logChannel }) {
         let args = interaction.customId.split('-');
         let [event, signupId] = args.slice(1);
 

@@ -9,7 +9,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
     process.on('uncaughtException', console.error);
 
     let monsterList;
-    async function updateMonsters () {
+    async function updateMonsters() {
         let hadError = false;
         try {
             let { data, error } = await supabase.from(config.supabase.tables.monsters).select('*');
@@ -160,6 +160,117 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         
         setTimeout(updateGroupList, 2000);
         return hadError;
+    }
+
+    let tagList;
+    async function updateTagList() {
+        let hadError = false;
+        try {
+            let { data, error } = await supabase.from(config.supabase.tables.tags).select('*');
+            if (error == null) {
+                tagList = data;
+                // console.log(`[Tag List]: Fetched ${tagList.length} tag records.`);
+            } else {
+                hadError = true;
+                console.log('[Tag List]: Error:', error.message == null ? '' : (error.message.includes('<!DOCTYPE html>') || error.message.includes('<html>')) ? 'Server Error' : error.message);
+                await new Promise(res => setTimeout(res, 5000));
+            }
+        } catch (err) {
+            hadError = true;
+            console.log('[Tag List]: Error:', err)
+        }
+        
+        setTimeout(updateTagList, 2000);
+        return hadError;
+    }
+
+    async function updateGraphs() {
+        let { data: allSignups, error } = await supabase.from(config.supabase.tables.signups).select('*, event_id (event_id, monster_name), player_id (id, username)');
+        if (error) {
+            console.log('[Graphs]: Error:', (error.message.includes('<!DOCTYPE html>') || error.message.includes('<html>')) ? 'Server Error' : error.message);
+            await new Promise(res => setTimeout(res, 5000));            
+        } else {
+            // console.log(`[Graphs]: Fetched ${signups.length} signups.`);
+            allSignups = allSignups.filter(a => new Date(a.date).getTime() > Date.now() - (30 * 24 * 60 * 60 * 1000));
+            let monsters = allSignups.map(a => a.event_id.monster_name).filter((a, i, arr) => !arr.slice(0, i).includes(a));
+            monsters.forEach(async a => {
+                let monster = monsterList.find(b => b.monster_name == a);
+                if (monster == null) return console.log(`[Graphs]: Couldn't find data for monster "${a}"`);
+                let signups = allSignups.filter(a => a.event_id.monster_name == monster.monster_name);
+                let graph = {
+                    type: 'line',
+                    data: {
+                        labels: Array(31).fill(null).map((a, i) => {
+                            let date = new Date(Date.now() - (30 - i) * 24 * 60 * 60 * 1000);
+                            return `${date.getDate()}/${date.getMonth() + 1}`;
+                        }),
+                        datasets: [
+                            {
+                                data: Array(31).fill(0),
+                                fill: true,
+                                borderColor: config.graph.lineColor,
+                                backgroundColor: config.graph.lineFillColor,
+                                pointRadius: 0,
+                            }
+                        ]
+                    },
+                    options: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: ''
+                        },
+                        scales: {
+                            yAxes: [
+                                {
+                                    gridLines: {
+                                        display: true,
+                                        color: config.graph.fontColor
+                                    },
+                                    ticks: {
+                                        precision: 0,
+                                        beginAtZero: true,
+                                        fontColor: config.graph.fontColor,
+                                    },
+                                    scaleLabel: {
+                                        display: true,
+                                        labelString: 'Signups',
+                                        fontColor: config.graph.fontColor
+                                    }
+                                }
+                            ],
+                            xAxes: [
+                                {
+                                    ticks: {
+                                        precision: 0,
+                                        beginAtZero: true,
+                                        fontColor: config.graph.fontColor,
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+                signups.forEach(signup => {
+                    let day = Math.floor((new Date(signup.date).getTime() - (Date.now() - (30 * 24 * 60 * 60 * 1000))) / (24 * 60 * 60 * 1000));
+                    graph.data.datasets[0].data[day]++;
+                });
+                let embed = new EmbedBuilder()
+                    .setTitle(monster.monster_name)
+                    .setDescription(`<t:${Math.floor(Date.now() / 1000)}:d>`)
+                    .setImage(`https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(graph))}&backgroundColor=${config.graph.backgroundColor}`);
+                try {
+                    await graphChannels[monster.channel_type].send({ embeds: [embed] });
+                } catch (err) {
+                    console.log('[Graphs]: Error sending message:', err);
+                }
+            })
+        }
+
+        setTimeout(updateGraphs, 24 * 60 * 60 * 1000);
+        return ;
     }
 
     const client = new Client({
@@ -875,6 +986,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
     let screenshotPanelCategory;
     let memberScreenshotsChannel;
     let rewardHistoryChannel;
+    let graphChannels;
     client.once(Events.ClientReady, async () => {
         console.log(`[Bot]: ${client.user.tag}`);
         console.log(`[Servers]: ${client.guilds.cache.size}`);
@@ -889,6 +1001,12 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         screenshotPanelCategory = await client.channels.fetch(config.discord.screenshotPanelCategory);
         memberScreenshotsChannel = await client.channels.fetch(config.discord.memberScreenshots);
         rewardHistoryChannel = await client.channels.fetch(config.discord.rewardHistoryChannel);
+        graphChannels = {
+            DKP: await client.channels.fetch(config.discord.graphChannel.DKP),
+            PPP: await client.channels.fetch(config.discord.graphChannel.PPP)
+        }
+
+        updateGraphs();
 
         let messages = Array.from((await monstersChannel.messages.fetch({ limit: 100, cache: false })).values()).filter(a => a.embeds.length > 0).reverse();
 
@@ -1016,6 +1134,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         }
 
         let commandInput = {
+            config,
             interaction,
             client,
             user,
@@ -1027,6 +1146,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             campRules,
             pointRules,
             groupList,
+            tagList,
             monsters,
             archive,
             rosterChannels,
@@ -1034,8 +1154,10 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             logChannel,
             memberScreenshotsChannel,
             rewardHistoryChannel,
+            graphChannels,
             Monster,
             updateTagRates,
+            updateGraphs,
             messageCallbacks
         }
 
@@ -1136,7 +1258,8 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             await updateTemplates() ||
             await updateCampRules() ||
             await updatePointRules() ||
-            await updateGroupList()
+            await updateGroupList() ||
+            await updateTagList()
         ) process.exit();
         updateFreeze();
         client.login(config.discord.token);

@@ -1,11 +1,10 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, FileUploadBuilder, LabelBuilder, ChannelType, AttachmentBuilder } = require('discord.js');
 const { errorEmbed } = require('../commonFunctions.js');
-const config = require('../config.json');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('membersscreenshot'),
-    async buttonHandler({ interaction, user, archive, memberScreenshotsChannel, messageCallbacks }) {
+    async buttonHandler({ config, interaction, user, archive, memberScreenshotsChannel, messageCallbacks }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'modal': {
@@ -84,7 +83,7 @@ module.exports = {
             }
         }
     },
-    async selectHandler({ interaction, archive }) {
+    async selectHandler({ config, interaction, archive }) {
         let args = interaction.customId.split('-');
         let event = args[1];
 
@@ -113,7 +112,7 @@ module.exports = {
 
         await interaction.reply({ ephemeral: true, embeds: [], components });
     },
-    async modalHandler({ interaction, user, archive, memberScreenshotsChannel }) {
+    async modalHandler({ config, interaction, user, archive, memberScreenshotsChannel }) {
         let args = interaction.customId.split('-');
         let [event, window] = args.slice(1);
         window = parseInt(window);

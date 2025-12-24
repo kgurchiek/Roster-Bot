@@ -1,10 +1,9 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
-const config = require('../config.json');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('clear'),
-    async buttonHandler({ interaction, user, supabase, monsters, logChannel }) {
+    async buttonHandler({ config, interaction, user, supabase, monsters, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster':  {

@@ -36,7 +36,11 @@
         "logChannel": "",
         "screenshotPanelCategory": "",
         "memberScreenshots": "",
-        "rewardHistoryChannel": ""
+        "rewardHistoryChannel": "",
+        "graphChannel": {
+            "DKP": "",
+            "PPP": ""
+        }
     },
     "roster": {
         "alliances": 4,
@@ -45,5 +49,11 @@
         "team": "",
         "monsterGroups": [],
         "placeholderMonsters": []
+    },
+    "graph": {
+        "backgroundColor": "black",
+        "fontColor": "#bbbbbb",
+        "lineColor": "blue",
+        "lineFillColor": "rgba(0, 0, 255, 0.5)"
     }
 }

@@ -1,12 +1,11 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { errorEmbed } = require('../commonFunctions.js');
-const config = require('../config.json');
 
 let selections = {};
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('editsignup'),
-    async buttonHandler({ interaction, user, supabase, archive, logChannel, monsters }) {
+    async buttonHandler({ config, interaction, user, supabase, archive, logChannel, monsters }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {
@@ -54,7 +53,7 @@ module.exports = {
                 };
 
                 interaction.customId = `editsignup-signup--${event}-${interaction.id}-true`;
-                await this.selectHandler({ interaction, user, supabase, archive, logChannel });
+                await this.selectHandler({ config, interaction, user, supabase, archive, logChannel });
 
                 await interaction.editReply({ components });
                 break;
@@ -73,7 +72,7 @@ module.exports = {
 
                 selections[id][option] = !selections[id][option];
                 interaction.customId = `editsignup-signup-0-${event}-${id}-true`;
-                this.selectHandler({ interaction, user, supabase, archive, logChannel });
+                this.selectHandler({ config, interaction, user, supabase, archive, logChannel });
                 break;
             }
             case 'verify' : {
@@ -136,7 +135,7 @@ module.exports = {
             }
         }
     },
-    async selectHandler({ interaction, user, supabase, archive, logChannel }) {
+    async selectHandler({ config, interaction, user, supabase, archive, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'signup': {
@@ -281,13 +280,13 @@ module.exports = {
                         }
                     }
                     interaction.customId = `editsignup-signup-0-${selections[id].event}-${id}-true`;
-                    this.selectHandler({ interaction, user, supabase, archive, logChannel });
+                    this.selectHandler({ config, interaction, user, supabase, archive, logChannel });
                 }
                 break;
             }
         }
     },
-    async modalHandler({ interaction, user, supabase, archive, logChannel }) {
+    async modalHandler({ config, interaction, user, supabase, archive, logChannel }) {
         let args = interaction.customId.split('-');
         let id = args[1];
 
@@ -317,6 +316,6 @@ module.exports = {
         }
         
         interaction.customId = `editsignup-signup-0-${selections[id].event}-${id}-true`;
-        this.selectHandler({ interaction, user, supabase, archive, logChannel });
+        this.selectHandler({ config, interaction, user, supabase, archive, logChannel });
     }
 }

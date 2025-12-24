@@ -1,11 +1,10 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const config = require('../config.json');
 const { errorEmbed } = require('../commonFunctions.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('rewarddetails'),
-    async buttonHandler({ interaction, supabase, monsterList, campRules, pointRules }) {
+    async buttonHandler({ config, interaction, supabase, monsterList, campRules, pointRules }) {
         let args = interaction.customId.split('-');
         let eventId = args[1];
 

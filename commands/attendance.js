@@ -1,12 +1,11 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { errorEmbed } = require('../commonFunctions.js');
-const config = require('../config.json');
 
 let selections = {};
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('attendance'),
-    async buttonHandler({ interaction, user, supabase, monsters, archive, logChannel }) {
+    async buttonHandler({ config, interaction, user, supabase, monsters, archive, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {
@@ -190,7 +189,7 @@ module.exports = {
                 }
                 
                 interaction.customId = `attendance-confirm2-${id}`;
-                this.buttonHandler({ interaction, user, supabase, monsters, archive, logChannel });
+                this.buttonHandler({ config, interaction, user, supabase, monsters, archive, logChannel });
                 break;
             }
             case 'confirm2': {
@@ -275,7 +274,7 @@ module.exports = {
             }
         }
     },
-    async selectHandler({ interaction }) {
+    async selectHandler({ config, interaction }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'windows': {
@@ -322,7 +321,7 @@ module.exports = {
             }
         }
     },
-    async modalHandler({ interaction, user, supabase, monsters, archive, logChannel }) {
+    async modalHandler({ config, interaction, user, supabase, monsters, archive, logChannel }) {
         let args = interaction.customId.split('-');
         let id = args[1];
 
@@ -344,6 +343,6 @@ module.exports = {
         selections[id].windows = windows;
 
         interaction.customId = `attendance-confirm2-${id}`;
-        this.buttonHandler({ interaction, user, supabase, monsters, archive, logChannel });
+        this.buttonHandler({ config, interaction, user, supabase, monsters, archive, logChannel });
     }
 }

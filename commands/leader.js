@@ -1,11 +1,10 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { errorEmbed } = require('../commonFunctions.js');
-const config = require('../config.json');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('leader'),
-    async buttonHandler({ interaction, user, supabase, monsters, logChannel, jobList }) {
+    async buttonHandler({ config, interaction, user, supabase, monsters, logChannel, jobList }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {

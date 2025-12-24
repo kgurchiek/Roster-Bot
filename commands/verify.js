@@ -1,12 +1,11 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { errorEmbed } = require('../commonFunctions.js');
-const config = require('../config.json');
 
 let selections = {};
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('verify'),
-    async selectHandler({ interaction, user, supabase, archive, logChannel, pointRules }) {
+    async selectHandler({ config, interaction, user, supabase, archive, logChannel, pointRules }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'signup': {
@@ -75,13 +74,13 @@ module.exports = {
                         }
                     }
                     interaction.customId = `verify-edit-${id}`;
-                    this.buttonHandler({ interaction, user, supabase, archive, logChannel, pointRules });
+                    this.buttonHandler({ config, interaction, user, supabase, archive, logChannel, pointRules });
                 }
                 break;
             }
         }
     },
-    async buttonHandler({ interaction, user, supabase, archive, logChannel, pointRules }) {
+    async buttonHandler({ config, interaction, user, supabase, archive, logChannel, pointRules }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'view': {
@@ -193,7 +192,7 @@ module.exports = {
                 await archive[event].updatePanel();
 
                 interaction.customId = `interaction-view-${event}-${id}`;
-                this.buttonHandler({ interaction, user, supabase, archive, logChannel, pointRules });
+                this.buttonHandler({ config, interaction, user, supabase, archive, logChannel, pointRules });
                 break;
             }
             case 'verify': {
@@ -205,7 +204,7 @@ module.exports = {
                         .setColor('#ff0000')
                         .setDescription(`This message has expired, please use the verify user dropdown again`)
                         .setFooter({ text: `raid id: ${event}` })
-                    return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
                 
                 let signup = selections[interaction.message.id];
@@ -216,7 +215,7 @@ module.exports = {
                         .setColor('#ff0000')
                         .setDescription(`This raid has been closed`)
                         .setFooter({ text: `raid id: ${event}` })
-                    return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
                 
                 let type = archive[event].data.monster_type;
@@ -225,20 +224,23 @@ module.exports = {
                 let dkp = 0;
                 let ppp = 0;
                 if (signup.tagged) {
+                    let { error } = await supabase.from(config.supabase.tables.tags).insert({ player_id: signup.player_id.id, monster_name: archive[event].name });
+                    if (error) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error recording monster tag log', error.message)] });
+
                     let rule = rules.find(a => a.point_code == 't');
-                    if (rule == null) return await interaction.update({ ephemeral: true, embeds: [errorEmbed('Error fetching point rule', `Couldn't find tag point rule for monster type ${type}`)], components: [] });
+                    if (rule == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching point rule', `Couldn't find tag point rule for monster type ${type}`)] });
                     dkp += rule.dkp_value;
                     ppp += rule.ppp_value;
                 }
                 if (signup.killed) {
                     let rule = rules.find(a => a.point_code == 'k');
-                    if (rule == null) return await interaction.update({ ephemeral: true, embeds: [errorEmbed('Error fetching point rule', `Couldn't find kill point rule for monster type ${type}`)], components: [] });
+                    if (rule == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching point rule', `Couldn't find kill point rule for monster type ${type}`)] });
                     dkp += rule.dkp_value;
                     ppp += rule.ppp_value;
 
                     if (signup.rage) {
                         let rule = rules.find(a => a.point_code == 'r');
-                        if (rule == null) return await interaction.update({ ephemeral: true, embeds: [errorEmbed('Error fetching point rule', `Couldn't find rage point rule for monster type ${type}`)], components: [] });
+                        if (rule == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching point rule', `Couldn't find rage point rule for monster type ${type}`)] });
                         dkp += rule.dkp_value;
                         ppp += rule.ppp_value;
                     }
@@ -402,12 +404,12 @@ module.exports = {
 
                 selections[id][option] = !selections[id][option];
                 interaction.customId = `verify-edit-${id}`;
-                this.buttonHandler({ interaction, user, supabase, archive, logChannel, pointRules });
+                this.buttonHandler({ config, interaction, user, supabase, archive, logChannel, pointRules });
                 break;
             }
         }
     },
-    async modalHandler({ interaction, user, supabase, archive, logChannel, pointRules }) {
+    async modalHandler({ config, interaction, user, supabase, archive, logChannel, pointRules }) {
         let args = interaction.customId.split('-');
         let id = args[1];
 
@@ -437,6 +439,6 @@ module.exports = {
         }
         
         interaction.customId = `verify-edit-${id}`;
-        this.buttonHandler({ interaction, user, supabase, archive, logChannel, pointRules });
+        this.buttonHandler({ config, interaction, user, supabase, archive, logChannel, pointRules });
     }
 }

@@ -1,6 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { errorEmbed } = require('../commonFunctions.js');
-const config = require('../config.json');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -16,11 +15,11 @@ module.exports = {
             option.setName('rage')
                 .setDescription('whether or not it\'s a rage roster')
         ),
-    async autocomplete({ interaction, monsterList }) {
+    async autocomplete({ config, interaction, monsterList }) {
         const focusedValue = interaction.options.getFocused(true);
         await interaction.respond(monsterList.filter(a => a.monster_name.toLowerCase().includes(focusedValue.value.toLowerCase())).map(a => ({ name: a.monster_name, value: a.monster_name })).sort((a, b) => a.name > b.name ? 1 : -1).slice(0, 25));
     },
-    async execute({ interaction, supabase, monsters, rosterChannels, logChannel, Monster }) {
+    async execute({ config, interaction, supabase, monsters, rosterChannels, logChannel, Monster }) {
         await interaction.deferReply({ ephemeral: true });
         let monster = interaction.options.getString('monster');
         let rage = interaction.options.getBoolean('rage');

@@ -1,11 +1,10 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { errorEmbed } = require('../commonFunctions.js');
-const config = require('../config.json');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('pause'),
-    async buttonHandler({ interaction, user, monsters, logChannel }) {
+    async buttonHandler({ config, interaction, user, monsters, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'pause': {

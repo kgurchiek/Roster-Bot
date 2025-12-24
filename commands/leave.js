@@ -1,12 +1,11 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { errorEmbed } = require('../commonFunctions.js');
-const config = require('../config.json');
 
 let selections = {};
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('leave'),
-    async buttonHandler({ interaction, user, supabase, userList, monsters, logChannel }) {
+    async buttonHandler({ config, interaction, user, supabase, userList, monsters, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster':  {
@@ -17,7 +16,7 @@ module.exports = {
 
                 if (monster == 'Tiamat') {
                     interaction.customId = `leave-confirm-${monster}-${interaction.id}-${userId}`;
-                    return this.buttonHandler({ interaction, user, supabase, userList, monsters, logChannel });
+                    return this.buttonHandler({ config, interaction, user, supabase, userList, monsters, logChannel });
                 }
 
                 if (monsters[monster] == null) {
@@ -178,7 +177,7 @@ module.exports = {
             }
         }
     },
-    async selectHandler({ interaction }) {
+    async selectHandler({ config, interaction }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'windows': {
@@ -197,7 +196,7 @@ module.exports = {
             }
         }
     },
-    async modalHandler({ interaction, user, supabase, userList, monsters, logChannel }) {        
+    async modalHandler({ config, interaction, user, supabase, userList, monsters, logChannel }) {        
         let args = interaction.customId.split('-');
         switch(args[1]) {
             case 'windows': {
@@ -223,7 +222,7 @@ module.exports = {
                 selections[id].windows = windows;
 
                 interaction.customId = `leave-confirm-${monster}-${id}-${userId}`;
-                this.buttonHandler({ interaction, user, supabase, userList, monsters, logChannel });
+                this.buttonHandler({ config, interaction, user, supabase, userList, monsters, logChannel });
             }
         }
     }

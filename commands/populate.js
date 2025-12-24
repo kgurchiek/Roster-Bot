@@ -1,12 +1,11 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { errorEmbed } = require('../commonFunctions.js');
-const config = require('../config.json');
 
 let selections = {};
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('populate'),
-    async buttonHandler({ interaction, supabase, groupList, monsters, logChannel }) {
+    async buttonHandler({ config, interaction, supabase, groupList, monsters, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {
@@ -25,7 +24,7 @@ module.exports = {
 
                 if (monsters[monster].group == null) {
                     interaction.customId = `populate-confirm-${monster}`;
-                    return this.buttonHandler({ interaction, supabase, groupList, monsters, logChannel });
+                    return this.buttonHandler({ config, interaction, supabase, groupList, monsters, logChannel });
                 }
 
                 let components = [
@@ -157,7 +156,7 @@ module.exports = {
                 }
                 
                 interaction.customId = `populate-confirm3-${monster}-${id}`;
-                this.buttonHandler({ interaction, supabase, groupList, monsters, logChannel });
+                this.buttonHandler({ config, interaction, supabase, groupList, monsters, logChannel });
                 break;
             }
             case 'confirm3': {
@@ -220,7 +219,7 @@ module.exports = {
             }
         }
     },
-    async selectHandler({ interaction, supabase, monsterList, groupList, monsters, logChannel }) {
+    async selectHandler({ config, interaction, supabase, monsterList, groupList, monsters, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {
@@ -244,7 +243,7 @@ module.exports = {
                 monsters[interaction.values[0]] = monsters[monster];
                 delete monsters[monster];
                 interaction.customId = `populate-confirm-${interaction.values[0]}-true`;
-                this.buttonHandler({ interaction, supabase, groupList, monsters, logChannel });
+                this.buttonHandler({ config, interaction, supabase, groupList, monsters, logChannel });
                 break;
             }
             case 'windows': {
@@ -277,7 +276,7 @@ module.exports = {
             }
         }
     },
-    async modalHandler({ interaction, supabase, groupList, monsters, logChannel }) {        
+    async modalHandler({ config, interaction, supabase, groupList, monsters, logChannel }) {        
         let args = interaction.customId.split('-');
         let [monster, id, maxWindows] = args.slice(1);
         maxWindows = parseInt(maxWindows);
@@ -301,6 +300,6 @@ module.exports = {
         selections[id].windows = windows;
 
         interaction.customId = `populate-confirm3-${monster}-${id}`;
-        this.buttonHandler({ interaction, supabase, groupList, monsters, logChannel });
+        this.buttonHandler({ config, interaction, supabase, groupList, monsters, logChannel });
     }
 }

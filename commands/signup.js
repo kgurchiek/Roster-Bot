@@ -1,12 +1,11 @@
 const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { errorEmbed } = require('../commonFunctions.js');
-const config = require('../config.json');
 
 let selections = {};
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('signup'),
-    async buttonHandler({ interaction, user, supabase, userList, jobList, templateList, monsters, logChannel }) {
+    async buttonHandler({ config, interaction, user, supabase, userList, jobList, templateList, monsters, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'user': {
@@ -21,7 +20,7 @@ module.exports = {
                 }
 
                 interaction.customId = `signup-select-${monster}-${userId}`;
-                this.buttonHandler({ interaction, user, supabase, userList, jobList, templateList, monsters, logChannel });
+                this.buttonHandler({ config, interaction, user, supabase, userList, jobList, templateList, monsters, logChannel });
                 break;
             }
             case 'select': {
@@ -255,7 +254,7 @@ module.exports = {
             }
         }
     },
-    async selectHandler({ interaction }) {
+    async selectHandler({ config, interaction }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'selectslot': {

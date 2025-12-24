@@ -1,6 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { errorEmbed, scoreMatch } = require('../commonFunctions.js');
-const config = require('../config.json');
 
 async function findUser(interaction, userList) {
     let args = interaction.customId.split('-');
@@ -40,7 +39,7 @@ let selections = {};
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('editroster'),
-    async buttonHandler({ interaction, user, supabase, userList, templateList, monsters, logChannel }) {
+    async buttonHandler({ config, interaction, user, supabase, userList, templateList, monsters, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {
@@ -157,7 +156,7 @@ module.exports = {
             }
         }
     },
-    async selectHandler({ interaction, client, user, supabase, userList, monsters, logChannel }) {
+    async selectHandler({ config, interaction, client, user, supabase, userList, monsters, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'action': {
@@ -240,12 +239,12 @@ module.exports = {
                 let [command, monster] = args.slice(2);
                 
                 interaction.customId = `editroster-${command}-${monster}-${interaction.values[0]}`;
-                await this.modalHandler({ interaction, client, user, supabase, userList, monsters, logChannel });
+                await this.modalHandler({ config, interaction, client, user, supabase, userList, monsters, logChannel });
                 break;
             }
         }
     },
-    async modalHandler({ interaction, client, user, supabase, userList, monsters, logChannel }) {
+    async modalHandler({ config, interaction, client, user, supabase, userList, monsters, logChannel }) {
         let args = interaction.customId.split('-');
 
         switch (args[1]) {
@@ -419,7 +418,7 @@ module.exports = {
                 let command = client.commands.get('leave');
                 if (command == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching command', 'Could not fetch leave command')] });
                 interaction.customId = `leave-monster-${monster}-${dbUser.id}`;
-                command.buttonHandler({ interaction, user, supabase, userList, monsters, logChannel });
+                command.buttonHandler({ config, interaction, user, supabase, userList, monsters, logChannel });
                 break;
             }
         }

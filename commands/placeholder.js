@@ -1,12 +1,11 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
 const { errorEmbed } = require('../commonFunctions.js');
-const config = require('../config.json');
 
 let selections = {};
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('placeholder'),
-    async buttonHandler({ interaction, user, supabase, monsters }) {
+    async buttonHandler({ config, interaction, user, supabase, monsters }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'increment': {
@@ -31,7 +30,7 @@ module.exports = {
                 }
 
                 interaction.customId = `placeholder-confirm-${monster}-${interaction.id}-${signupId}`;
-                this.buttonHandler({ interaction, user, supabase, monsters })
+                this.buttonHandler({ config, interaction, user, supabase, monsters })
                 break;
             }
             case 'enter': {
@@ -174,7 +173,7 @@ module.exports = {
             }
         }
     },
-    async selectHandler({ interaction }) {
+    async selectHandler({ config, interaction }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'count': {
