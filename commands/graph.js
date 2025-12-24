@@ -33,13 +33,18 @@ module.exports = {
         for (let arg in args) if (args[arg]) config.graph[arg] = args[arg];
 
         let error = await new Promise(res => fs.writeFile('./config.json.temp', JSON.stringify(config, 0, 4), res));
-        if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error saving new config', error.message)] });
+        if (error) return await interaction.editReply({ embeds: [errorEmbed('Error saving new config', error.message)] });
         error = await new Promise(res => fs.copyFile('./config.json.temp', './config.json', res));
-        if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error copying new config', error.message)] });
+        if (error) return await interaction.editReply({ embeds: [errorEmbed('Error copying new config', error.message)] });
 
-        await updateGraphs();
         let embed = new EmbedBuilder()
             .setDescription('Sending updated graphs...')
-        await interaction.editReply({ ephemeral: true, embeds: [embed] });
+        await interaction.editReply({ embeds: [embed] });
+        await updateGraphs();
+        embed = new EmbedBuilder()
+            .setTitle('Success')
+            .setColor('#00ff00')
+            .setDescription('New graphs have been sent')
+        await interaction.editReply({ embeds: [embed ]});
     }
 }
