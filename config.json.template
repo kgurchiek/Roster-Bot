@@ -15,7 +15,11 @@
             "deaths": "",
             "claims": "",
             "claimRates": "",
-            "tags": ""
+            "tags": "",
+            "lootHistory": {
+                "DKP": "",
+                "PPP": ""
+            }
         },
         "trackedRates": [],
         "buckets": {

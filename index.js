@@ -184,6 +184,38 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         return hadError;
     }
 
+    let lootHistory = {};
+    async function updateLootHistory() {
+        let hadError = false;
+        try {
+            let { data, error } = await supabase.from(config.supabase.tables.lootHistory.DKP).select('*');
+            if (error == null) {
+                lootHistory.DKP = data;
+                // console.log(`[Loot History]: Fetched ${lootHistory.length} dkp items.`);
+            } else {
+                hadError = true;
+                console.log('[Loot History]: Error:', error.message == null ? '' : (error.message.includes('<!DOCTYPE html>') || error.message.includes('<html>')) ? 'Server Error' : error.message);
+                await new Promise(res => setTimeout(res, 5000));
+            }
+
+            ({ data, error } = await supabase.from(config.supabase.tables.lootHistory.PPP).select('*'));
+            if (error == null) {
+                lootHistory.PPP = data;
+                // console.log(`[Loot History]: Fetched ${lootHistory.length} ppp items.`);
+            } else {
+                hadError = true;
+                console.log('[Loot History]: Error:', error.message == null ? '' : (error.message.includes('<!DOCTYPE html>') || error.message.includes('<html>')) ? 'Server Error' : error.message);
+                await new Promise(res => setTimeout(res, 5000));
+            }
+        } catch (err) {
+            hadError = true;
+            console.log('[Loot History]: Error:', err)
+        }
+        
+        setTimeout(updateLootHistory, 2000);
+        return hadError;
+    }
+
     async function updateGraphs() {
         let { data: allSignups, error } = await supabase.from(config.supabase.tables.signups).select('*, event_id (event_id, monster_name), player_id (id, username)');
         if (error) {
@@ -1147,6 +1179,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             pointRules,
             groupList,
             tagList,
+            lootHistory,
             monsters,
             archive,
             rosterChannels,
@@ -1259,7 +1292,8 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             await updateCampRules() ||
             await updatePointRules() ||
             await updateGroupList() ||
-            await updateTagList()
+            await updateTagList() ||
+            await updateLootHistory()
         ) process.exit();
         updateFreeze();
         client.login(config.discord.token);
