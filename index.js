@@ -216,6 +216,50 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         return hadError;
     }
 
+    let eventList;
+    async function updateEventList() {
+        let hadError = false;
+        try {
+            let { data, error } = await supabase.from(config.supabase.tables.events).select('*');
+            if (error == null) {
+                eventList = data;
+                // console.log(`[Tag List]: Fetched ${eventList.length} events.`);
+            } else {
+                hadError = true;
+                console.log('[Tag List]: Error:', error.message == null ? '' : (error.message.includes('<!DOCTYPE html>') || error.message.includes('<html>')) ? 'Server Error' : error.message);
+                await new Promise(res => setTimeout(res, 5000));
+            }
+        } catch (err) {
+            hadError = true;
+            console.log('[Tag List]: Error:', err);
+        }
+        
+        setTimeout(updateEventList, 2000);
+        return hadError;
+    }
+
+    let signupList;
+    async function updateSignupList() {
+        let hadError = false;
+        try {
+            let { data, error } = await supabase.from(config.supabase.tables.signups).select('*, event_id (event_id, monster_name), player_id (id, username)');
+            if (error == null) {
+                signupList = data;
+                // console.log(`[Signup List]: Fetched ${signupList.length} signups.`);
+            } else {
+                hadError = true;
+                console.log('[Signup List]: Error:', error.message == null ? '' : (error.message.includes('<!DOCTYPE html>') || error.message.includes('<html>')) ? 'Server Error' : error.message);
+                await new Promise(res => setTimeout(res, 5000));
+            }
+        } catch (err) {
+            hadError = true;
+            console.log('[Signup List]: Error:', err);
+        }
+        
+        setTimeout(updateSignupList, 2000);
+        return hadError;
+    }
+
     async function updateGraphs() {
         let { data: allSignups, error } = await supabase.from(config.supabase.tables.signups).select('*, event_id (event_id, monster_name), player_id (id, username)');
         if (error) {
@@ -303,6 +347,37 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
 
         setTimeout(updateGraphs, 24 * 60 * 60 * 1000);
         return ;
+    }
+
+    async function updateUserTable() {
+        let signups = signupList.filter((a, i) => signupList.slice(0, i).find(b => b.event_id.event_id == a.event_id.event_id && b.player_id.id == a.player_id.id) == null);
+        let lines = [['User'].concat(config.supabase.trackedRates.map(a => `${a.slice(0, 3)}${a.length > 3 ? '.' : ''}`))];
+        let longest = lines[0].slice(0, -1).map(a => a.length);
+        for (let user of userList) {
+            let line = [user.username].concat(config.supabase.trackedRates.map(a => `${(((signups.filter(b => b.event_id.monster_name == a && b.player_id.id == user.id).length / eventList.filter(b => b.monster_name == a).length) || 0) * 100).toFixed(0)}%`));
+            line.forEach((a, i) => longest[i] = Math.max(longest[i] || 0, a.length));
+            lines.push(line);
+        }
+        let embeds = [
+            new EmbedBuilder()
+                .setTitle('User Attendance')
+                .setDescription('```\n')
+        ]
+        for (let line of lines) {
+            let newDescription = line.map((a, i) => `${a}${i < line.length - 1 ? ' '.repeat(longest[i] - a.length) : ''}`).join(' | ');
+            if (`${embeds[embeds.length - 1].data.description}\n${newDescription}`.length > 4092) {
+                embeds[embeds.length - 1].data.description += '\n```'
+                embeds.push(new EmbedBuilder().setDescription('```\n'));
+            }
+            embeds[embeds.length - 1].data.description += `\n${newDescription}`;
+        }
+        embeds[embeds.length - 1].data.description += '\n```'
+
+        let messages = Array.from((await userAttendanceChannel.messages.fetch({ limit: 100, cache: false })).values()).filter(a => a.author.id == client.user.id);
+        for (let message of messages.slice(1)) await message.delete();
+        
+        if (messages[0]) await messages[0].edit({ content: '', embeds, components: [] })
+        else await userAttendanceChannel.send({ embeds });
     }
 
     const client = new Client({
@@ -1019,6 +1094,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
     let memberScreenshotsChannel;
     let rewardHistoryChannel;
     let graphChannels;
+    let userAttendanceChannel;
     client.once(Events.ClientReady, async () => {
         console.log(`[Bot]: ${client.user.tag}`);
         console.log(`[Servers]: ${client.guilds.cache.size}`);
@@ -1037,8 +1113,10 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             DKP: await client.channels.fetch(config.discord.graphChannel.DKP),
             PPP: await client.channels.fetch(config.discord.graphChannel.PPP)
         }
+        userAttendanceChannel = await client.channels.fetch(config.discord.userAttendanceChannel);
 
         updateGraphs();
+        updateUserTable();
 
         let messages = Array.from((await monstersChannel.messages.fetch({ limit: 100, cache: false })).values()).filter(a => a.embeds.length > 0).reverse();
 
@@ -1180,6 +1258,8 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             groupList,
             tagList,
             lootHistory,
+            eventList,
+            signupList,
             monsters,
             archive,
             rosterChannels,
@@ -1293,7 +1373,9 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             await updatePointRules() ||
             await updateGroupList() ||
             await updateTagList() ||
-            await updateLootHistory()
+            await updateLootHistory() ||
+            await updateEventList() ||
+            await updateSignupList()
         ) process.exit();
         updateFreeze();
         client.login(config.discord.token);

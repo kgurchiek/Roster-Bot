@@ -44,7 +44,8 @@
         "graphChannel": {
             "DKP": "",
             "PPP": ""
-        }
+        },
+        "userAttendanceChannel": ""
     },
     "roster": {
         "alliances": 4,

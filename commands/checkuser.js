@@ -25,11 +25,11 @@ module.exports = {
         }
 
         let events;
-        ({ data: events, error } = await supabase.from(config.supabase.tables.events).select('*')); // TODO: past month only
+        ({ data: events, error } = await supabase.from(config.supabase.tables.events).select('*'));
         if (error) return await interaction.editReply({ content: '', embeds: [errorEmbed('Error Fetching Events', error.message)] });
 
         let signups;
-        ({ data: signups, error } = await supabase.from(config.supabase.tables.signups).select('*, event_id (event_id, monster_name)')); // TODO: past month only
+        ({ data: signups, error } = await supabase.from(config.supabase.tables.signups).select('*, event_id (event_id, monster_name)'));
         if (error) return await interaction.editReply({ content: '', embeds: [errorEmbed('Error Fetching Signups', error.message)] });
         signups = signups.filter((a, i) => signups.slice(0, i).find(b => b.event_id.event_id == a.event_id.event_id && b.player_id == a.player_id) == null);
 
@@ -38,7 +38,7 @@ module.exports = {
             .setDescription(`**DKP:** ${account.dkp}
                 **PPP:** ${account.ppp}
                 **Frozen:** ${account.frozen}${account.last_camped == null ? '' : `\n**Last Camp**:<t:${Math.floor(new Date(account.last_camped).getTime() / 1000)}:R>`}
-                
+
                 **Tag Rates:**${config.supabase.trackedRates.map(a => `\n${a}: ${tagList.filter(b => b.monster_name == a && b.player_id == account.id).length}/${tagList.filter(b => b.monster_name == a).length} (${(((tagList.filter(b => b.monster_name == a && b.player_id == account.id).length / tagList.filter(b => b.monster_name == a).length) || 0) * 100).toFixed(0)}%)`).join('')}
                 Total: ${tagList.filter(b => config.supabase.trackedRates.includes(b.monster_name) && b.player_id == account.id).length}/${tagList.filter(b => config.supabase.trackedRates.includes(b.monster_name)).length} (${(((tagList.filter(b => config.supabase.trackedRates.includes(b.monster_name) && b.player_id == account.id).length / tagList.filter(b => config.supabase.trackedRates.includes(b.monster_name)).length) || 0) * 100).toFixed(0)}%)
                 
