@@ -45,7 +45,11 @@
             "DKP": "",
             "PPP": ""
         },
-        "userAttendanceChannel": ""
+        "userAttendanceChannel": "",
+        "lootHistoryChannel": {
+            "DKP": "",
+            "PPP": ""
+        }
     },
     "roster": {
         "alliances": 4,
