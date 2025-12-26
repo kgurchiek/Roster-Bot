@@ -269,6 +269,8 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             // console.log(`[Graphs]: Fetched ${signups.length} signups.`);
             allSignups = allSignups.filter(a => new Date(a.date).getTime() > Date.now() - (30 * 24 * 60 * 60 * 1000));
             let monsters = allSignups.map(a => a.event_id.monster_name).filter((a, i, arr) => !arr.slice(0, i).includes(a));
+            
+            let embeds = { DKP: [], PPP: [] };
             monsters.forEach(async a => {
                 let monster = monsterList.find(b => b.monster_name == a);
                 if (monster == null) return console.log(`[Graphs]: Couldn't find data for monster "${a}"`);
@@ -333,19 +335,33 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                     let day = Math.floor((new Date(signup.date).getTime() - (Date.now() - (30 * 24 * 60 * 60 * 1000))) / (24 * 60 * 60 * 1000));
                     graph.data.datasets[0].data[day]++;
                 });
+                let url = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(graph))}&backgroundColor=${encodeURIComponent(config.graph.backgroundColor)}`;
                 let embed = new EmbedBuilder()
                     .setTitle(monster.monster_name)
                     .setDescription(`<t:${Math.floor(Date.now() / 1000)}:d>`)
-                    .setImage(`https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(graph))}&backgroundColor=${config.graph.backgroundColor}`);
+                    .setImage(url);
                 try {
-                    await graphChannels[monster.channel_type].send({ embeds: [embed] });
+                    embeds[monster.channel_type].push(embed);
                 } catch (err) {
                     console.log('[Graphs]: Error sending message:', err);
                 }
             })
+
+            let dkpMessages = Array.from((await graphChannels.DKP.messages.fetch({ limit: 100, cache: false })).values()).filter(a => a.author.id == client.user.id);
+            let pppMessages = Array.from((await graphChannels.PPP.messages.fetch({ limit: 100, cache: false })).values()).filter(a => a.author.id == client.user.id);
+            for (let message of dkpMessages.slice(embeds.DKP.length)) await message.delete();
+            for (let message of pppMessages.slice(embeds.PPP.length)) await message.delete();
+            embeds.DKP.forEach(async (a, i) => {
+                if (dkpMessages[i]) await dkpMessages[i].edit({ content: '', embeds: [a], components: [] });
+                else await graphChannels.DKP.send({ embeds: [a] });
+            })
+            embeds.PPP.forEach(async (a, i) => {
+                if (pppMessages[i]) await pppMessages[i].edit({ content: '', embeds: [a], components: [] });
+                else await graphChannels.PPP.send({ embeds: [a] });
+            })
         }
 
-        setTimeout(updateGraphs, 24 * 60 * 60 * 1000);
+        setTimeout(updateGraphs, 60 * 60 * 1000);
         return ;
     }
 
@@ -372,12 +388,73 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             embeds[embeds.length - 1].data.description += `\n${newDescription}`;
         }
         embeds[embeds.length - 1].data.description += '\n```'
-
-        let messages = Array.from((await userAttendanceChannel.messages.fetch({ limit: 100, cache: false })).values()).filter(a => a.author.id == client.user.id);
-        for (let message of messages.slice(1)) await message.delete();
+        let messages = Array.from((await userAttendanceChannel.messages.fetch({ limit: 100, cache: false })).values()).filter(a => a.author.id == client.user.id).reverse();
+        for (let message of messages.slice(embeds.length)) await message.delete();
         
-        if (messages[0]) await messages[0].edit({ content: '', embeds, components: [] })
-        else await userAttendanceChannel.send({ embeds });
+        embeds.forEach(async (a, i) => {
+            if (messages[i]) await messages[i].edit({ content: '', embeds: [a], components: [] })
+            else await userAttendanceChannel.send({ embeds: [a] });
+        })
+
+        setTimeout(updateUserTable, 60 * 1000);
+    }
+
+    async function updateLootHistoryTable() {
+        let embeds = {
+            DKP: [
+                new EmbedBuilder()
+                    .setTitle('Loot History')
+                    .setDescription('```\n')
+            ],
+            PPP: [
+                new EmbedBuilder()
+                    .setTitle('Loot History')
+                    .setDescription('```\n')
+            ]
+        }
+     	for (let user of userList.sort((a, b) => a.username > b.username ? 1 : -1)) {
+            let loot = lootHistory.DKP.filter(a => a.user == user.username);
+            if (loot.length == 0) continue;
+            let newDescription = `${user.username}: ${loot.filter((a, i) => loot.slice(0, i).find(b => b.item == a.item) == null).map(a => {
+              let all = loot.filter(b => b.item == a.item);
+              return `${a.item}${all.length == 1 ? '' : ` (x${all.length})`} (${all.reduce((a, b) => a + b.points_spent, 0).toFixed(1)} DKP)`;
+            }).join(', ')}`;
+            if (`${embeds.DKP[embeds.DKP.length - 1].data.description}\n${newDescription}`.length > 4092) {
+                embeds.DKP[embeds.DKP.length - 1].data.description += '\n```'
+                embeds.DKP.push(new EmbedBuilder().setDescription('```\n'));
+            } else embeds.DKP[embeds.DKP.length - 1].data.description += '\n';
+            embeds.DKP[embeds.DKP.length - 1].data.description += `\n${newDescription}`;
+        }
+        embeds.DKP[embeds.DKP.length - 1].data.description += '\n```'
+        let messages = Array.from((await lootHistoryChannels.DKP.messages.fetch({ limit: 100, cache: false })).values()).filter(a => a.author.id == client.user.id).reverse();
+        for (let message of messages.slice(embeds.DKP.length)) await message.delete();
+        embeds.DKP.forEach(async (a, i) => {
+            if (messages[i]) await messages[i].edit({ content: '', embeds: [a], components: [] })
+            else await lootHistoryChannels.DKP.send({ embeds: [a] });
+        })
+
+        for (let user of userList.sort((a, b) => a > b ? 1 : -1)) {
+            let loot = lootHistory.PPP.filter(a => a.user == user.username);
+            if (loot.length == 0) continue;
+            let newDescription = `${user.username}: ${loot.filter((a, i) => loot.slice(0, i).find(b => b.item == a.item) == null).map(a => {
+              let all = loot.filter(b => b.item == a.item);
+              return `${a.item}${all.length == 1 ? '' : ` (x${all.length})`} (${all.reduce((a, b) => a + b.points_spent, 0).toFixed(1)} PPP)`;
+            }).join(', ')}`;
+            if (`${embeds.PPP[embeds.PPP.length - 1].data.description}\n${newDescription}`.length > 4092) {
+                embeds.PPP[embeds.PPP.length - 1].data.description += '\n```'
+                embeds.PPP.push(new EmbedBuilder().setDescription('```\n'));
+            } else embeds.PPP[embeds.PPP.length - 1].data.description += '\n';
+            embeds.PPP[embeds.PPP.length - 1].data.description += `\n${newDescription}`;
+        }
+        embeds.PPP[embeds.PPP.length - 1].data.description += '\n```'
+        messages = Array.from((await lootHistoryChannels.PPP.messages.fetch({ limit: 100, cache: false })).values()).filter(a => a.author.id == client.user.id).reverse();
+        for (let message of messages.slice(embeds.PPP.length)) await message.delete();
+        embeds.PPP.forEach(async (a, i) => {
+            if (messages[i]) await messages[i].edit({ content: '', embeds: [a], components: [] })
+            else await lootHistoryChannels.PPP.send({ embeds: [a] });
+        })
+
+        setTimeout(updateLootHistoryTable, 60 * 1000);
     }
 
     const client = new Client({
@@ -1095,6 +1172,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
     let rewardHistoryChannel;
     let graphChannels;
     let userAttendanceChannel;
+    let lootHistoryChannels;
     client.once(Events.ClientReady, async () => {
         console.log(`[Bot]: ${client.user.tag}`);
         console.log(`[Servers]: ${client.guilds.cache.size}`);
@@ -1114,9 +1192,14 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             PPP: await client.channels.fetch(config.discord.graphChannel.PPP)
         }
         userAttendanceChannel = await client.channels.fetch(config.discord.userAttendanceChannel);
+        lootHistoryChannels = {
+            DKP: await client.channels.fetch(config.discord.lootHistoryChannel.DKP),
+            PPP: await client.channels.fetch(config.discord.lootHistoryChannel.PPP)
+        }
 
         updateGraphs();
         updateUserTable();
+        updateLootHistoryTable();
 
         let messages = Array.from((await monstersChannel.messages.fetch({ limit: 100, cache: false })).values()).filter(a => a.embeds.length > 0).reverse();
 
