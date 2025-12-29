@@ -149,7 +149,6 @@ module.exports = {
                     }
                 }
                 if (alliance == null) {
-                    console.log(monsters[monster].signups)
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')

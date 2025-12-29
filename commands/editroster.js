@@ -5,11 +5,11 @@ async function findUser(interaction, userList) {
     let args = interaction.customId.split('-');
     let [command, monster] = args.slice(1);
     
-    let input = interaction.fields.getTextInputValue('username').toLowerCase();
+    let input = interaction.fields.getTextInputValue('username');
     let usernames = userList.map(a => a.username);
     usernames.sort((a, b) =>
-        scoreMatch(a.toLowerCase(), input) -
-        scoreMatch(b.toLowerCase(), input)
+        scoreMatch(a.toLowerCase(), input.toLowerCase()) -
+        scoreMatch(b.toLowerCase(), input.toLowerCase())
     )
     
     usernames = usernames.slice(0, 25);
@@ -448,7 +448,7 @@ module.exports = {
                 }
 
                 let command = client.commands.get('leader');
-                if (command == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching command', 'Could not fetch leave command')] });
+                if (command == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching command', 'Could not fetch leader command')] });
                 interaction.customId = `leader-monster-${monster}-${dbUser.id}-true`;
                 command.buttonHandler({ config, interaction, user, supabase, monsters, logChannel, jobList, getUser });
                 break;
@@ -487,7 +487,7 @@ module.exports = {
                 }
 
                 let command = client.commands.get('todgrab');
-                if (command == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching command', 'Could not fetch leave command')] });
+                if (command == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching command', 'Could not fetch todgrab command')] });
                 interaction.customId = `todgrab-monster-${monster}-${dbUser.id}-true`;
                 command.buttonHandler({ config, interaction, user, supabase, monsters, logChannel, getUser });
                 break;

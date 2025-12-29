@@ -739,7 +739,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                 let userSignups = this.data.signups.filter(c => c != null && c.player_id.id == b.player_id.id); 
                                 let totalWindows = this.name == 'Tiamat' ? userSignups.length : userSignups.reduce((a, b) => a + b?.windows || 0, 0);
                                 return `${b.active && b.windows == null && b.tagged == null && b.killed == null ? '✖' : '✓'} ${b.player_id.username}${this.name != 'Tiamat' && userSignups.length > 1 ? ` x${userSignups.length}` : ''}${this.placeholders == null ? ((totalWindows == null || this.data.max_windows == 1) ? '' : ` - ${totalWindows}${this.windows == null ? '' : `/${this.windows}`} windows`) : ` - ${b.placeholders} PH`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''} Camp: ${this.placeholders != null ? `${(Math.floor(b.placeholders / 4) * 0.2).toFixed(1)} PPP` : `${this.calculatePoints(b.player_id.id)} ${this.getPointType()}`} Bonus: ${this.calculateBonusPoints(b)} ${this.getPointType()}`;
-                            }).join('\n')
+                            }).join('\n\n')
                         }\n\`\`\``);
                         if (this.verified) embed.setFooter({ text: '✓ Verified' });
 
@@ -822,7 +822,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                     .setLabel('👑 Leader')
                                     .setStyle(ButtonStyle.Secondary),
                                 new ButtonBuilder()
-                                    .setCustomId(`todgrab-monster-${this.name}`)
+                                    .setCustomId(`todgrab-select`)
                                     .setLabel('Tod Grab')
                                     .setStyle(ButtonStyle.Secondary)
                             ].filter(a => a != null)
@@ -1080,9 +1080,15 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 if (error) return { error };
             }
             
-            ({ data, error } = await supabase.from(config.supabase.tables.signups).select('signup_id, event_id, slot_template_id, player_id (id, username), assigned_job_id, active, windows, tagged, killed, rage, verified, date, placeholders, screenshot, leader').eq('event_id', this.event));
+            if (this.todGrabber != null) {
+                ({ error } = await supabase.from(config.supabase.tables.signups).insert({ event_id: this.event, player_id: this.todGrabber.id, active: true, todgrab: true }));
+                if (error) return { error };
+            }
+            
+            ({ data, error } = await supabase.from(config.supabase.tables.signups).select('*, player_id (id, username)').eq('event_id', this.event));
             if (error) return { error };
             this.data.signups = data;
+
 
             ({ error } = await supabase.from(config.supabase.tables.events).update({ active: false, verified: this.data.signups.length == 0, close_date: new Date() }).eq('event_id', this.event));
             if (error) return { error };
