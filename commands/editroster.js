@@ -488,7 +488,7 @@ module.exports = {
 
                 let command = client.commands.get('todgrab');
                 if (command == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching command', 'Could not fetch todgrab command')] });
-                interaction.customId = `todgrab-monster-${monster}-${dbUser.id}-true`;
+                interaction.customId = `todgrab-select-${monster}-${dbUser.id}-true`;
                 command.buttonHandler({ config, interaction, user, supabase, monsters, logChannel, getUser });
                 break;
             }

@@ -600,6 +600,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             this.windows = windows;
             this.killer = killer;
             this.todGrabber = todGrabber;
+            this.todGrabs = [];
 
             this.clears = 0;
             this.verifiedClears = [];
@@ -656,11 +657,11 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         }
         createEmbeds() {
             if (this.active) {
-                let signups = this.signups.flat().flat().filter((a, i, arr) => a != null && arr.slice(0, i).find(b => b != null && a.user.id == b.user.id) == null).length;
+                let signups = this.signups.flat(2).filter((a, i, arr) => a != null && arr.slice(0, i).find(b => b != null && a.user.id == b.user.id) == null).length;
                 let embed = new EmbedBuilder()
                     .setTitle(`🐉 ${this.name}${this.day == null ? '' : ` (Day ${this.day})`}${this.rage ? ' (Rage)' : ''}${this.paused ? ' (Paused)' : ''}`)
                     .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.data.monster_name.split('_')[0].replaceAll(' ', '')}.png`)
-                    .setDescription(`**${signups} member${signups == 1 ? '' : 's'} signed up**\n🕒 Starts at <t:${this.timestamp}:D> <t:${this.timestamp}:T> (<t:${this.timestamp}:R>)${this.lastCleared == null ? '' : `\nLast Cleared: <t:${Math.floor(this.lastCleared.getTime() / 1000)}:R>`}`)
+                    .setDescription(`**${signups} member${signups == 1 ? '' : 's'} signed up**\n🕒 Starts at <t:${this.timestamp}:D> <t:${this.timestamp}:T> (<t:${this.timestamp}:R>)${this.lastCleared == null ? '' : `\nLast Cleared: <t:${Math.floor(this.lastCleared.getTime() / 1000)}:R>`}${this.todGrabber == null ? '' : `\n**TOD Grabber: ${this.todGrabber.username}**`}${this.todGrabs.length == 0 ? '' : '\n\n**TOD Grabbers**'}${this.todGrabs.map(a => `\n**${a.player_id.username}: ${a.todgrab}**`).join('')}`)
                     .addFields(
                         ...Array(this.alliances).fill().map((a, i) => [
                             Array(this.parties).fill().map((b, j) => {
@@ -705,8 +706,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
 
                                 return field;
                             })
-                        ]).reduce((a, b) => a.concat(b.reduce((c, d) => c.concat(d), [])), []),
-                        ...(this.todGrabber == null ? [] : [{ name: 'Tod Grab', value: this.todGrabber.username }])
+                        ]).reduce((a, b) => a.concat(b.reduce((c, d) => c.concat(d), [])), [])
                     )
                 if (this.placeholders != null) {
                     let longest = Object.entries(this.placeholders).reduce((a, b) => Math.max(a, `${b[0]}: ${b[1]}`.length), 0)
@@ -822,7 +822,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                     .setLabel('👑 Leader')
                                     .setStyle(ButtonStyle.Secondary),
                                 new ButtonBuilder()
-                                    .setCustomId(`todgrab-select`)
+                                    .setCustomId(`todgrab-select-${this.name}`)
                                     .setLabel('Tod Grab')
                                     .setStyle(ButtonStyle.Secondary)
                             ].filter(a => a != null)
@@ -1178,13 +1178,18 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             let newMonster = new Monster(monster, timestamp, day, event.event_id, threads, event.rage, thread, message, event.windows, event.killed_by, todGrabber);
             monster = newMonster.name;
             monsters[monster] = newMonster;
-            let { data, error } = await supabase.from(config.supabase.tables.signups).select('signup_id, slot_template_id, player_id (id, username), assigned_job_id, placeholders, leader').eq('event_id', event.event_id).eq('active', true);
+            let { data, error } = await supabase.from(config.supabase.tables.signups).select('*, player_id (id, username)').eq('event_id', event.event_id).eq('active', true);
             if (error) {
                 console.log('Error fetching signups:', error.message);
                 data = [];
             }
 
+            let todGrabs = [];
             for (let signup of data) {
+                if (signup.todgrab) {
+                    todGrabs.push(signup);
+                    continue;
+                }
                 if (monsters[monster].placeholders && signup.placeholders) monsters[monster].placeholders[signup.player_id.username] = signup.placeholders;
 
                 let template = templateList.find(a => a.slot_template_id == signup.slot_template_id);
@@ -1211,6 +1216,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 };
                 if (signup.leader) monsters[monster].leaders[template.alliance_number - 1][template.party_number - 1] = user;
             }
+            monsters[monster].todGrabs = todGrabs;
         }
 
         if (monsters[monster].message == null) {
@@ -1297,12 +1303,13 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             archive[event.event_id].active = false;
             if (event.close_date) archive[event.event_id].closeDate = new Date(event.close_date);
             
-            ({ data, error } = await supabase.from(config.supabase.tables.signups).select('signup_id, event_id, slot_template_id, player_id (id, username), assigned_job_id, active, windows, tagged, killed, rage, verified, date, placeholders, screenshot, leader').eq('event_id', event.event_id));
+            ({ data, error } = await supabase.from(config.supabase.tables.signups).select('*, player_id (id, username)').eq('event_id', event.event_id));
             if (error) {
                 console.log('Error fetching signups:', error.message);
                 continue;
             }
             archive[event.event_id].data.signups = data;
+            archive[event.event_id].todGrabs = data.filter(a => a.todgrab != null);
             await archive[event.event_id].updateMessage();
         }
         console.log('Handled closed rosters');

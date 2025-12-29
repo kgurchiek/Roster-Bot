@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { errorEmbed } = require('../commonFunctions.js');
+const todgrab = require('./todgrab.js');
 
 let selections = {};
 module.exports = {
@@ -9,7 +10,7 @@ module.exports = {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'user': {
-                let [monster, userId] = args.slice(2);
+                let [monster, userId, todGrab] = args.slice(2);
 
                 if (monsters[monster] == null) {
                     let embed = new EmbedBuilder()
@@ -19,12 +20,12 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
-                interaction.customId = `quickjoin-job-${monster}-${userId}`;
+                interaction.customId = `quickjoin-job-${monster}-${userId}-${todGrab}`;
                 this.buttonHandler({ config, interaction, user, supabase, userList, jobList, templateList, monsters, logChannel });
                 break;
             }
             case 'job': {
-                let [monster, userId] = args.slice(2);
+                let [monster, userId, todGrab] = args.slice(2);
                 if (userId == null) userId = user.id;
                 selections[interaction.id] = {};
 
@@ -89,7 +90,7 @@ module.exports = {
                      new ActionRowBuilder()
                         .addComponents(
                             new ButtonBuilder()
-                                .setCustomId(`quickjoin-confirm-${monster}-${interaction.id}-${userId}`)
+                                .setCustomId(`quickjoin-confirm-${monster}-${interaction.id}-${userId}-${todGrab}`)
                                 .setLabel('✓')
                                 .setStyle(ButtonStyle.Success)
                         )
@@ -98,7 +99,7 @@ module.exports = {
                 break;
             }
             case 'confirm': {
-                let [monster, id, userId] = args.slice(2);
+                let [monster, id, userId, todGrab] = args.slice(2);
                 if (monsters[monster] == null) {
                     let embed = new EmbedBuilder()
                     .setTitle('Error')
@@ -181,14 +182,17 @@ module.exports = {
                     event_id: monsters[monster].event,
                     slot_template_id: templateId,
                     player_id: user.id,
-                    assigned_job_id: job
+                    assigned_job_id: job,
+                    todgrab: todGrab != null,
+                    todgrab_target: todGrab
                 }).select('*').single();
                 if (error) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error updating database', error.message)] });
                 
                 monsters[monster].signups[alliance - 1][party - 1][slot - 1] = {
                     user,
                     job,
-                    signupId: data.signup_id
+                    signupId: data.signup_id,
+                    todGrab
                 }
                 delete selections[id];
 
