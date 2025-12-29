@@ -128,22 +128,21 @@ module.exports = {
                     return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
                 }
 
+                let fields = [];
+                let modal = new ModalBuilder()
+                    .setTitle(`Populate ${monster} Points`)
                 if (monsters[monster].placeholders == null) {
                     if (monsters[monster].data.max_windows == null || monsters[monster].data.max_windows >= 25) {
-                        let modal = new ModalBuilder()
-                            .setCustomId(`populate-${monster}-${id}-${monsters[monster].windows}`)
-                            .setTitle(`Populate ${monster} Points`)
-                            .addComponents(
-                                new ActionRowBuilder()
-                                    .addComponents(
-                                        new TextInputBuilder()
-                                            .setCustomId('windows')
-                                            .setLabel('Windows')
-                                            .setStyle(TextInputStyle.Short)
-                                    )
-                            )
-
-                        return await interaction.showModal(modal);
+                        modal.addComponents(
+                            new ActionRowBuilder()
+                                .addComponents(
+                                    new TextInputBuilder()
+                                        .setCustomId('windows')
+                                        .setLabel('Windows')
+                                        .setStyle(TextInputStyle.Short)
+                                )
+                        )
+                        fields.push({ name: 'windows', max: monsters[monsters].windows });
                     }
 
                     if (selections[id].windows == null) {
@@ -154,9 +153,19 @@ module.exports = {
                         return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
                     }
                 }
-                
-                interaction.customId = `populate-confirm3-${monster}-${id}`;
-                this.buttonHandler({ config, interaction, supabase, groupList, monsters, logChannel });
+
+                modal.addComponents(
+                    new ActionRowBuilder()
+                        .addComponents(
+                            new TextInputBuilder()
+                                .setCustomId('zone')
+                                .setLabel('Tags in zone')
+                                .setStyle(TextInputStyle.Short)
+                        )
+                )
+                fields.push({ name: 'zone' });
+                modal.setCustomId(`populate-${monster}-${id}-${JSON.stringify(fields)}`);
+                await interaction.showModal(modal);
                 break;
             }
             case 'confirm3': {
@@ -194,9 +203,10 @@ module.exports = {
                 }
 
                 await interaction.deferUpdate({ ephemeral: true });
-                let { error } = await supabase.from(config.supabase.tables.events).update({ windows: selections[id].windows, killed_by: selections[id].group, active: false }).eq('event_id', monsters[monster].event);
+                let { error } = await supabase.from(config.supabase.tables.events).update({ windows: selections[id].windows, killed_by: selections[id].group, zone: selections[id].zone, active: false }).eq('event_id', monsters[monster].event);
                 if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating killer', error.message)], components: [] });
                 monsters[monster].windows = selections[id].windows;
+                monsters[monster].zone = selections[id].zone;
                 monsters[monster].killer = selections[id].group;
 
                 try {
@@ -278,8 +288,7 @@ module.exports = {
     },
     async modalHandler({ config, interaction, supabase, groupList, monsters, logChannel }) {        
         let args = interaction.customId.split('-');
-        let [monster, id, maxWindows] = args.slice(1);
-        maxWindows = parseInt(maxWindows);
+        let [monster, id, fields] = args.slice(1);
 
         if (monsters[monster] == null) {
             let embed = new EmbedBuilder()
@@ -289,15 +298,18 @@ module.exports = {
             return await interaction.reply({ ephemeral: true, embeds: [embed] });
         }
 
-        let windows = parseInt(interaction.fields.getTextInputValue('windows'));
-        if (isNaN(windows) || windows < 0 || windows > maxWindows) {
-            let embed = new EmbedBuilder()
-                .setTitle('Error')
-                .setColor('#ff0000')
-                .setDescription(`Please enter a valid number of windows${maxWindows == Infinity ? '' : ` (max: ${maxWindows})`}`)
-            return await interaction.reply({ ephemeral: true, embeds: [embed] });
+        for (let field of JSON.parse(fields)) {
+            if (field.max == null) field.max = Infinity;
+            let value = parseInt(interaction.fields.getTextInputValue(field.name));
+            if (isNaN(value) || value < 0 || value > field.max) {
+                let embed = new EmbedBuilder()
+                    .setTitle('Error')
+                    .setColor('#ff0000')
+                    .setDescription(`Please enter a valid value for field "${field.name}"${field.max == Infinity ? '' : ` (max: ${field.max})`}`)
+                return await interaction.reply({ ephemeral: true, embeds: [embed] });
+            }
+            selections[id][field.name] = value;
         }
-        selections[id].windows = windows;
 
         interaction.customId = `populate-confirm3-${monster}-${id}`;
         this.buttonHandler({ config, interaction, supabase, groupList, monsters, logChannel });

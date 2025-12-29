@@ -56,7 +56,7 @@ module.exports = {
                         }
                     }
                     error = false;
-                    return `${a.player_id.username}${config.roster.placeholderMonsters.includes(monster.monster_name) ? ` - ${a.placeholders} PH` : ((a.windows == null || monster.max_windows == 1) ? '' : ` - ${a.windows}${event.windows == null ? '' : `/${event.windows}`} windows`)}${a.tagged ? ' - T' : ''}${a.killed ? ' - K' : ''}${a.rage ? ' - R' : ''}${config.roster.placeholderMonsters.includes(monster.monster_name) ? ` ${(Math.floor(a.placeholders / 4) * 0.2).toFixed(1)} PPP` : Object.keys(points).filter(b => points[b] != 0).map(b => ` ${points[b]} ${b}`).join('')}`
+                    return `${a.player_id.username}${config.roster.placeholderMonsters.includes(monster.monster_name) ? ` - ${a.placeholders} PH` : ((a.windows == null || monster.max_windows == 1) ? '' : ` - ${a.windows}${event.windows == null ? '' : `/${event.windows}`} windows`)}${a.tagged ? ' - T' : ''}${a.killed ? ' - K' : ''}${a.rage ? ' - R' : ''}${config.roster.placeholderMonsters.includes(monster.monster_name) ? ` ${(Math.floor(a.placeholders / 4) * 0.2).toFixed(1)} PPP` : Object.keys(points).filter(b => points[b] != 0).map(b => ` ${points[b].toFixed(1)} ${b}`).join('')}`
                 })
             )).join('\n')}\n\`\`\``)
         if (!error) await interaction.editReply({ embeds: [newEmbed] });

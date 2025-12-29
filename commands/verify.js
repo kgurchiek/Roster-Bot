@@ -135,11 +135,13 @@ module.exports = {
                 let embed = new EmbedBuilder()
                     .setTitle(`${signup.player_id.username}'${signup.player_id.username.endsWith('s') ? '' : 's'} Attendance (${signup.verified ? 'Verified' : 'Unverified'})`)
                     .addFields(
-                        { name: 'Windows', value: selections[id].windows == null ? 'null' : String(selections[id].windows) },
-                        { name: 'Tagged', value: selections[id].tagged == null ? 'null' : selections[id].tagged ? 'True' : 'False' },
-                        { name: 'Killed', value: selections[id].killed == null ? 'null' : selections[id].killed ? 'True' : 'False' },
-                        { name: 'Rage', value: selections[id].rage ? 'True' : 'False' },
-                        ...(archive[event].placeholders == null ? [] : [{ name: 'Placeholders', value: selections[id].placeholders == null ? 'null' : String(selections[id].placeholders) }])
+                        ...[
+                            archive[event].placeholders == null ? { name: 'Windows', value: selections[id].windows == null ? 'null' : String(selections[id].windows) } : null,
+                            selections[id].tagged == null ? null : { name: 'Tagged', value: selections[id].tagged ? 'True' : 'False' },
+                            selections[id].killed == null ? null : { name: 'Killed', value: selections[id].killed ? 'True' : 'False' },
+                            { name: 'Rage', value: selections[id].rage ? 'True' : 'False' },
+                            archive[event].placeholders == null ? null : { name: 'Placeholders', value: selections[id].placeholders == null ? 'null' : String(selections[id].placeholders) }
+                        ].filter(a => a != null)
                     )
                     .setImage(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.screenshots}/${signup.screenshot}`)
                 let components = [
@@ -232,19 +234,6 @@ module.exports = {
                     dkp += rule.dkp_value;
                     ppp += rule.ppp_value;
                 }
-                if (signup.killed) {
-                    let rule = rules.find(a => a.point_code == 'k');
-                    if (rule == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching point rule', `Couldn't find kill point rule for monster type ${type}`)] });
-                    dkp += rule.dkp_value;
-                    ppp += rule.ppp_value;
-
-                    if (signup.rage) {
-                        let rule = rules.find(a => a.point_code == 'r');
-                        if (rule == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching point rule', `Couldn't find rage point rule for monster type ${type}`)] });
-                        dkp += rule.dkp_value;
-                        ppp += rule.ppp_value;
-                    }
-                }
 
                 await interaction.deferUpdate();
                 if (dkp != 0) {
@@ -267,7 +256,7 @@ module.exports = {
                 await archive[event].updatePanel();
 
                 let embed = new EmbedBuilder()
-                    .setDescription(`${user.username} marked ${signup.player_id.username}'${signup.player_id.username.endsWith('s') ? '' : 's'} attendance for the ${archive[event].name} raid as verified.`)
+                    .setDescription(`${user.username} approved ${signup.player_id.username}'${signup.player_id.username.endsWith('s') ? '' : 's'} tag screenshot of "${archive[event].name}".`)
                 await logChannel.send({ embeds: [embed] });
                 break;
             }
@@ -302,7 +291,7 @@ module.exports = {
                 await archive[event].updatePanel();
 
                 let embed = new EmbedBuilder()
-                    .setDescription(`${user.username} marked ${signup.player_id.username}'${signup.player_id.username.endsWith('s') ? '' : 's'} attendance for the ${archive[event].name} raid as declined.`)
+                    .setDescription(`${user.username} declined ${signup.player_id.username}'${signup.player_id.username.endsWith('s') ? '' : 's'} tag screenshot of "${archive[event].name}".`)
                 await logChannel.send({ embeds: [embed] });
                 break;
             }

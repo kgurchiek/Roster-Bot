@@ -5,7 +5,7 @@ let selections = {};
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('attendance'),
-    async buttonHandler({ config, interaction, user, supabase, monsters, archive, logChannel }) {
+    async buttonHandler({ config, interaction, user, supabase, monsters, archive, logChannel, pointRules }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {
@@ -19,7 +19,16 @@ module.exports = {
                         .setFooter({ text: `raid id: ${event}` })
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
-                
+
+                let type = archive[event].data.monster_type;
+                if (type == 'NQ' && this.day >= 4) type = 'HQ';
+                let tagRule = pointRules.find(a => a.point_code == 't' && a.monster_type == type);
+                if (tagRule == null) return await interaction.reply({ ephemeral: true, embeds: [new errorEmbed('Error fetching bonus point rule', `Couldn't find tag point rule for monster type ${type}`)] });
+                let hasTagAward = tagRule.dkp_value != 0 || tagRule.ppp_value != 0;
+                let killRule = pointRules.find(a => a.point_code == 'k' && a.monster_type == type);
+                if (killRule == null) return await interaction.reply({ ephemeral: true, embeds: [new errorEmbed('Error fetching bonus point rule', `Couldn't find kill point rule for monster type ${type}`)] });
+                let hasKillAward = killRule.dkp_value != 0 || killRule.ppp_value != 0;
+
                 let monster = archive[event].name;
                 let maxWindows = archive[event].windows;
                 let killer = archive[event].killer;
@@ -72,7 +81,7 @@ module.exports = {
                                     )
                                 )
                         ),
-                    new ActionRowBuilder()
+                    hasTagAward ? new ActionRowBuilder()
                         .addComponents(
                             new StringSelectMenuBuilder()
                                 .setPlaceholder(`Did you tag ${monster}?`)
@@ -85,8 +94,8 @@ module.exports = {
                                         .setLabel('No')
                                         .setValue('no')
                                 )
-                        ),
-                    (killer != config.roster.team) ? null : new ActionRowBuilder()
+                        ) : null,
+                    (killer != config.roster.team || !hasKillAward) ? null : new ActionRowBuilder()
                         .addComponents(
                             new StringSelectMenuBuilder()
                                 .setPlaceholder(`Were you in the kill?`)
@@ -103,7 +112,7 @@ module.exports = {
                     new ActionRowBuilder()
                         .addComponents(
                             new ButtonBuilder()
-                                .setCustomId(`attendance-confirm-${interaction.id}`)
+                                .setCustomId(`attendance-confirm-${interaction.id}-${hasTagAward}-${hasKillAward}`)
                                 .setLabel('✓')
                                 .setStyle(ButtonStyle.Success)
                         )
@@ -112,7 +121,9 @@ module.exports = {
                 break;
             }
             case 'confirm': {
-                let id = args[2];
+                let [id, hasTagAward, hasKillAward] = args.slice(2);
+                hasTagAward = hasTagAward == 'true';
+                hasKillAward = hasKillAward == 'true';
 
                 if (selections[id] == null) {
                     let embed = new EmbedBuilder()
@@ -122,7 +133,7 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
-                if (selections[id].killer == config.roster.team && selections[id].kill == null) {
+                if (selections[id].killer == config.roster.team && hasKillAward && selections[id].kill == null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')
@@ -130,7 +141,7 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
-                if (selections[id].tag == null) {
+                if (hasTagAward && selections[id].tag == null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')
@@ -188,12 +199,14 @@ module.exports = {
                     }
                 }
                 
-                interaction.customId = `attendance-confirm2-${id}`;
-                this.buttonHandler({ config, interaction, user, supabase, monsters, archive, logChannel });
+                interaction.customId = `attendance-confirm2-${id}-${hasTagAward}-${hasKillAward}`;
+                this.buttonHandler({ config, interaction, user, supabase, monsters, archive, logChannel, pointRules });
                 break;
             }
             case 'confirm2': {
-                let id = args[2];
+                let [id, hasTagAward, hasKillAward] = args.slice(2);
+                hasTagAward = hasTagAward == 'true';
+                hasKillAward = hasKillAward == 'true';
 
                 if (!interaction.deferred) await interaction.deferReply({ ephemeral: true });
 
@@ -213,19 +226,19 @@ module.exports = {
                     return await interaction.editReply({ ephemeral: true, embeds: [embed] });
                 }
 
-                if (selections[id].killer == config.roster.team && selections[id].kill == null) {
-                    let embed = new EmbedBuilder()
-                        .setTitle('Error')
-                        .setColor('#ff0000')
-                        .setDescription('Please indicate whether or not you killed the monster')
-                    return await interaction.editReply({ ephemeral: true, embeds: [embed] });
-                }
-
-                if (selections[id].tag == null) {
+                if (hasTagAward && selections[id].tag == null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')
                         .setDescription('Please indicate whether or not you tagged the monster')
+                    return await interaction.editReply({ ephemeral: true, embeds: [embed] });
+                }
+
+                if (selections[id].killer == config.roster.team && hasKillAward && selections[id].kill == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription('Please indicate whether or not you killed the monster')
                     return await interaction.editReply({ ephemeral: true, embeds: [embed] });
                 }
 
@@ -252,6 +265,7 @@ module.exports = {
                     tagged: selections[id].tag
                 });
                 await archive[selections[id].event].message.edit({ embeds: archive[selections[id].event].createEmbeds() });
+                await archive[selections[id].event].updatePanel();
 
                 let embed = new EmbedBuilder()
                     .setTitle('Success')
@@ -321,7 +335,7 @@ module.exports = {
             }
         }
     },
-    async modalHandler({ config, interaction, user, supabase, monsters, archive, logChannel }) {
+    async modalHandler({ config, interaction, user, supabase, monsters, archive, logChannel, pointRules }) {
         let args = interaction.customId.split('-');
         let id = args[1];
 
@@ -343,6 +357,6 @@ module.exports = {
         selections[id].windows = windows;
 
         interaction.customId = `attendance-confirm2-${id}`;
-        this.buttonHandler({ config, interaction, user, supabase, monsters, archive, logChannel });
+        this.buttonHandler({ config, interaction, user, supabase, monsters, archive, logChannel, pointRules });
     }
 }

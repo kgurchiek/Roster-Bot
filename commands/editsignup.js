@@ -54,8 +54,6 @@ module.exports = {
 
                 interaction.customId = `editsignup-signup--${event}-${interaction.id}-true`;
                 await this.selectHandler({ config, interaction, user, supabase, archive, logChannel });
-
-                await interaction.editReply({ components });
                 break;
             }
             case 'toggle': {

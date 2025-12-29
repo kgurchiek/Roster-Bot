@@ -69,6 +69,23 @@ module.exports = {
                     if (campRule.type.toLowerCase() == 'dkp') dkp += campPoints;
                     else ppp += campPoints;
                     
+                    let type = archive[event].data.monster_type;
+                    if (type == 'NQ' && archive[event].day >= 4) type = 'HQ'; 
+                    let rules = pointRules.filter(a => a.monster_type == type);
+                    if (signup.killed) {
+                        let rule = rules.find(a => a.point_code == 'k');
+                        if (rule == null) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error fetching point rule', `Couldn't find kill point rule for monster type ${type}`)] });
+                        dkp += rule.dkp_value;
+                        ppp += rule.ppp_value;
+
+                        if (signup.rage) {
+                            let rule = rules.find(a => a.point_code == 'r');
+                            if (rule == null) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error fetching point rule', `Couldn't find rage point rule for monster type ${type}`)] });
+                            dkp += rule.dkp_value;
+                            ppp += rule.ppp_value;
+                        }
+                    }
+
                     total.dkp += dkp;
                     total.ppp += ppp;
 

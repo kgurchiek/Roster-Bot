@@ -75,6 +75,12 @@ module.exports = {
                                         .setLabel('Move user')
                                         .setValue('move'),
                                     new StringSelectMenuOptionBuilder()
+                                        .setLabel('Set leader')
+                                        .setValue('leader'),
+                                    new StringSelectMenuOptionBuilder()
+                                        .setLabel('Set Tod Grab')
+                                        .setValue('todgrab'),
+                                    new StringSelectMenuOptionBuilder()
                                         .setLabel('Remove user')
                                         .setValue('remove')
                                 )
@@ -205,6 +211,32 @@ module.exports = {
                         await interaction.showModal(modal);
                         break;
                     }
+                    case 'leader': {
+                        let modal = new ModalBuilder()
+                            .setTitle('Edit Leader')
+                            .setCustomId(`editroster-leader-${monster}`)
+                            .addComponents(
+                                new TextInputBuilder()
+                                    .setCustomId('username')
+                                    .setLabel('Username')
+                                    .setStyle(TextInputStyle.Short)
+                            )
+                        await interaction.showModal(modal);
+                        break;
+                    }
+                    case 'todgrab': {
+                        let modal = new ModalBuilder()
+                            .setTitle('Edit Tod Grab')
+                            .setCustomId(`editroster-todgrab-${monster}`)
+                            .addComponents(
+                                new TextInputBuilder()
+                                    .setCustomId('username')
+                                    .setLabel('Username')
+                                    .setStyle(TextInputStyle.Short)
+                            )
+                        await interaction.showModal(modal);
+                        break;
+                    }
                     case 'remove': {
                         let modal = new ModalBuilder()
                             .setTitle('Remove User')
@@ -244,13 +276,13 @@ module.exports = {
             }
         }
     },
-    async modalHandler({ config, interaction, client, user, supabase, userList, monsters, logChannel }) {
+    async modalHandler({ config, interaction, client, user, supabase, userList, monsters, logChannel, jobList, getUser }) {
         let args = interaction.customId.split('-');
 
         switch (args[1]) {
             case 'add': {
                 let [monster, username] = args.slice(2);
-                if (!username) username == interaction.fields.getTextInputValue('username').toLowerCase();
+                if (!username) username = interaction.fields.getTextInputValue('username').toLowerCase();
 
                 if (monsters[monster] == null) {
                     let embed = new EmbedBuilder()
@@ -299,7 +331,7 @@ module.exports = {
             }
             case 'move': {
                 let [monster, username] = args.slice(2);
-                if (!username) username == interaction.fields.getTextInputValue('username').toLowerCase();
+                if (!username) username = interaction.fields.getTextInputValue('username').toLowerCase();
 
                 if (monsters[monster] == null) {
                     let embed = new EmbedBuilder()
@@ -382,9 +414,87 @@ module.exports = {
                 await interaction.update({ embeds: [], components: buttons });
                 break;
             }
+            case 'leader': {
+                let [monster, username] = args.slice(2);
+                if (!username) username = interaction.fields.getTextInputValue('username').toLowerCase();
+
+                if (monsters[monster] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`${monster} is not active`)
+                    return await interaction.update({ ephemeral: true, embeds: [embed] });
+                }
+        
+                if (!user.staff) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`This action can only be performed by staff`)
+                    return await interaction.update({ ephemeral: true, embeds: [embed] });
+                }
+
+                let dbUser = userList.find(a => {
+                    if (a.username.toLowerCase() == username) return true;
+                    let names = [a.username.slice(0, a.username.indexOf('('))];
+                    let altNames = a.username.slice(a.username.indexOf('(')).trim();
+                    if (altNames.endsWith(')')) altNames = altNames.slice(0, -1);
+                    names = names.concat(altNames.split(',')).map(a => a.trim().toLowerCase());
+                    if (names.includes(username)) return true;
+                });
+                if (dbUser == null) {
+                    await interaction.deferUpdate();
+                    return await findUser(interaction, userList);
+                }
+
+                let command = client.commands.get('leader');
+                if (command == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching command', 'Could not fetch leave command')] });
+                interaction.customId = `leader-monster-${monster}-${dbUser.id}-true`;
+                command.buttonHandler({ config, interaction, user, supabase, monsters, logChannel, jobList, getUser });
+                break;
+            }
+            case 'todgrab': {
+                let [monster, username] = args.slice(2);
+                if (!username) username = interaction.fields.getTextInputValue('username').toLowerCase();
+
+                if (monsters[monster] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`${monster} is not active`)
+                    return await interaction.update({ ephemeral: true, embeds: [embed] });
+                }
+        
+                if (!user.staff) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`This action can only be performed by staff`)
+                    return await interaction.update({ ephemeral: true, embeds: [embed] });
+                }
+
+                let dbUser = userList.find(a => {
+                    if (a.username.toLowerCase() == username) return true;
+                    let names = [a.username.slice(0, a.username.indexOf('('))];
+                    let altNames = a.username.slice(a.username.indexOf('(')).trim();
+                    if (altNames.endsWith(')')) altNames = altNames.slice(0, -1);
+                    names = names.concat(altNames.split(',')).map(a => a.trim().toLowerCase());
+                    if (names.includes(username)) return true;
+                });
+                if (dbUser == null) {
+                    await interaction.deferUpdate();
+                    return await findUser(interaction, userList);
+                }
+
+                let command = client.commands.get('todgrab');
+                if (command == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching command', 'Could not fetch leave command')] });
+                interaction.customId = `todgrab-monster-${monster}-${dbUser.id}-true`;
+                command.buttonHandler({ config, interaction, user, supabase, monsters, logChannel, getUser });
+                break;
+            }
             case 'leave': {
                 let [monster, username] = args.slice(2);
-                if (!username) username == interaction.fields.getTextInputValue('username').toLowerCase();
+                if (!username) username = interaction.fields.getTextInputValue('username').toLowerCase();
 
                 if (monsters[monster] == null) {
                     let embed = new EmbedBuilder()

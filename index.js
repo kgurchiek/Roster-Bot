@@ -268,17 +268,22 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         } else {
             // console.log(`[Graphs]: Fetched ${signups.length} signups.`);
             allSignups = allSignups.filter(a => new Date(a.date).getTime() > Date.now() - (30 * 24 * 60 * 60 * 1000));
-            let monsters = allSignups.map(a => a.event_id.monster_name).filter((a, i, arr) => !arr.slice(0, i).includes(a));
-            
+            let monsters = allSignups.map(a => a.event_id.monster_name).filter((a, i, arr) => !arr.slice(0, i).includes(a)).filter((a, i, arr) => {
+                let group = config.roster.monsterGroups.find(b => b.includes(a));
+                if (group == null) return true;
+                return arr.slice(0, i).find(b => group.includes(b)) == null;
+            });
+
             let embeds = { DKP: [], PPP: [] };
             monsters.forEach(async a => {
                 let monster = monsterList.find(b => b.monster_name == a);
                 if (monster == null) return console.log(`[Graphs]: Couldn't find data for monster "${a}"`);
-                let signups = allSignups.filter(a => a.event_id.monster_name == monster.monster_name);
+                let group = config.roster.monsterGroups.find(b => b.includes(a)) || [monster.monster_name];
+                let signups = allSignups.filter(a => group.includes(a.event_id.monster_name));
                 let graph = {
                     type: 'line',
                     data: {
-                        labels: Array(31).fill(null).map((a, i) => {
+                        labels: Array(30).fill(null).map((a, i) => {
                             let date = new Date(Date.now() - (30 - i) * 24 * 60 * 60 * 1000);
                             return `${date.getDate()}/${date.getMonth() + 1}`;
                         }),
@@ -337,7 +342,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 });
                 let url = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(graph))}&backgroundColor=${encodeURIComponent(config.graph.backgroundColor)}`;
                 let embed = new EmbedBuilder()
-                    .setTitle(monster.monster_name)
+                    .setTitle(group.join('/'))
                     .setDescription(`<t:${Math.floor(Date.now() / 1000)}:d>`)
                     .setImage(url);
                 try {
@@ -370,7 +375,8 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         let lines = [['User'].concat(config.supabase.trackedRates.map(a => `${a.slice(0, 3)}${a.length > 3 ? '.' : ''}`))];
         let longest = lines[0].slice(0, -1).map(a => a.length);
         for (let user of userList) {
-            let line = [user.username].concat(config.supabase.trackedRates.map(a => `${(((signups.filter(b => b.event_id.monster_name == a && b.player_id.id == user.id).length / eventList.filter(b => b.monster_name == a).length) || 0) * 100).toFixed(0)}%`));
+            let displayName = user.username.split('(')[0].trim();
+            let line = [displayName.length > 6 ? `${displayName.slice(0, 5)}.` : displayName].concat(config.supabase.trackedRates.map(a => `${(((signups.filter(b => b.event_id.monster_name == a && b.player_id.id == user.id).length / eventList.filter(b => b.monster_name == a).length) || 0) * 100).toFixed(0)}%`));
             line.forEach((a, i) => longest[i] = Math.max(longest[i] || 0, a.length));
             lines.push(line);
         }
@@ -415,7 +421,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
      	for (let user of userList.sort((a, b) => a.username > b.username ? 1 : -1)) {
             let loot = lootHistory.DKP.filter(a => a.user == user.username);
             if (loot.length == 0) continue;
-            let newDescription = `${user.username}: ${loot.filter((a, i) => loot.slice(0, i).find(b => b.item == a.item) == null).map(a => {
+            let newDescription = `${user.username.split('(')[0].trim()} (${loot.reduce((a, b) => a + b.points_spent, 0).toFixed(1)} DKP): ${loot.filter((a, i) => loot.slice(0, i).find(b => b.item == a.item) == null).map(a => {
               let all = loot.filter(b => b.item == a.item);
               return `${a.item}${all.length == 1 ? '' : ` (x${all.length})`} (${all.reduce((a, b) => a + b.points_spent, 0).toFixed(1)} DKP)`;
             }).join(', ')}`;
@@ -433,10 +439,10 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             else await lootHistoryChannels.DKP.send({ embeds: [a] });
         })
 
-        for (let user of userList.sort((a, b) => a > b ? 1 : -1)) {
+        for (let user of userList.sort((a, b) => a.username > b.username ? 1 : -1)) {
             let loot = lootHistory.PPP.filter(a => a.user == user.username);
             if (loot.length == 0) continue;
-            let newDescription = `${user.username}: ${loot.filter((a, i) => loot.slice(0, i).find(b => b.item == a.item) == null).map(a => {
+            let newDescription = `${user.username.split('(')[0].trim()} (${loot.reduce((a, b) => a + b.points_spent, 0).toFixed(1)} PPP): ${loot.filter((a, i) => loot.slice(0, i).find(b => b.item == a.item) == null).map(a => {
               let all = loot.filter(b => b.item == a.item);
               return `${a.item}${all.length == 1 ? '' : ` (x${all.length})`} (${all.reduce((a, b) => a + b.points_spent, 0).toFixed(1)} PPP)`;
             }).join(', ')}`;
@@ -574,7 +580,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
     }
 
     class Monster {
-        constructor(name, timestamp, day, event, threads, rage, thread, message, windows, killer) {
+        constructor(name, timestamp, day, event, threads, rage, thread, message, windows, killer, todGrabber) {
             this.group = config.roster.monsterGroups.find(a => a.includes(name));
             this.name = this.group == null ? name : this.group.join('/');
             if (config.roster.placeholderMonsters.includes(this.name)) {
@@ -593,6 +599,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             this.message = message;
             this.windows = windows;
             this.killer = killer;
+            this.todGrabber = todGrabber;
 
             this.clears = 0;
             this.verifiedClears = [];
@@ -618,6 +625,34 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             let campRule = campRules.find(a => a.monster_name == this.data.monster_name);
             if (campRule == null) console.log(`Error: couldn't fetch camp point rule for ${this.data.monster_name}`);
             else return campRule.type;
+        }
+        calculateBonusPoints(signup) {
+            let type = this.data.monster_type;
+            if (type == 'NQ' && this.day >= 4) type = 'HQ'; 
+            let bonusRules = pointRules.filter(a => a.monster_type == type);
+            let dkp = 0;
+            let ppp = 0;
+            if (signup.tagged) {
+                let rule = bonusRules.find(a => a.point_code == 't');
+                if (rule == null) return console.log(`[Calculate Bonus Points]: Error: Couldn't find tag point rule for monster type ${type}`);
+                dkp += rule.dkp_value;
+                ppp += rule.ppp_value;
+            }
+            if (signup.killed) {
+                let rule = bonusRules.find(a => a.point_code == 'k');
+                if (rule == null) return console.log(`[Calculate Bonus Points]: Error: Couldn't find kill point rule for monster type ${type}`);
+                dkp += rule.dkp_value;
+                ppp += rule.ppp_value;
+    
+                if (signup.rage) {
+                    let rule = bonusRules.find(a => a.point_code == 'r');
+                    if (rule == null) return console.log(`[Calculate Bonus Points]: Error: Couldn't find rage point rule for monster type ${type}`);
+                    dkp += rule.dkp_value;
+                    ppp += rule.ppp_value;
+                }
+            }
+            
+            return dkp || ppp;
         }
         createEmbeds() {
             if (this.active) {
@@ -670,7 +705,8 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
 
                                 return field;
                             })
-                        ]).reduce((a, b) => a.concat(b.reduce((c, d) => c.concat(d), [])), [])
+                        ]).reduce((a, b) => a.concat(b.reduce((c, d) => c.concat(d), [])), []),
+                        ...(this.todGrabber == null ? [] : [{ name: 'Tod Grab', value: this.todGrabber.username }])
                     )
                 if (this.placeholders != null) {
                     let longest = Object.entries(this.placeholders).reduce((a, b) => Math.max(a, `${b[0]}: ${b[1]}`.length), 0)
@@ -702,7 +738,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                             a.filter((b, i, arr) => arr.slice(0, i).find(c => c.player_id.id == b.player_id.id) == null).map(b => {
                                 let userSignups = this.data.signups.filter(c => c != null && c.player_id.id == b.player_id.id); 
                                 let totalWindows = this.name == 'Tiamat' ? userSignups.length : userSignups.reduce((a, b) => a + b?.windows || 0, 0);
-                                return `${b.active && b.windows == null && b.tagged == null && b.killed == null ? '✖' : '✓'} ${b.player_id.username}${this.name != 'Tiamat' && userSignups.length > 1 ? ` x${userSignups.length}` : ''}${this.placeholders == null ? ((totalWindows == null || this.data.max_windows == 1) ? '' : ` - ${totalWindows}${this.windows == null ? '' : `/${this.windows}`} windows`) : ` - ${b.placeholders} PH`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''} ${this.placeholders != null ? `${(Math.floor(b.placeholders / 4) * 0.2).toFixed(1)} PPP` : `${this.calculatePoints(b.player_id.id)} ${this.getPointType()}`}`;
+                                return `${b.active && b.windows == null && b.tagged == null && b.killed == null ? '✖' : '✓'} ${b.player_id.username}${this.name != 'Tiamat' && userSignups.length > 1 ? ` x${userSignups.length}` : ''}${this.placeholders == null ? ((totalWindows == null || this.data.max_windows == 1) ? '' : ` - ${totalWindows}${this.windows == null ? '' : `/${this.windows}`} windows`) : ` - ${b.placeholders} PH`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''} Camp: ${this.placeholders != null ? `${(Math.floor(b.placeholders / 4) * 0.2).toFixed(1)} PPP` : `${this.calculatePoints(b.player_id.id)} ${this.getPointType()}`} Bonus: ${this.calculateBonusPoints(b)} ${this.getPointType()}`;
                             }).join('\n')
                         }\n\`\`\``);
                         if (this.verified) embed.setFooter({ text: '✓ Verified' });
@@ -714,28 +750,30 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         }
         createButtons() {
             let unverifiedClears = new Array(this.clears).fill().map((a, i) => i).filter(a => !this.verifiedClears.includes(a));
-            if (this.verified) return [
-                new ActionRowBuilder()
-                    .addComponents(
-                        new ButtonBuilder()
-                            .setLabel('📷 Upload Tag Screenshot')
-                            .setStyle(ButtonStyle.Primary)
-                            .setCustomId(`screenshot-monster-${this.event}`),
-                    ),
-                unverifiedClears.length == 0 ? null : new ActionRowBuilder()
-                    .addComponents(
-                        new StringSelectMenuBuilder()
-                            .setCustomId(`membersscreenshot-${this.event}`)
-                            .setPlaceholder('📷 Upload Tiamat Attendance')
-                            .addOptions(
-                                unverifiedClears.map(a => 
-                                    new StringSelectMenuOptionBuilder()
-                                        .setLabel(`Window ${a + 1}`)
-                                        .setValue(`${a}`)
+            if (this.verified) {
+                return this.data.signups.length == 0 ? [] : [
+                    new ActionRowBuilder()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setLabel('📷 Upload Tag Screenshot')
+                                .setStyle(ButtonStyle.Primary)
+                                .setCustomId(`screenshot-monster-${this.event}`),
+                        ),
+                    unverifiedClears.length == 0 ? null : new ActionRowBuilder()
+                        .addComponents(
+                            new StringSelectMenuBuilder()
+                                .setCustomId(`membersscreenshot-${this.event}`)
+                                .setPlaceholder('📷 Upload Tiamat Attendance')
+                                .addOptions(
+                                    unverifiedClears.map(a => 
+                                        new StringSelectMenuOptionBuilder()
+                                            .setLabel(`Window ${a + 1}`)
+                                            .setValue(`${a}`)
+                                    )
                                 )
-                            )
-                    )
-            ].filter(a => a != null);
+                        )
+                ].filter(a => a != null);
+            }
             if (this.paused) return [
                 new ActionRowBuilder()
                     .addComponents(
@@ -782,6 +820,10 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                 this.signups.find((a, i) => a.find((b, j) => this.leaders[i][j] == null)) == null ? null : new ButtonBuilder()
                                     .setCustomId(`leader-monster-${this.name}`)
                                     .setLabel('👑 Leader')
+                                    .setStyle(ButtonStyle.Secondary),
+                                new ButtonBuilder()
+                                    .setCustomId(`todgrab-monster-${this.name}`)
+                                    .setLabel('Tod Grab')
                                     .setStyle(ButtonStyle.Secondary)
                             ].filter(a => a != null)
                         ),
@@ -928,7 +970,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                         await this.updateMessage();
                         let embed = new EmbedBuilder()
                             .setTitle('Leader Chosen')
-                            .setDescription(`${this.leaders[i][j].username} is now leader of alliance ${i + 1} party ${j + 1}.`)
+                            .setDescription(`<@${this.leaders[i][j].id}> is now leader of alliance ${i + 1} party ${j + 1}.`)
                         await this.message.reply({ embeds: [embed] });
                     }
                 }
@@ -957,7 +999,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                         .addFields(
                             ...new Array(Math.min(unverified.slice(i * 25).length, 25)).fill().map((b, j) =>
                                 ({
-                                    name: `${unverified[i * 25 + j].player_id.username}`,
+                                    name: `${unverified[i * 25 + j].player_id.username} (${this.calculateBonusPoints(unverified[i * 25 + j])} ${this.getPointType()})`,
                                     value: unverified[i * 25 + j].screenshot == null ? 'No screenshot uploaded' : `[Screenshot](https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.screenshots}/${unverified[i * 25 + j].screenshot})`
                                 })
                             )
@@ -1061,6 +1103,8 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             }
 
             await updateClaimRates();
+
+            if (this.data.signups.length == 0) setTimeout(this.message.delete, 60 * 60 * 1000);
         }
     }
 
@@ -1073,7 +1117,24 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         let day = parseInt(message.embeds[0].fields[1].value);
         let delay = timestamp - (Date.now() / 1000);
         // if (delay < 0) return;
-        // if (delay > 3600) await new Promise(res => setTimeout(res, (delay - 3600) * 1000));
+        // if (delay > config.roster.postDelay) await new Promise(res => setTimeout(res, (delay - config.roster.postDelay) * 1000));
+
+        let dupeEvents = Object.values(archive).filter(a => group.includes(a.data.monster_name));
+        for (let event of dupeEvents) {
+            if (event.active && event.signups.flat(2).filter(a => a != null).length > 0) {
+                await event.message.reply(`<@&${config.discord.usersRole}> A new raid is ready, please close the previous roster`);
+                await new Promise(res => {
+                    let interval = setInterval(() => {
+                        if (!event.active) {
+                            clearInterval(interval);
+                            res();
+                        }
+                    })
+                })
+            }
+            await event.message.delete();
+            delete archive[event.event];
+        }
 
         let threads = {
             DKP: Array.from((await rosterChannels.DKP.threads.fetchActive(false)).threads.values()).concat(Array.from((await rosterChannels.DKP.threads.fetchArchived(false)).threads.values())),
@@ -1101,11 +1162,14 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                     thread = await client.channels.fetch(event.channel);
                     message = await thread.messages.fetch(event.message);
                 } catch (err) {
-                    console.log('Error fetching previous monster message:', err);
+                    if (!err.message.includes('Unknown Message')) console.log('Error fetching previous monster message:', err);
                 }
             }
 
-            let newMonster = new Monster(monster, timestamp, day, event.event_id, threads, event.rage, thread, message, event.windows, event.killed_by);
+            if (message == null) return;
+            let todGrabber = event.todgrab == null ? null : await getUser(event.todgrab);
+            if (event.todgrab != null && todGrabber == null) console.log(`[Schedule Monster]: Error: could not fetch user with id ${event.todGrabber}`);
+            let newMonster = new Monster(monster, timestamp, day, event.event_id, threads, event.rage, thread, message, event.windows, event.killed_by, todGrabber);
             monster = newMonster.name;
             monsters[monster] = newMonster;
             let { data, error } = await supabase.from(config.supabase.tables.signups).select('signup_id, slot_template_id, player_id (id, username), assigned_job_id, placeholders, leader').eq('event_id', event.event_id).eq('active', true);
@@ -1220,7 +1284,9 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 console.log('Error fetching previous monster message:', err);
                 continue;
             }
-            archive[event.event_id] = new Monster(event.monster_name, event.start_time, event.day, event.event_id, null, event.rage, thread, message, event.windows, event.killed_by);
+            let todGrabber = event.todgrab == null ? null : await getUser(event.todgrab);
+            if (event.todgrab != null && todGrabber == null) console.log(`[Schedule Monster]: Error: could not fetch user with id ${event.todGrabber}`);
+            archive[event.event_id] = new Monster(event.monster_name, event.start_time, event.day, event.event_id, null, event.rage, thread, message, event.windows, event.killed_by, todGrabber);
             archive[event.event_id].name = event.monster_name;
             archive[event.event_id].active = false;
             if (event.close_date) archive[event.event_id].closeDate = new Date(event.close_date);
@@ -1321,7 +1387,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 await interaction.editReply({ embeds: [errorEmbed], components: [], ephemeral: true });
                 return;
             }
-            guildMember = await guild.members.fetch(interaction.user.id);
+            guildMember = await interaction.guild.members.fetch(interaction.user.id);
             user.staff = false;
             for (const role of config.discord.staffRoles) if (guildMember.roles.cache.get(role)) user.staff = true;
         }
@@ -1354,7 +1420,8 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             Monster,
             updateTagRates,
             updateGraphs,
-            messageCallbacks
+            messageCallbacks,
+            getUser
         }
 
         if (interaction.isChatInputCommand()) {
@@ -1365,7 +1432,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 let errorEmbed = new EmbedBuilder()
                     .setColor('#ff0000')
                     .addFields({ name: 'Error', value: 'You must be a member of the server to use this bot.' });
-                await interaction.editReply({ embeds: [errorEmbed], components: [] });
+                await interaction.reply({ ephemeral: true, embeds: [errorEmbed], components: [] });
                 return;
             }
             

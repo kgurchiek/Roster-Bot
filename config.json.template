@@ -49,7 +49,8 @@
         "lootHistoryChannel": {
             "DKP": "",
             "PPP": ""
-        }
+        },
+        "usersRole": ""
     },
     "roster": {
         "alliances": 4,
@@ -57,7 +58,8 @@
         "slots": 6,
         "team": "",
         "monsterGroups": [],
-        "placeholderMonsters": []
+        "placeholderMonsters": [],
+        "postDelay": 3600
     },
     "graph": {
         "backgroundColor": "black",

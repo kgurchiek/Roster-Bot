@@ -110,20 +110,20 @@ module.exports = {
                         .setTitle('Error')
                         .setColor('#ff0000')
                         .setDescription('This message has expired, please click the sign up button again')
-                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                    return await interaction.update({ ephemeral: true, embeds: [embed] });
                 }
 
                 let { alliance, party, slot } = selections[id];
-                if (alliance == null) return await interaction.reply({ ephemeral: true, embeds: [new EmbedBuilder().setTitle('Error').setColor('#ff0000').setDescription('Select which alliance you wish to join')] });
-                if (party == null) return await interaction.reply({ ephemeral: true, embeds: [new EmbedBuilder().setTitle('Error').setColor('#ff0000').setDescription('Select which party you wish to join')] });
-                if (slot == null) return await interaction.reply({ ephemeral: true, embeds: [new EmbedBuilder().setTitle('Error').setColor('#ff0000').setDescription('Select which slot you wish to join')] });
+                if (alliance == null) return await interaction.update({ ephemeral: true, embeds: [new EmbedBuilder().setTitle('Error').setColor('#ff0000').setDescription('Select which alliance you wish to join')] });
+                if (party == null) return await interaction.update({ ephemeral: true, embeds: [new EmbedBuilder().setTitle('Error').setColor('#ff0000').setDescription('Select which party you wish to join')] });
+                if (slot == null) return await interaction.update({ ephemeral: true, embeds: [new EmbedBuilder().setTitle('Error').setColor('#ff0000').setDescription('Select which slot you wish to join')] });
 
                 if (monsters[monster].signups[alliance - 1][party - 1][slot - 1] != null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')
                         .setDescription(`Slot already filled by ${monsters[monster].signups[alliance - 1][party - 1][slot - 1].user.username}`)
-                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                    return await interaction.update({ ephemeral: true, embeds: [embed] });
                 }
 
                 if (monsters[monster] == null) {
@@ -131,7 +131,7 @@ module.exports = {
                         .setTitle('Error')
                         .setColor('#ff0000')
                         .setDescription(`${monster} is not active`)
-                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                    return await interaction.update({ ephemeral: true, embeds: [embed] });
                 }
 
                 for (let alliances of monsters[monster].signups) {
@@ -142,7 +142,7 @@ module.exports = {
                                     .setTitle('Error')
                                     .setColor('#ff0000')
                                     .setDescription('You already signed up for this raid')
-                                return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                                return await interaction.update({ ephemeral: true, embeds: [embed] });
                             }
                         }
                     }
@@ -151,7 +151,7 @@ module.exports = {
                 let template = templateList.find(a => a.monster_name == monsters[monster].data.monster_name && a.alliance_number == alliance && a.party_number == party && a.party_slot_number == slot);
                 let templateId = template?.slot_template_id;
                 template = template?.allowed_job_ids;
-                if (template == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed(`Error fetching jobs`, `Could not find template for monster "${monster}", alliance ${alliance}, party ${party}, slot ${slot}`)] });
+                if (template == null) return await interaction.update({ ephemeral: true, embeds: [errorEmbed(`Error fetching jobs`, `Could not find template for monster "${monster}", alliance ${alliance}, party ${party}, slot ${slot}`)] });
                 template = template.map(a => {
                     let job = jobList.find(b => b.job_id == a);
                     if (job == null) {
@@ -183,7 +183,7 @@ module.exports = {
                                 .setStyle(ButtonStyle.Success)
                         )
                 ]
-                await interaction.reply({ ephemeral: true, components: buttons });
+                await interaction.update({ ephemeral: true, content: '', embeds: [], components: buttons });
                 break;
             }
             case 'confirm': {

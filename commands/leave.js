@@ -171,7 +171,7 @@ module.exports = {
                 await interaction.update({ content: '​', embeds: [], components: [] });
                 let embed = new EmbedBuilder().setDescription(`${user.username} has left the ${monster} raid`);
                 await logChannel.send({ embeds: [embed] });
-                await monsters[monster].message.edit({ embeds: monsters[monster].createEmbeds() });
+                await monsters[monster].updateMessage();
                 await monsters[monster].updateLeaders();
                 break;
             }
