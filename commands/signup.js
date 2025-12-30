@@ -230,20 +230,19 @@ module.exports = {
                 }
                 if (job == null) return await interaction.reply({ ephemeral: true, embeds: [new EmbedBuilder().setTitle('Error').setColor('#ff0000').setDescription('Select the job you wish to sign up for')] });
 
-                let { error } = await supabase.from(config.supabase.tables.signups).insert({
+                let { data, error } = await supabase.from(config.supabase.tables.signups).insert({
                     event_id: monsters[monster].event,
                     slot_template_id: templateId,
                     player_id: user.id,
                     assigned_job_id: job,
-                    todgrab: todGrab != null,
-                    todgrab_target: todGrab
-                });
+                    todgrab: todGrab
+                }).select('*').single();
                 if (error) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error updating database', error.message)] });
                 
                 monsters[monster].signups[alliance - 1][party - 1][slot - 1] = {
                     user,
                     job,
-                    signupId: this.data.signup_id,
+                    signupId: data.signup_id,
                     todGrab
                 }
                 delete selections[id];
