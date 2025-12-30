@@ -23,7 +23,12 @@ module.exports = {
                 let signups;
                 ({ data: signups, error } = await supabase.from(config.supabase.tables.signups).select('*, player_id (id, username)').eq('event_id', eventId));
                 if (error) return await interaction.editReply({ content: '', embeds: [errorEmbed('Error Fetching Signups', error.message)], components: [] });
-                signups = signups.filter((a, i) => a.active || signups.find((b, j) => b.player_id.id == a.player_id.id && (b.active || j > i)) == null);
+                signups = signups.filter((a, i) => a.todgrab == null && a.active || signups.find((b, j) => b.player_id.id == a.player_id.id && (b.active || j > i)) == null);
+                if (signups.length == 0) {
+                    let embed = new EmbedBuilder()
+                        .setDescription('This event had no signups')
+                    return await interaction.editReply({ embeds: [embed] });
+                }
 
                 let components = new Array(Math.ceil(signups.length / 25)).fill().map((a, i) =>
                     new ActionRowBuilder()

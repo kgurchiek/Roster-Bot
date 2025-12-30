@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, FileUploadBuilder, LabelBuilder, ChannelType } = require('discord.js');
 const { errorEmbed } = require('../commonFunctions.js');
 
-async function uploadFile(interaction, user, supabase, ocrCategory, logChannel, event, signupId, attachment, file) {
+async function uploadFile(config, interaction, user, supabase, ocrCategory, logChannel, event, signupId, attachment, file) {
     let channelName = (event.group ? event.group.map(a => a).join('—') : event.name).replaceAll(' ', '-').toLowerCase()
     let channels = [...(await ocrCategory.guild.channels.fetch(null, { force: true })).values()].filter(a => a.parentId == ocrCategory.id);
     let channel = channels.find(a => a.name == channelName);
@@ -183,7 +183,7 @@ module.exports = {
                         }
                         await message.delete();
                         
-                        uploadFile(interaction, user, supabase, ocrCategory, logChannel, archive[event], signupId, attachment, file);
+                        uploadFile(config, interaction, user, supabase, ocrCategory, logChannel, archive[event], signupId, attachment, file);
                         messageCallbacks[messageCallbacks.findIndex(a => a.id == interaction.id)] = null;
                     }
                 })
@@ -212,6 +212,6 @@ module.exports = {
             return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error fetching attachment', err)]});
         }
 
-        uploadFile(interaction, user, supabase, ocrCategory, logChannel, archive[event], signupId, attachment, file);
+        uploadFile(config, interaction, user, supabase, ocrCategory, logChannel, archive[event], signupId, attachment, file);
     }
 }

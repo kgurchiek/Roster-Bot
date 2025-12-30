@@ -235,7 +235,7 @@ module.exports = {
                     slot_template_id: templateId,
                     player_id: user.id,
                     assigned_job_id: job,
-                    todgrab: todGrab
+                    todgrab: todGrab == 'undefined' ? null : todGrab
                 }).select('*').single();
                 if (error) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error updating database', error.message)] });
                 

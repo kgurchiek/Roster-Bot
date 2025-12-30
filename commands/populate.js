@@ -53,17 +53,18 @@ module.exports = {
             case 'confirm': {
                 let monster = args[2];
                 selections[interaction.id] = {};
-                if (monsters[monster].data.max_windows == 1) selections[interaction.id].windows = 1;
-
+                
                 if (!interaction.deferred) await interaction.deferReply({ ephemeral: true });
                 if (monsters[monster] == null) {
                     let embed = new EmbedBuilder()
-                        .setTitle('Error')
-                        .setColor('#ff0000')
-                        .setDescription(`${monster} is not active`)
+                    .setTitle('Error')
+                    .setColor('#ff0000')
+                    .setDescription(`${monster} is not active`)
                     return await interaction.editReply({ ephemeral: true, embeds: [embed], components: [] });
                 }
-
+                
+                if (monsters[monster].data.max_windows == 1) selections[interaction.id].windows = 1;
+                
                 let buttons = [
                     (monsters[monster].placeholders != null || monsters[monster].data.max_windows == null || monsters[monster].data.max_windows == 1 || monsters[monster].data.max_windows >= 25) ? null : new ActionRowBuilder()
                         .addComponents(

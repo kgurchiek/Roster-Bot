@@ -4,7 +4,7 @@ const { errorEmbed } = require('../commonFunctions.js');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('resolve'),
-    async buttonHandler({ config, interaction, user, supabase, campRules, archive, logChannel, rewardHistoryChannel }) {
+    async buttonHandler({ config, interaction, user, supabase, campRules, archive, logChannel, rewardHistoryChannel, pointRules }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {

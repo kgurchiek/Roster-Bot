@@ -762,7 +762,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                     unverifiedClears.length == 0 ? null : new ActionRowBuilder()
                         .addComponents(
                             new StringSelectMenuBuilder()
-                                .setCustomId(`membersscreenshot-${this.event}`)
+                                .setCustomId(`membersscreenshot-window-${this.event}`)
                                 .setPlaceholder('📷 Upload Tiamat Attendance')
                                 .addOptions(
                                     unverifiedClears.map(a => 
@@ -789,7 +789,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 unverifiedClears.length == 0 ? null : new ActionRowBuilder()
                     .addComponents(
                         new StringSelectMenuBuilder()
-                            .setCustomId(`membersscreenshot-${this.event}`)
+                            .setCustomId(`membersscreenshot-window-${this.event}`)
                             .setPlaceholder('📷 Upload Tiamat Attendance')
                             .addOptions(
                                 unverifiedClears.map(a => 
@@ -873,7 +873,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                     unverifiedClears.length == 0 ? null : new ActionRowBuilder()
                         .addComponents(
                             new StringSelectMenuBuilder()
-                                .setCustomId(`membersscreenshot-${this.event}`)
+                                .setCustomId(`membersscreenshot-window-${this.event}`)
                                 .setPlaceholder('📷 Upload Tiamat Attendance')
                                 .addOptions(
                                     unverifiedClears.map(a => 
@@ -928,7 +928,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                     unverifiedClears.length == 0 ? null : new ActionRowBuilder()
                         .addComponents(
                             new StringSelectMenuBuilder()
-                                .setCustomId(`membersscreenshot-${this.event}`)
+                                .setCustomId(`membersscreenshot-window-${this.event}`)
                                 .setPlaceholder('📷 Upload Tiamat Attendance')
                                 .addOptions(
                                     unverifiedClears.map(a => 
@@ -944,7 +944,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 unverifiedClears.length == 0 ? null : new ActionRowBuilder()
                     .addComponents(
                         new StringSelectMenuBuilder()
-                            .setCustomId(`membersscreenshot-${this.event}`)
+                            .setCustomId(`membersscreenshot-window-${this.event}`)
                             .setPlaceholder('📷 Upload Tiamat Attendance')
                             .addOptions(
                                 unverifiedClears.map(a => 
@@ -981,7 +981,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             if (error) console.log(`Error updating attendance for event ${this.event}: ${error.message}`);
         }
         createVerificationEmbeds() {
-            let unverified = this.data.signups.filter(a => a.active && a.verified == null);
+            let unverified = this.data.signups.filter(a => a.active && a.verified == null && a.todgrab == null);
             if (unverified.length == 0) {
                 return [
                     new EmbedBuilder()
