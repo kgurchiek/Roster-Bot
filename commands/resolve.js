@@ -113,7 +113,7 @@ module.exports = {
                     .addFields(
                         ...[
                             { name: 'Members', value: String(archive[event].data.signups.filter((a, i, arr) => arr.slice(0, i).find(b => a.player_id.id == b.player_id.id) == null).length) },
-                            { name: 'Tag Rate', value: `${archive[event].data.signups.filter(a => a.tagged).length}/${archive[event].zone} (${(archive[event].data.signups.filter(a => a.tagged).length / archive[event].zone * 100).toFixed(1)}%)` },
+                            { name: 'Linkshell Tag Rate', value: `${archive[event].data.signups.filter(a => a.tagged).length}/${archive[event].zone} (${(archive[event].data.signups.filter(a => a.tagged).length / archive[event].zone * 100).toFixed(1)}%)` },
                             total.dkp == 0 ? null : { name: 'Total DKP', value: String(total.dkp) },
                             total.ppp == 0 ? null : { name: 'Total PPP', value: String(total.ppp) }
                         ].filter(a => a != null)
@@ -128,7 +128,11 @@ module.exports = {
                             new ButtonBuilder()
                                 .setCustomId(`editevent-event-${event}`)
                                 .setLabel('🛡️ Edit')
-                                .setStyle(ButtonStyle.Primary)
+                                .setStyle(ButtonStyle.Primary),
+                            new ButtonBuilder()
+                                .setCustomId(`nontaggers-${event}`)
+                                .setLabel('Non-Taggers')
+                                .setStyle(ButtonStyle.Primary),
                         )
                 ]
                 await rewardHistoryChannel.send({ embeds: [embed], components });

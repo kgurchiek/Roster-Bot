@@ -143,10 +143,8 @@ module.exports = {
                                         .setStyle(TextInputStyle.Short)
                                 )
                         )
-                        fields.push({ name: 'windows', max: monsters[monsters].windows });
-                    }
-
-                    if (selections[id].windows == null) {
+                        fields.push({ name: 'windows', max: monsters[monster].windows });
+                    } else if (selections[id].windows == null) {
                         let embed = new EmbedBuilder()
                             .setTitle('Error')
                             .setColor('#ff0000')
