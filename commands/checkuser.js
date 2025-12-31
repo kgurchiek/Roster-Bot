@@ -39,7 +39,7 @@ module.exports = {
 **PPP:** ${account.ppp}
 **Frozen:** ${account.frozen}${account.last_camped == null ? '' : `\n**Last Camp**:<t:${Math.floor(new Date(account.last_camped).getTime() / 1000)}:R>`}
 
-**Tag Rates:**${config.supabase.trackedRates.map(a => `\n${a}: ${tagList.filter(b => b.monster_name == a && b.player_id == account.id).length}/${tagList.filter(b => b.monster_name == a).length} (${(((tagList.filter(b => b.monster_name == a && b.player_id == account.id).length / tagList.filter(b => b.monster_name == a).length) || 0) * 100).toFixed(0)}%)`).join('')}
+**Tag Rates:**${config.supabase.trackedRates.map(a => `\n${a}: ${tagList.filter(b => b.monster_name == a && b.player_id == account.id).length}/${events.filter(b => b.monster_name == a).length} (${(((tagList.filter(b => b.monster_name == a && b.player_id == account.id).length / events.filter(b => b.monster_name == a).length) || 0) * 100).toFixed(0)}%)`).join('')}
 Total: ${tagList.filter(b => config.supabase.trackedRates.includes(b.monster_name) && b.player_id == account.id).length}/${tagList.filter(b => config.supabase.trackedRates.includes(b.monster_name)).length} (${(((tagList.filter(b => config.supabase.trackedRates.includes(b.monster_name) && b.player_id == account.id).length / tagList.filter(b => config.supabase.trackedRates.includes(b.monster_name)).length) || 0) * 100).toFixed(0)}%)
 
 **Attendance Rates:**${config.supabase.trackedRates.map(a => `\n${a}: ${signups.filter(b => b.event_id.monster_name == a && b.player_id == account.id).length}/${events.filter(b => b.monster_name == a).length} (${(((signups.filter(b => b.event_id.monster_name == a && b.player_id == account.id).length / events.filter(b => b.monster_name == a).length) || 0) * 100).toFixed(0)}%)`).join('')}
