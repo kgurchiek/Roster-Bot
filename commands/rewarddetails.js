@@ -4,7 +4,7 @@ const { errorEmbed } = require('../commonFunctions.js');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('rewarddetails'),
-    async buttonHandler({ config, interaction, supabase, monsterList, campRules, pointRules, calculateCampPoints }) {
+    async buttonHandler({ config, interaction, supabase, monsterList, campRules, pointRules, calculateCampPoints, calculateBonusPoints }) {
         let args = interaction.customId.split('-');
         let eventId = args[1];
 
@@ -37,27 +37,9 @@ module.exports = {
                     if (campRule == null) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error fetching point rule', `Couldn't find camp point rule for monster ${monster.monster_name}`)], components: [] });
                     points[campRule.type] += calculateCampPoints(monster.monster_name, a.windows, event.windows);
                     let type = monster.monster_type;
-                    if (type == 'NQ' && this.day >= 4) type = 'HQ';
-                    let bonusRules = pointRules.filter(b => b.monster_type == type);
-                    if (a.tagged) {
-                        let rule = bonusRules.find(b => b.point_code == 't');
-                        if (rule == null) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error fetching point rule', `Couldn't find tag point rule for monster type ${type}`)], components: [] });
-                        points.DKP += rule.dkp_value;
-                        points.PPP += rule.ppp_value;
-                    }
-                    if (a.killed) {
-                        let rule = bonusRules.find(b => b.point_code == 'k');
-                        if (rule == null) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error fetching point rule', `Couldn't find kill point rule for monster type ${type}`)], components: [] });
-                        points.DKP += rule.dkp_value;
-                        points.PPP += rule.ppp_value;
-
-                        if (a.rage) {
-                            let rule = bonusRules.find(b => b.point_code == 'r');
-                            if (rule == null) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error fetching point rule', `Couldn't find rage point rule for monster type ${type}`)], components: [] });
-                            points.DKP += rule.dkp_value;
-                            points.PPP += rule.ppp_value;
-                        }
-                    }
+                    if (type == 'NQ' && event.day >= 4) type = 'HQ';
+                    let bonusRule = pointRules.find(b => b.monster_type == type);
+                    points[bonusRule.dkp_value ? 'DKP' : 'PPP'] += calculateBonusPoints(a, type);
                     error = false;
                     return `${a.player_id.username}${config.roster.placeholderMonsters.includes(monster.monster_name) ? ` - ${a.placeholders} PH` : ((a.windows == null || monster.max_windows == 1) ? '' : ` - ${a.windows}${event.windows == null ? '' : `/${event.windows}`} windows`)}${a.tagged ? ' - T' : ''}${a.killed ? ' - K' : ''}${a.rage ? ' - R' : ''}${config.roster.placeholderMonsters.includes(monster.monster_name) ? ` ${(Math.floor(a.placeholders / 4) * 0.2).toFixed(1)} PPP` : Object.keys(points).filter(b => points[b] != 0).map(b => ` ${points[b].toFixed(1)} ${b}`).join('')}`
                 })

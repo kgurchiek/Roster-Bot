@@ -592,6 +592,33 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         }
     }
 
+    function calculateBonusPoints(signup, type) {
+        let bonusRules = pointRules.filter(a => a.monster_type == type);
+        let dkp = 0;
+        let ppp = 0;
+        if (signup.tagged) {
+            let rule = bonusRules.find(a => a.point_code == 't');
+            if (rule == null) return console.log(`[Calculate Bonus Points]: Error: Couldn't find tag point rule for monster type ${type}`);
+            dkp += rule.dkp_value;
+            ppp += rule.ppp_value;
+        }
+        if (signup.killed) {
+            let rule = bonusRules.find(a => a.point_code == 'k');
+            if (rule == null) return console.log(`[Calculate Bonus Points]: Error: Couldn't find kill point rule for monster type ${type}`);
+            dkp += rule.dkp_value;
+            ppp += rule.ppp_value;
+
+            if (signup.rage) {
+                let rule = bonusRules.find(a => a.point_code == 'r');
+                if (rule == null) return console.log(`[Calculate Bonus Points]: Error: Couldn't find rage point rule for monster type ${type}`);
+                dkp += rule.dkp_value;
+                ppp += rule.ppp_value;
+            }
+        }
+        
+        return dkp || ppp;
+    }
+
     class Monster {
         constructor(name, timestamp, day, event, threads, rage, thread, message, windows, killer, todGrabber) {
             this.group = config.roster.monsterGroups.find(a => a.includes(name));
@@ -629,38 +656,23 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         calculatePoints(playerId) {
             return calculateCampPoints(this.data.monster_name, this.data.signups.filter(a => a.player_id.id == playerId).reduce((a, b) => a + b.windows || 0, 0), this.windows);
         }
-        getPointType() {
-            let campRule = campRules.find(a => a.monster_name == this.data.monster_name);
-            if (campRule == null) console.log(`Error: couldn't fetch camp point rule for ${this.data.monster_name}`);
-            else return campRule.type;
+        getPointType(camp) {
+            if (camp) {
+                let rule = campRules.find(a => a.monster_name == this.data.monster_name);
+                if (rule == null) console.log(`Error: couldn't fetch camp point rule for ${this.data.monster_name}`);
+                else return rule.type;
+            } else {
+                let type = this.data.monster_type;
+                if (type == 'NQ' && this.day >= 4) type = 'HQ';
+                let rule = bonusRules.find(a => a.monster_type == this.data.monster_type);
+                if (rule == null) console.log(`Error: couldn't fetch bonus point rule for ${this.data.monster_type}`);
+                else return rule.dkp_value ? 'DKP' : 'PPP';
+            }
         }
         calculateBonusPoints(signup) {
             let type = this.data.monster_type;
             if (type == 'NQ' && this.day >= 4) type = 'HQ'; 
-            let bonusRules = pointRules.filter(a => a.monster_type == type);
-            let dkp = 0;
-            let ppp = 0;
-            if (signup.tagged) {
-                let rule = bonusRules.find(a => a.point_code == 't');
-                if (rule == null) return console.log(`[Calculate Bonus Points]: Error: Couldn't find tag point rule for monster type ${type}`);
-                dkp += rule.dkp_value;
-                ppp += rule.ppp_value;
-            }
-            if (signup.killed) {
-                let rule = bonusRules.find(a => a.point_code == 'k');
-                if (rule == null) return console.log(`[Calculate Bonus Points]: Error: Couldn't find kill point rule for monster type ${type}`);
-                dkp += rule.dkp_value;
-                ppp += rule.ppp_value;
-    
-                if (signup.rage) {
-                    let rule = bonusRules.find(a => a.point_code == 'r');
-                    if (rule == null) return console.log(`[Calculate Bonus Points]: Error: Couldn't find rage point rule for monster type ${type}`);
-                    dkp += rule.dkp_value;
-                    ppp += rule.ppp_value;
-                }
-            }
-            
-            return dkp || ppp;
+            return calculateBonusPoints(signup, type);
         }
         createEmbeds() {
             if (this.active) {
@@ -745,7 +757,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                             a.filter((b, i, arr) => arr.slice(0, i).find(c => c.player_id.id == b.player_id.id) == null).map(b => {
                                 let userSignups = this.data.signups.filter(c => c != null && c.player_id.id == b.player_id.id); 
                                 let totalWindows = this.name == 'Tiamat' ? userSignups.length : userSignups.reduce((a, b) => a + b?.windows || 0, 0);
-                                return `${b.active && b.windows == null && b.tagged == null && b.killed == null ? '✖' : '✓'} ${b.player_id.username}${this.name != 'Tiamat' && userSignups.length > 1 ? ` x${userSignups.length}` : ''}${this.placeholders == null ? ((totalWindows == null || this.data.max_windows == 1) ? '' : ` - ${totalWindows}${this.windows == null ? '' : `/${this.windows}`} windows`) : ` - ${b.placeholders} PH`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''} Camp: ${this.placeholders != null ? `${(Math.floor(b.placeholders / 4) * 0.2).toFixed(1)} PPP` : `${this.calculatePoints(b.player_id.id)} ${this.getPointType()}`} Bonus: ${this.calculateBonusPoints(b)} ${this.getPointType()}`;
+                                return `${b.active && b.windows == null && b.tagged == null && b.killed == null ? '✖' : '✓'} ${b.player_id.username}${this.name != 'Tiamat' && userSignups.length > 1 ? ` x${userSignups.length}` : ''}${this.placeholders == null ? ((totalWindows == null || this.data.max_windows == 1) ? '' : ` - ${totalWindows}${this.windows == null ? '' : `/${this.windows}`} windows`) : ` - ${b.placeholders} PH`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''} Camp: ${this.placeholders != null ? `${(Math.floor(b.placeholders / 4) * 0.2).toFixed(1)} PPP` : `${this.calculatePoints(b.player_id.id)} ${this.getPointType(true)}`} Bonus: ${this.calculateBonusPoints(b)} ${this.getPointType(false)}`;
                             }).join('\n\n')
                         }\n\`\`\``);
                         if (this.verified) embed.setFooter({ text: '✓ Verified' });
@@ -1006,7 +1018,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                         .addFields(
                             ...new Array(Math.min(unverified.slice(i * 25).length, 25)).fill().map((b, j) =>
                                 ({
-                                    name: `${unverified[i * 25 + j].player_id.username} (${this.calculateBonusPoints(unverified[i * 25 + j])} ${this.getPointType()})`,
+                                    name: `${unverified[i * 25 + j].player_id.username} (${this.calculateBonusPoints(unverified[i * 25 + j])} ${this.getPointType(false)})`,
                                     value: unverified[i * 25 + j].screenshot == null ? 'No screenshot uploaded' : `[Screenshot](https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.screenshots}/${unverified[i * 25 + j].screenshot})`
                                 })
                             )
@@ -1442,7 +1454,8 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             updateGraphs,
             messageCallbacks,
             getUser,
-            calculateCampPoints
+            calculateCampPoints,
+            calculateBonusPoints
         }
 
         if (interaction.isChatInputCommand()) {
