@@ -5,7 +5,7 @@ let selections = {};
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('editevent'),
-    async buttonHandler({ config, interaction, client, user, supabase, logChannel, campRules }) {
+    async buttonHandler({ config, interaction, client, user, supabase, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'event': {
@@ -90,12 +90,8 @@ module.exports = {
 
                 let total = { dkp: 0, ppp: 0 };
                 eventSignups.forEach(async (signup, i, arr) => {
-                    let campRule = campRules.find(a => a.monster_name == selections[id].event.monster_name);
-                    if (campRule == null) return console.log(`Error: couldn't find camp rule for monster ${selections[id].event.monster_name}`);
-                    total.ppp += parseFloat((Math.floor(signup.placeholders / 4) * 0.2).toFixed(1));
-                    let campPoints = campRule.camp_points[Math.min(signup.windows - 1, campRule.camp_points.length - 1)] || 0;
-                    if (campRule.bonus_windows) campPoints += Math.min(Math.floor(signup.windows / campRule.bonus_windows) * campRule.bonus_points, campRule.max_bonus);
-                    if (campRule.type.toLowerCase() == 'dkp') total.dkp += campPoints;
+                    campPoints = selections[id].calculatePoints(selections[id].signup.player_id.id);
+                    if (selections[id].event.getPointType().toLowerCase() == 'dkp') total.dkp += campPoints;
                     else total.ppp += campPoints;
                 })
 

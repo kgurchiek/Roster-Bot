@@ -579,6 +579,19 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         setTimeout(updateFreeze, 60000);
     }
 
+    function calculateCampPoints(monster, windows, totalWindows) {
+        let campRule = campRules.find(a => a.monster_name == monster);
+        if (campRule == null) console.log(`Error: couldn't fetch camp point rule for ${monster}`);
+        else {
+            let points = 0;
+            if (campRule.bonus_windows) points += Math.min(Math.floor(windows / campRule.bonus_windows) * campRule.bonus_points, campRule.max_bonus);
+            let diff = totalWindows - windows;
+            console.log(windows, diff, campRule)
+            if (windows > 0) points += campRule.camp_points[campRule.camp_points.length - 1 - diff] || 0;
+            return points;
+        }
+    }
+
     class Monster {
         constructor(name, timestamp, day, event, threads, rage, thread, message, windows, killer, todGrabber) {
             this.group = config.roster.monsterGroups.find(a => a.includes(name));
@@ -591,9 +604,9 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             this.day = day;
             this.event = event;
             this.rage = rage;
-            this.signups = Array(this.alliances).fill().map(() => Array(this.parties).fill().map(() => Array(this.slots).fill(null)));
-            this.leaders = Array(this.alliances).fill().map(() => Array(this.parties).fill(null));
-            this.removedLeader = Array(this.alliances).fill().map(() => Array(this.parties).fill(null));
+            this.signups = Array(this.alliances).fill().map(() => Array(this.parties).fill().map(() => Array(this.slots).fill()));
+            this.leaders = Array(this.alliances).fill().map(() => Array(this.parties).fill());
+            this.removedLeader = Array(this.alliances).fill().map(() => Array(this.parties).fill());
             
             this.thread = thread;
             this.message = message;
@@ -614,13 +627,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         parties = config.roster.parties;
         slots = config.roster.slots;
         calculatePoints(playerId) {
-            let campRule = campRules.find(a => a.monster_name == this.data.monster_name);
-            if (campRule == null) console.log(`Error: couldn't fetch camp point rule for ${this.data.monster_name}`);
-            else {
-                let signups = this.data.signups.filter(a => a.player_id.id == playerId);
-                let windows = signups.reduce((a, b) => a + b.windows || 0, 0);
-                return campRule.camp_points[Math.min(windows - 1, campRule.camp_points.length - 1)] || 0;
-            }
+            return calculateCampPoints(this.data.monster_name, this.data.signups.filter(a => a.player_id.id == playerId).reduce((a, b) => a + b.windows || 0, 0), this.windows);
         }
         getPointType() {
             let campRule = campRules.find(a => a.monster_name == this.data.monster_name);
@@ -821,7 +828,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                     .setCustomId(`leader-monster-${this.name}`)
                                     .setLabel('👑 Leader')
                                     .setStyle(ButtonStyle.Secondary),
-                                new ButtonBuilder()
+                                this.data.channel_type == 'PPP' ? null : new ButtonBuilder()
                                     .setCustomId(`todgrab-select-${this.name}`)
                                     .setLabel('Tod Grab')
                                     .setStyle(ButtonStyle.Secondary)
@@ -1434,7 +1441,8 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             updateTagRates,
             updateGraphs,
             messageCallbacks,
-            getUser
+            getUser,
+            calculateCampPoints
         }
 
         if (interaction.isChatInputCommand()) {

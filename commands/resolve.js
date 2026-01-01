@@ -4,7 +4,7 @@ const { errorEmbed } = require('../commonFunctions.js');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('resolve'),
-    async buttonHandler({ config, interaction, user, supabase, campRules, archive, logChannel, rewardHistoryChannel, pointRules }) {
+    async buttonHandler({ config, interaction, user, supabase, archive, logChannel, rewardHistoryChannel, pointRules }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {
@@ -59,14 +59,11 @@ module.exports = {
                         let { error } = await supabase.from(config.supabase.tables.users).update({last_camped: new Date() }).eq('id', signup.player_id.id);
                         if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error incrementing dkp', error.message)] });
                     }
-                    let campRule = campRules.find(a => a.monster_name == archive[event].name);
-                    if (campRule == null) return console.log(`Error: couldn't find camp rule for monster ${archive[event].monster_name}`);
                     let dkp = 0;
                     let ppp = 0;
                     ppp += parseFloat((Math.floor(signup.placeholders / 4) * 0.2).toFixed(1));
-                    let campPoints = campRule.camp_points[Math.min(signup.windows - 1, campRule.camp_points.length - 1)] || 0;
-                    if (campRule.bonus_windows) campPoints += Math.min(Math.floor(signup.windows / campRule.bonus_windows) * campRule.bonus_points, campRule.max_bonus);
-                    if (campRule.type.toLowerCase() == 'dkp') dkp += campPoints;
+                    let campPoints = archive[event].calculatePoints(signup.player_id.id);
+                    if (archive[event].getPointType.toLowerCase() == 'dkp') dkp += campPoints;
                     else ppp += campPoints;
                     
                     let type = archive[event].data.monster_type;

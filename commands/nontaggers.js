@@ -4,7 +4,7 @@ const { errorEmbed } = require('../commonFunctions.js');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('nontaggers'),
-    async buttonHandler({ config, interaction, supabase, monsterList, campRules, pointRules }) {
+    async buttonHandler({ config, interaction, supabase }) {
         let args = interaction.customId.split('-');
         let eventId = args[1];
 
