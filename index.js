@@ -664,7 +664,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             } else {
                 let type = this.data.monster_type;
                 if (type == 'NQ' && this.day >= 4) type = 'HQ';
-                let rule = bonusRules.find(a => a.monster_type == this.data.monster_type);
+                let rule = pointRules.find(a => a.monster_type == this.data.monster_type);
                 if (rule == null) console.log(`Error: couldn't fetch bonus point rule for ${this.data.monster_type}`);
                 else return rule.dkp_value ? 'DKP' : 'PPP';
             }
