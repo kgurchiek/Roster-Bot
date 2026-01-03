@@ -586,7 +586,6 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             let points = 0;
             if (campRule.bonus_windows) points += Math.min(Math.floor(windows / campRule.bonus_windows) * campRule.bonus_points, campRule.max_bonus);
             let diff = totalWindows - windows;
-            console.log(windows, diff, campRule)
             if (windows > 0) points += campRule.camp_points[campRule.camp_points.length - 1 - diff] || 0;
             return points;
         }
@@ -1145,18 +1144,12 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
 
     let monsters = {};
     let archive = {};
-    let i = 0;
     async function scheduleMonster(message, events = []) {
         let monster = message.embeds[0].title;
         let group = config.roster.monsterGroups.find(a => a.includes(monster)) || [monster];
         let timestamp = parseInt(message.embeds[0].fields[0].value.split(':')[1]);
         let day = parseInt(message.embeds[0].fields[1].value);
         let delay = timestamp - (Date.now() / 1000);
-        if (i == 2) {
-            monster = 'Tiamat';
-            group = ['Tiamat'];
-        }
-        i++;
         // if (delay < 0) return;
         // if (delay > config.roster.postDelay) await new Promise(res => setTimeout(res, (delay - config.roster.postDelay) * 1000));
 
