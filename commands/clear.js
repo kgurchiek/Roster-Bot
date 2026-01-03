@@ -73,6 +73,7 @@ module.exports = {
                 } else {
                     monsters[monster].lastCleared = new Date();
                     monsters[monster].clears++;
+                    monsters[monster].windows++;
                     await monsters[monster].updateMessage();
                     let embed = new EmbedBuilder()
                         .setDescription(`The ${monster} raid has been cleared`)

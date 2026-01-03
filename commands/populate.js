@@ -129,10 +129,12 @@ module.exports = {
                     return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
                 }
 
+                if (monster == 'Tiamat') selections[id].windows == monsters[monster].windows;
+
                 let fields = [];
                 let modal = new ModalBuilder()
                     .setTitle(`Populate ${monster} Points`)
-                if (monsters[monster].placeholders == null) {
+                if (monster != 'Tiamat' && monsters[monster].placeholders == null) {
                     if (monsters[monster].data.max_windows == null || monsters[monster].data.max_windows >= 25) {
                         modal.addComponents(
                             new ActionRowBuilder()

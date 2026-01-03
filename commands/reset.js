@@ -27,7 +27,7 @@ module.exports = {
             )
         await interaction.reply({ ephemeral: true, embeds: [embed], components: [buttons] });
     },
-    async buttonHandler({ config, interaction, user, supabase, archive }) {
+    async buttonHandler({ config, interaction, user, supabase }) {
         if (!user.staff) {
             let embed = new EmbedBuilder()
                 .setTitle('Error')
@@ -37,13 +37,11 @@ module.exports = {
         }
 
         await interaction.deferReply({ ephemeral: true });
-        for (let event in archive) {
-            let { error } = await supabase.from(config.supabase.tables.signups).delete().gt('event_id', -1);
-            if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error deleting signups', error.message)] });
+        let { error } = await supabase.from(config.supabase.tables.signups).delete().gt('event_id', -1);
+        if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error deleting signups', error.message)] });
 
-            ({ error } = await supabase.from(config.supabase.tables.events).delete().gt('event_id', -1));
-            if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error deleting event', error.message)] });
-        }
+        ({ error } = await supabase.from(config.supabase.tables.events).delete().gt('event_id', -1));
+        if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error deleting event', error.message)] });
 
         let embed = new EmbedBuilder()
             .setTitle('Success')

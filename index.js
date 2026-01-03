@@ -637,7 +637,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             
             this.thread = thread;
             this.message = message;
-            this.windows = windows;
+            this.windows = windows || 0;
             this.killer = killer;
             this.todGrabber = todGrabber;
             this.todGrabs = [];
@@ -663,8 +663,9 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 else return rule.type;
             } else {
                 let type = this.data.monster_type;
+                if (type == 'PPP') return 'PPP'
                 if (type == 'NQ' && this.day >= 4) type = 'HQ';
-                let rule = pointRules.find(a => a.monster_type == this.data.monster_type);
+                let rule = pointRules.find(a => a.monster_type == this.data.monster_type && a.dkp_value != 0 || a.ppp_value != 0);
                 if (rule == null) console.log(`Error: couldn't fetch bonus point rule for ${this.data.monster_type}`);
                 else return rule.dkp_value ? 'DKP' : 'PPP';
             }
@@ -703,7 +704,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                         if (job == null) console.log(`Error: can't find job id: ${this.signups[i][j][k].job}`);
                                         else {
                                             role = `\`${job.color}${job.job_abbreviation}\``;
-                                            username = `${this.leaders[i][j]?.id == this.signups[i][j][k].user.id ? '👑 ' : ''}${this.signups[i][j][k].user.username}`;
+                                            username = `${this.leaders[i][j]?.id == this.signups[i][j][k].user.id ? '👑 ' : ''}${this.signups[i][j][k].user.username}${this.signups[i][j][k].alt ? ' 👥' : ''}${this.signups[i][j][k].tag_only ? ' **TAG**' : ''}`;
                                         }
                                     }
                                     if (role == null) {
@@ -1144,7 +1145,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         // if (delay < 0) return;
         // if (delay > config.roster.postDelay) await new Promise(res => setTimeout(res, (delay - config.roster.postDelay) * 1000));
 
-        let dupeEvents = Object.values(archive).filter(a => group.includes(a.data.monster_name));
+        let dupeEvents = Object.values(archive).filter(a => group.includes(a.data.monster_name) && Math.floor(new Date(a.timestamp).getTime() / 1000) != timestamp);
         for (let event of dupeEvents) {
             if (event.active && event.signups.flat(2).filter(a => a != null).length > 0) {
                 await event.message.reply(`<@&${config.discord.usersRole}> A new raid is ready, please close the previous roster`);
@@ -1231,7 +1232,10 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 monsters[monster].signups[template.alliance_number - 1][template.party_number - 1][template.party_slot_number - 1] = {
                     user,
                     job,
-                    signupId: signup.signup_id
+                    signupId: signup.signup_id,
+                    todGrab: signup.todgrab,
+                    alt: signup.alt,
+                    tag_only: signup.tag_only
                 };
                 if (signup.leader) monsters[monster].leaders[template.alliance_number - 1][template.party_number - 1] = user;
             }
@@ -1304,7 +1308,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             events = [];
         }
 
-        for (let event of events.filter(a => a.verified == null)) {
+        for (let event of events.filter(a => a.verified == false)) {
             if (event.channel == null) continue;
             let thread;
             let message;

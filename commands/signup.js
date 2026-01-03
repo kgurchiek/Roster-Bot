@@ -161,6 +161,7 @@ module.exports = {
                     return job;
                 }).filter(a => a != null);
 
+                let dbUser = userList.find(a => a.id == userId) || user;
                 let buttons = [
                     new ActionRowBuilder()
                         .addComponents(
@@ -173,6 +174,34 @@ module.exports = {
                                             .setLabel(a.job_name)
                                             .setValue(`${a.job_id}`)
                                     )
+                                )
+                        ),
+                    dbUser.username.includes('(') ? new ActionRowBuilder()
+                        .addComponents(
+                            new StringSelectMenuBuilder()
+                                .setPlaceholder('Are you using an alt? (optional)')
+                                .setCustomId(`signup-selectalt-${interaction.id}`)
+                                .addOptions(
+                                    new StringSelectMenuOptionBuilder()
+                                        .setLabel('No (Default)')
+                                        .setValue('false'),
+                                    new StringSelectMenuOptionBuilder()
+                                        .setLabel('Yes')
+                                        .setValue('true')
+                                )
+                        ) : null,
+                    new ActionRowBuilder()
+                        .addComponents(
+                            new StringSelectMenuBuilder()
+                                .setPlaceholder('Tag only? (optional)')
+                                .setCustomId(`signup-selecttag-${interaction.id}`)
+                                .addOptions(
+                                    new StringSelectMenuOptionBuilder()
+                                        .setLabel('No (Default)')
+                                        .setValue('false'),
+                                    new StringSelectMenuOptionBuilder()
+                                        .setLabel('Yes')
+                                        .setValue('true')
                                 )
                         ),
                      new ActionRowBuilder()
@@ -285,6 +314,34 @@ module.exports = {
                 }
                 interaction.deferUpdate();
                 selections[id].job = interaction.values[0];
+                break;
+            }
+            case 'selectalt': {
+                let id = args[2];
+
+                if (selections[id] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription('This message has expired, please click the sign up button again')
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
+                interaction.deferUpdate();
+                selections[id].alt = interaction.values[0] == 'true';
+                break;
+            }
+            case 'selecttag': {
+                let id = args[2];
+
+                if (selections[id] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription('This message has expired, please click the sign up button again')
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
+                interaction.deferUpdate();
+                selections[id].tag_only = interaction.values[0] == 'true';
                 break;
             }
         }

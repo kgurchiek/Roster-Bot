@@ -72,7 +72,7 @@ module.exports = {
                 }
                 jobs = jobs.filter((a, i, arr) => !arr.slice(0, i).find(b => b.job_id == a.job_id));
                 
-
+                let dbUser = userList.find(a => a.id == userId) || user;
                 let buttons = [
                     new ActionRowBuilder()
                         .addComponents(
@@ -87,6 +87,34 @@ module.exports = {
                                     )
                                 )
                         ),
+                    dbUser.username.includes('(') ? new ActionRowBuilder()
+                        .addComponents(
+                            new StringSelectMenuBuilder()
+                                .setPlaceholder('Are you using an alt? (optional)')
+                                .setCustomId(`quickjoin-selectalt-${interaction.id}`)
+                                .addOptions(
+                                    new StringSelectMenuOptionBuilder()
+                                        .setLabel('No (Default)')
+                                        .setValue('false'),
+                                    new StringSelectMenuOptionBuilder()
+                                        .setLabel('Yes')
+                                        .setValue('true')
+                                )
+                        ) : null,
+                    new ActionRowBuilder()
+                        .addComponents(
+                            new StringSelectMenuBuilder()
+                                .setPlaceholder('Tag only? (optional)')
+                                .setCustomId(`quickjoin-selecttag-${interaction.id}`)
+                                .addOptions(
+                                    new StringSelectMenuOptionBuilder()
+                                        .setLabel('No (Default)')
+                                        .setValue('false'),
+                                    new StringSelectMenuOptionBuilder()
+                                        .setLabel('Yes')
+                                        .setValue('true')
+                                )
+                        ),
                      new ActionRowBuilder()
                         .addComponents(
                             new ButtonBuilder()
@@ -94,7 +122,7 @@ module.exports = {
                                 .setLabel('✓')
                                 .setStyle(ButtonStyle.Success)
                         )
-                ]
+                ].filter(a => a != null);
                 await interaction.reply({ ephemeral: true, components: buttons });
                 break;
             }
@@ -178,12 +206,15 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
+                if (todGrab == 'undefined') todGrab = null;
                 let { data, error } = await supabase.from(config.supabase.tables.signups).insert({
                     event_id: monsters[monster].event,
                     slot_template_id: templateId,
                     player_id: user.id,
                     assigned_job_id: job,
-                    todgrab: todGrab == 'undefined' ? null : todGrab
+                    todgrab: todGrab,
+                    alt: selections[id].alt,
+                    tag_only: selections[id].tag_only
                 }).select('*').single();
                 if (error) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error updating database', error.message)] });
                 
@@ -191,7 +222,9 @@ module.exports = {
                     user,
                     job,
                     signupId: data.signup_id,
-                    todGrab
+                    todGrab,
+                    alt: selections[id].alt,
+                    tag_only: selections[id].tag_only
                 }
                 delete selections[id];
 
@@ -219,6 +252,34 @@ module.exports = {
                 }
                 interaction.deferUpdate();
                 selections[id].job = interaction.values[0];
+                break;
+            }
+            case 'selectalt': {
+                let id = args[2];
+
+                if (selections[id] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription('This message has expired, please click the sign up button again')
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
+                interaction.deferUpdate();
+                selections[id].alt = interaction.values[0] == 'true';
+                break;
+            }
+            case 'selecttag': {
+                let id = args[2];
+
+                if (selections[id] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription('This message has expired, please click the sign up button again')
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
+                interaction.deferUpdate();
+                selections[id].tag_only = interaction.values[0] == 'true';
                 break;
             }
         }
