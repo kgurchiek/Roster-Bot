@@ -32,7 +32,7 @@ module.exports = {
                 await interaction.reply({ ephemeral: true, embeds: [embed], components: buttons });
                 break;
             }
-            case 'confirm':  {
+            case 'confirm': {
                 let monster = args[2];
 
                 if (monsters[monster] == null) {
@@ -74,16 +74,15 @@ module.exports = {
                     monsters[monster].lastCleared = new Date();
                     monsters[monster].clears++;
                     monsters[monster].windows++;
-                    await monsters[monster].updateMessage();
                     let embed = new EmbedBuilder()
-                        .setDescription(`The ${monster} raid has been cleared`)
+                        .setDescription(`${monster} has been cleared to the next window`)
                     await logChannel.send({ embeds: [embed] });
                     embed.setTitle('Success');
                     embed.setColor('#00ff00');
                     await interaction.editReply({ ephemeral: true, embeds: [embed], components: [] });
                 }
 
-                await monsters[monster].message.edit({ embeds: monsters[monster].createEmbeds() });
+                await monsters[monster].updateMessage();
                 break;
             }
         }

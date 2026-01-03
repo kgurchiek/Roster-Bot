@@ -180,7 +180,7 @@ module.exports = {
                         .addComponents(
                             new StringSelectMenuBuilder()
                                 .setPlaceholder('Are you using an alt? (optional)')
-                                .setCustomId(`signup-selectalt-${interaction.id}`)
+                                .setCustomId(`signup-selectalt-${id}`)
                                 .addOptions(
                                     new StringSelectMenuOptionBuilder()
                                         .setLabel('No (Default)')
@@ -194,7 +194,7 @@ module.exports = {
                         .addComponents(
                             new StringSelectMenuBuilder()
                                 .setPlaceholder('Tag only? (optional)')
-                                .setCustomId(`signup-selecttag-${interaction.id}`)
+                                .setCustomId(`signup-selecttag-${id}`)
                                 .addOptions(
                                     new StringSelectMenuOptionBuilder()
                                         .setLabel('No (Default)')
@@ -259,12 +259,15 @@ module.exports = {
                 }
                 if (job == null) return await interaction.reply({ ephemeral: true, embeds: [new EmbedBuilder().setTitle('Error').setColor('#ff0000').setDescription('Select the job you wish to sign up for')] });
 
+                if (todGrab == 'undefined') todGrab = null;
                 let { data, error } = await supabase.from(config.supabase.tables.signups).insert({
                     event_id: monsters[monster].event,
                     slot_template_id: templateId,
                     player_id: user.id,
                     assigned_job_id: job,
-                    todgrab: todGrab == 'undefined' ? null : todGrab
+                    todgrab: todGrab,
+                    alt: selections[id].alt,
+                    tag_only: selections[id].tag_only
                 }).select('*').single();
                 if (error) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error updating database', error.message)] });
                 
@@ -272,7 +275,9 @@ module.exports = {
                     user,
                     job,
                     signupId: data.signup_id,
-                    todGrab
+                    todGrab,
+                    alt: selections[id].alt,
+                    tag_only: selections[id].tag_only
                 }
                 delete selections[id];
 

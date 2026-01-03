@@ -638,6 +638,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             this.thread = thread;
             this.message = message;
             this.windows = windows || 0;
+            if (this.name == 'Tiamat' && windows == null) this.windows = 1;
             this.killer = killer;
             this.todGrabber = todGrabber;
             this.todGrabs = [];
@@ -679,7 +680,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             if (this.active) {
                 let signups = this.signups.flat(2).filter((a, i, arr) => a != null && arr.slice(0, i).find(b => b != null && a.user.id == b.user.id) == null).length;
                 let embed = new EmbedBuilder()
-                    .setTitle(`🐉 ${this.name}${this.day == null ? '' : ` (Day ${this.day})`}${this.rage ? ' (Rage)' : ''}${this.paused ? ' (Paused)' : ''}`)
+                    .setTitle(`🐉 ${this.name}${this.day == null ? '' : ` (Day ${this.day})`}${this.name == 'Tiamat' ? ` (Window ${this.windows})` : ''}${this.rage ? ' (Rage)' : ''}${this.paused ? ' (Paused)' : ''}`)
                     .setThumbnail(`https://mrqccdyyotqulqmagkhm.supabase.co/storage/v1/object/public/${config.supabase.buckets.images}/${this.data.monster_name.split('_')[0].replaceAll(' ', '')}.png`)
                     .setDescription(`**${signups} member${signups == 1 ? '' : 's'} signed up**\n🕒 Starts at <t:${this.timestamp}:D> <t:${this.timestamp}:T> (<t:${this.timestamp}:R>)${this.lastCleared == null ? '' : `\nLast Cleared: <t:${Math.floor(this.lastCleared.getTime() / 1000)}:R>`}${this.todGrabber == null ? '' : `\n**TOD Grabber: ${this.todGrabber.username}**`}${this.todGrabs.length == 0 ? '' : '\n\n**TOD Grabbers**'}${this.todGrabs.map(a => `\n**${a.player_id.username}: ${a.todgrab}**`).join('')}`)
                     .addFields(
@@ -769,7 +770,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             }
         }
         createButtons() {
-            let unverifiedClears = new Array(this.clears).fill().map((a, i) => i).filter(a => !this.verifiedClears.includes(a));
+            let unverifiedClears = new Array(this.clears).fill().map((a, i) => i);//.filter(a => !this.verifiedClears.includes(a));
             if (this.verified) {
                 return this.data.signups.length == 0 ? [] : [
                     new ActionRowBuilder()
@@ -860,7 +861,11 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                     .setStyle(ButtonStyle.Danger),
                                 this.name == 'Tiamat' ? new ButtonBuilder()
                                     .setCustomId(`clear-monster-${this.name}`)
-                                    .setLabel('🗑️ Clear')
+                                    .setLabel('Clear to Next Window')
+                                    .setStyle(ButtonStyle.Secondary) : null,
+                                this.name == 'Tiamat' ? new ButtonBuilder()
+                                    .setCustomId(`unclear-monster-${this.name}`)
+                                    .setLabel('Revert to Last Window')
                                     .setStyle(ButtonStyle.Secondary) : null
                             ].filter(a => a != null)
                         ),
@@ -977,7 +982,11 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             ].filter(a => a != null);
         }
         async updateMessage() {
-            return await this.message.edit({ embeds: this.createEmbeds(), components: this.createButtons() });
+            try {
+                return await this.message.edit({ embeds: this.createEmbeds(), components: this.createButtons() });
+            } catch(err) {
+                console.log(`Error updating message for ${this.name}:`, err);
+            }
         }
         async updateLeaders() {
             for (let i = 0; i < this.signups.length; i++) {
@@ -1136,12 +1145,18 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
 
     let monsters = {};
     let archive = {};
+    let i = 0;
     async function scheduleMonster(message, events = []) {
         let monster = message.embeds[0].title;
         let group = config.roster.monsterGroups.find(a => a.includes(monster)) || [monster];
         let timestamp = parseInt(message.embeds[0].fields[0].value.split(':')[1]);
         let day = parseInt(message.embeds[0].fields[1].value);
         let delay = timestamp - (Date.now() / 1000);
+        if (i == 2) {
+            monster = 'Tiamat';
+            group = ['Tiamat'];
+        }
+        i++;
         // if (delay < 0) return;
         // if (delay > config.roster.postDelay) await new Promise(res => setTimeout(res, (delay - config.roster.postDelay) * 1000));
 
