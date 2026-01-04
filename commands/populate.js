@@ -195,7 +195,7 @@ module.exports = {
                         .setDescription('Please select the group that killed the monster')
                     return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
                 }
-                if (monsters[monster].placeholders == null && selections[id].windows == null) {
+                if (monster != 'Tiamat' && monsters[monster].placeholders == null && selections[id].windows == null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')

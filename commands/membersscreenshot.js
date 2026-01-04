@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, FileUploadBuilder, LabelBuilder, ChannelType, AttachmentBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, FileUploadBuilder, LabelBuilder, ChannelType, AttachmentBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
 const { errorEmbed } = require('../commonFunctions.js');
 
 module.exports = {
@@ -20,7 +20,7 @@ module.exports = {
                 }
 
                 let modal = new ModalBuilder()
-                    .setCustomId(`membersscreenshot-${event}-${window}`)
+                    .setCustomId(`membersscreenshot-${event}-${window}-${alliance}`)
                     .setTitle(`${archive[event].name} Screenshot`)
                     .addLabelComponents(
                         new LabelBuilder()
@@ -150,7 +150,7 @@ module.exports = {
     },
     async modalHandler({ config, interaction, user, archive, memberScreenshotsChannel }) {
         let args = interaction.customId.split('-');
-        let [event, window] = args.slice(1);
+        let [event, window, alliance] = args.slice(1);
         window = parseInt(window);
 
         if (archive[event] == null) {
