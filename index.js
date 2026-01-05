@@ -647,6 +647,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             this.data = monsterList.find(a => a.monster_name == this.name.split('/')[this.day < 4 ? 0 : 1]);
             if (this.data == null) console.log(`Error: could not find data for monster "${this.name}"`);
             else if (thread == null) this.thread = threads[this.data.channel_type].find(a => a.name == this.name);
+            this.updateMessage();
         }
         active = true;
         alliances = config.roster.alliances;
@@ -992,10 +993,20 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             ].filter(a => a != null);
         }
         async updateMessage() {
-            try {
-                return await this.message.edit({ embeds: this.createEmbeds(), components: this.createButtons() });
-            } catch(err) {
-                console.log(`Error updating message for ${this.name}:`, err);
+            if (this.message == null) {
+                try {
+                    this.message = await this.thread.send({ embeds: this.createEmbeds(), components: this.createButtons() });
+                    let { error } = await supabase.from(config.supabase.tables.events).update({ channel: this.message.channelId, message: this.message.id }).eq('event_id', this.event);
+                    if (error) console.log(`Error updating event message: ${error.message}`);
+                } catch (err) {
+                    console.log(`Error sending message for ${this.name}:`, err);
+                }
+            } else {
+                try {
+                    return await this.message.edit({ embeds: this.createEmbeds(), components: this.createButtons() });
+                } catch (err) {
+                    console.log(`Error updating message for ${this.name}:`, err);
+                }
             }
         }
         async updateLeaders() {
@@ -1210,10 +1221,10 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                     message = await thread.messages.fetch(event.message);
                 } catch (err) {
                     if (!err.message.includes('Unknown Message')) console.log('Error fetching previous monster message:', err);
+                    message == null;
                 }
             }
 
-            if (message == null) return;
             let todGrabber = event.todgrab == null ? null : await getUser(event.todgrab);
             if (event.todgrab != null && todGrabber == null) console.log(`[Schedule Monster]: Error: could not fetch user with id ${event.todGrabber}`);
             let newMonster = new Monster(monster, timestamp, day, event.event_id, threads, event.rage, thread, message, event.windows, event.killed_by, todGrabber);
@@ -1264,22 +1275,18 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             monsters[monster].todGrabs = todGrabs;
         }
 
-        if (monsters[monster].message == null) {
-            if (monsters[monster].thread == null) {
-                monsters[monster].thread = await rosterChannels[monsters[monster].data.channel_type].threads.create({
-                    name: monsters[monster].group ? monsters[monster].group.map(a => a).join('/') : monsters[monster].name,
-                    type: ChannelType.PublicThread,
-                    autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek
-                });
-            }
-            monsters[monster].message = await monsters[monster].thread.send({ embeds: monsters[monster].createEmbeds(), components: monsters[monster].createButtons() });
-
-            let { error } = await supabase.from(config.supabase.tables.events).update({
-                channel: monsters[monster].message.channelId,
-                message: monsters[monster].message.id
-            }).eq('event_id', monsters[monster].event);
+        if (monsters[monster].thread == null) {
+            monsters[monster].thread = await rosterChannels[monsters[monster].data.channel_type].threads.create({
+                name: monsters[monster].group ? monsters[monster].group.map(a => a).join('/') : monsters[monster].name,
+                type: ChannelType.PublicThread,
+                autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek
+            });
+            
+            await monsters[monster].updateMessage();
+            console.log(monsters[monster].message)
+            let { error } = await supabase.from(config.supabase.tables.events).update({ channel: monsters[monster].message.channelId, message: monsters[monster].message.id }).eq('event_id', monsters[monster].event);
             if (error) console.log('Error updating event:', error.message);
-        } else await monsters[monster].updateMessage();
+        }
         archive[monsters[monster].event] = monsters[monster];
     }
 
@@ -1338,7 +1345,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 thread = await client.channels.fetch(event.channel);
                 message = await thread.messages.fetch(event.message);
             } catch (err) {
-                console.log('Error fetching previous monster message:', err);
+                if (!err.message.includes('Unknown Message')) console.log('Error fetching previous monster message:', err);
                 continue;
             }
             let todGrabber = event.todgrab == null ? null : await getUser(event.todgrab);
@@ -1425,6 +1432,19 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             await archive[signup.event_id.event_id].updatePanel();
         }
     })
+
+    client.on(Events.MessageDelete, async message => {
+        for (let monster in monsters) {
+            if (monsters[monster].message?.id == message.id) {
+                monsters[monster].message = null;
+                await monsters[monster].updateMessage();
+            }
+            if (monsters[monster].panel?.id == message.id) {
+                monsters[monster].panel = null;
+                await monsters[monster].updatePanel();
+            }
+        }
+    });
 
     client.on(Events.InteractionCreate, async interaction => {
         let user = await getUser(interaction.user.id);
