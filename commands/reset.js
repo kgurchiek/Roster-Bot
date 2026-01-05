@@ -36,18 +36,18 @@ module.exports = {
             return await interaction.reply({ ephemeral: true, embeds: [embed] });
         }
 
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferUpdate();
         let { error } = await supabase.from(config.supabase.tables.signups).delete().gt('event_id', -1);
-        if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error deleting signups', error.message)] });
+        if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error deleting signups', error.message)], components: [] });
 
         ({ error } = await supabase.from(config.supabase.tables.events).delete().gt('event_id', -1));
-        if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error deleting event', error.message)] });
+        if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error deleting event', error.message)], components: [] });
 
         let embed = new EmbedBuilder()
             .setTitle('Success')
             .setColor('#00ff00')
             .setDescription('Event and signup data deleted. Restarting bot...')
-        await interaction.editReply({ ephemeral: true, embeds: [embed] });
+        await interaction.editReply({ ephemeral: true, embeds: [embed], components: [] });
         process.exit();
     }
 }

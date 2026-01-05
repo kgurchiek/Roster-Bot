@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, time } = require('discord.js');
 const { errorEmbed } = require('../commonFunctions.js');
 
 module.exports = {
@@ -19,7 +19,7 @@ module.exports = {
         const focusedValue = interaction.options.getFocused(true);
         await interaction.respond(monsterList.filter(a => a.monster_name.toLowerCase().includes(focusedValue.value.toLowerCase())).map(a => ({ name: a.monster_name, value: a.monster_name })).sort((a, b) => a.name > b.name ? 1 : -1).slice(0, 25));
     },
-    async execute({ config, interaction, supabase, monsters, rosterChannels, logChannel, Monster }) {
+    async execute({ config, interaction, supabase, monsters, rosterChannels, logChannel, Monster, eventList, archive }) {
         await interaction.deferReply({ ephemeral: true });
         let monster = interaction.options.getString('monster');
         let rage = interaction.options.getBoolean('rage');
@@ -38,6 +38,9 @@ module.exports = {
                 PPP: Array.from((await rosterChannels.PPP.threads.fetchActive(false)).threads.values()).concat(Array.from((await rosterChannels.PPP.threads.fetchArchived(false)).threads.values()))
             }
 
+            let lastEvent = eventList.filter(a => a.monster_name == monster).sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())[0];
+            let timestamp = lastEvent == null ? Math.floor(Date.now() / 1000) + 60 * 60 : Math.floor(new Date(lastEvent.start_time).getTime() / 1000);
+            let day = lastEvent?.day || 0;
             let { data, error } = await supabase.from(config.supabase.tables.events).insert({
                 monster_name: monster,
                 start_time: new Date(timestamp * 1000),
