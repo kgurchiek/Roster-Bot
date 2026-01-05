@@ -117,7 +117,7 @@ module.exports = {
                 let embed = new EmbedBuilder()
                     .setTitle('Success')
                     .setColor('#00ff00')
-                    .setDescription(`You are now Tod Grab for ${monster} id`)
+                    .setDescription(`You are now Tod Grab for ${monster}`)
                 await interaction.reply({ ephemeral: true, embeds: [embed] });
                 embed = new EmbedBuilder().setDescription(`${dbUser.username} is now Tod Grab of ${monster}.`);
                 await logChannel.send({ embeds: [embed] });

@@ -511,10 +511,14 @@ module.exports = {
                     return await findUser(interaction, userList);
                 }
 
-                let command = client.commands.get('todgrab');
-                if (command == null) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching command', 'Could not fetch todgrab command')] });
-                interaction.customId = `todgrab-select-${monster}-${dbUser.id}-true`;
-                command.buttonHandler({ config, interaction, user, supabase, monsters, logChannel, getUser });
+                let button = new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setLabel('Click to continue')
+                            .setCustomId(`todgrab-select-${monster}-${dbUser.id}-true`)
+                            .setStyle(ButtonStyle.Success)
+                    )
+                await interaction.update({ embeds: [], components: [button] });
                 break;
             }
             case 'leave': {

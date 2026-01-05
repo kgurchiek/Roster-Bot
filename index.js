@@ -1288,6 +1288,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             if (error) console.log('Error updating event:', error.message);
         }
         archive[monsters[monster].event] = monsters[monster];
+        await monsters[monster].updateMessage();
     }
 
     let guild;
