@@ -57,11 +57,12 @@ module.exports = {
                 if (!interaction.deferred) await interaction.deferReply({ ephemeral: true });
                 if (monsters[monster] == null) {
                     let embed = new EmbedBuilder()
-                    .setTitle('Error')
-                    .setColor('#ff0000')
-                    .setDescription(`${monster} is not active`)
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`${monster} is not active`)
                     return await interaction.editReply({ ephemeral: true, embeds: [embed], components: [] });
                 }
+                if (monster == 'Tiamat') selections[interaction.id].windows = monsters[monster].windows;
                 
                 if (monsters[monster].data.max_windows == 1) selections[interaction.id].windows = 1;
                 
@@ -128,8 +129,6 @@ module.exports = {
                         .setDescription('Please select the group that killed the monster')
                     return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
                 }
-
-                if (monster == 'Tiamat') selections[id].windows == monsters[monster].windows;
 
                 let fields = [];
                 let modal = new ModalBuilder()

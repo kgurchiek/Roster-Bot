@@ -44,11 +44,12 @@ module.exports = {
                     return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
                 }
 
-
+                let { error } = await supabase.from(config.supabase.tables.events).update({ windows: monsters[monster].windows - 1 }).eq('event_id', monsters[monster].event);
+                if (error) return await interaction.editReply({ embeds: [errorEmbed('Error updating monster windows', error.message)], components: [] });
                 monsters[monster].lastCleared = new Date();
                 monsters[monster].windows--;
                 await interaction.deferUpdate();
-                let { data: signups, error } = await supabase.from(config.supabase.tables.signups).select('*, player_id (*)').eq('event_id', monsters[monster].event).eq('window', monsters[monster].windows);
+                ({ data: signups, error } = await supabase.from(config.supabase.tables.signups).select('*, player_id (*)').eq('event_id', monsters[monster].event).eq('window', monsters[monster].windows));
                 if (error) return await interaction.editReply({ embeds: [errorEmbed('Error fetching event signups', error.message)], components: [] });
                 for (let signup of signups) {
                     let { error } = await supabase.from(config.supabase.tables.signups).update({ active: true }).eq('signup_id', signup.signup_id);

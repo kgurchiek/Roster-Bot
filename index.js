@@ -491,10 +491,10 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         let data;
         let error;
         ({ data, error } = await supabase.from(config.supabase.tables.claimRates).delete().gt('id', -1));
-        if (error) return console.log('Error clearing claim rates:', error);
+        if (error) return console.log('Error clearing claim rates:', error.message);
 
         ({ data, error } = await supabase.from(config.supabase.tables.claims).select('linkshell_name, monster_name'));
-        if (error) return console.log('Error fetching claims:', error);
+        if (error) return console.log('Error fetching claims:', error.message);
         let claims = data.reduce((a, b) => {
             if (!config.supabase.trackedRates.includes(b.monster_name)) return;
             b.monster_name = b.monster_name.toLowerCase().replaceAll(' ', '_');
@@ -757,7 +757,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                             a.filter((b, i, arr) => arr.slice(0, i).find(c => c.player_id.id == b.player_id.id) == null).map(b => {
                                 let userSignups = this.data.signups.filter(c => c != null && c.player_id.id == b.player_id.id); 
                                 let totalWindows = this.name == 'Tiamat' ? userSignups.length : userSignups.reduce((a, b) => a + b?.windows || 0, 0);
-                                return `${b.active && b.windows == null && b.tagged == null && b.killed == null ? '✖' : '✓'} ${b.player_id.username}${this.name != 'Tiamat' && userSignups.length > 1 ? ` (${userSignups.length} signups)` : ''}${this.placeholders == null ? ((totalWindows == null || this.data.max_windows == 1) ? '' : ` - ${totalWindows}${this.windows == null ? '' : `/${this.windows}`} windows`) : ` - ${b.placeholders} PH`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''} Camp: ${this.placeholders != null ? `${(Math.floor(b.placeholders / 4) * 0.2).toFixed(1)} PPP` : `${this.calculatePoints(b.player_id.id)} ${this.getPointType(true)}`} Bonus: ${this.calculateBonusPoints(b)} ${this.getPointType(false)}`;
+                                return `${b.active && b.windows == null && b.tagged == null && b.killed == null ? '✖' : '✓'} ${b.player_id.username}${this.name != 'Tiamat' && userSignups.length > 1 ? ` (${userSignups.length} signups)` : ''}${this.placeholders == null ? ((totalWindows == null || this.data.max_windows == 1) ? '' : ` - ${totalWindows}${this.windows == null ? '' : `/${this.windows}`} window${this.windows == null ? (totalWindows == 1 ? '' : 's') : (this.windows == 1 ? '' : 's')}`) : ` - ${b.placeholders} PH`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''} Camp: ${this.placeholders != null ? `${(Math.floor(b.placeholders / 4) * 0.2).toFixed(1)} PPP` : `${this.calculatePoints(b.player_id.id)} ${this.getPointType(true)}`} Bonus: ${this.calculateBonusPoints(b)} ${this.getPointType(false)}`;
                             }).join('\n\n')
                         }\n\`\`\``);
                         if (this.verified) embed.setFooter({ text: '✓ Verified' });
