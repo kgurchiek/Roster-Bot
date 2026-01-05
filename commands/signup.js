@@ -211,7 +211,7 @@ module.exports = {
                                 .setLabel('✓')
                                 .setStyle(ButtonStyle.Success)
                         )
-                ]
+                ].filter(a => a != null);
                 await interaction.update({ ephemeral: true, content: '', embeds: [], components: buttons });
                 break;
             }
