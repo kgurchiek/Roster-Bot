@@ -251,7 +251,6 @@ module.exports = {
                 if (data == null) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error fetching monster data', `Could not find data for ${interaction.values[0]}`)], components: [] });
                 monsters[monster].updateMessage();
                 monsters[interaction.values[0]] = monsters[monster];
-                delete monsters[monster];
                 interaction.customId = `populate-confirm-${interaction.values[0]}-true`;
                 this.buttonHandler({ config, interaction, supabase, groupList, monsters, logChannel });
                 break;

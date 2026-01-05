@@ -1137,6 +1137,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
 
             await this.updateMessage();
             delete monsters[this.name];
+            delete monsters[this.group.join('/')];
             if (this.group) delete monsters[this.group.join('/')];
             if (this.verified) delete archive[this.event];
 
@@ -1164,7 +1165,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         // if (delay < 0) return;
         // if (delay > config.roster.postDelay) await new Promise(res => setTimeout(res, (delay - config.roster.postDelay) * 1000));
 
-        let dupeEvents = Object.values(archive).filter(a => group.includes(a.data.monster_name) && Math.floor(new Date(a.timestamp).getTime() / 1000) != timestamp);
+        let dupeEvents = Object.values(archive).filter(a => group.includes(a.data.monster_name) && a.timestamp != timestamp);
         for (let event of dupeEvents) {
             if (event.active && event.signups.flat(2).filter(a => a != null).length > 0) {
                 await event.message.reply(`<@&${config.discord.usersRole}> A new raid is ready, please close the previous roster`);
@@ -1218,6 +1219,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             let newMonster = new Monster(monster, timestamp, day, event.event_id, threads, event.rage, thread, message, event.windows, event.killed_by, todGrabber);
             monster = newMonster.name;
             monsters[monster] = newMonster;
+            monsters[event.monster_name] = newMonster;
             let { data, error } = await supabase.from(config.supabase.tables.signups).select('*, player_id (id, username)').eq('event_id', event.event_id).eq('active', true);
             if (error) {
                 console.log('Error fetching signups:', error.message);
