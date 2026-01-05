@@ -758,7 +758,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                             a.filter((b, i, arr) => arr.slice(0, i).find(c => c.player_id.id == b.player_id.id) == null).map(b => {
                                 let userSignups = this.data.signups.filter(c => c != null && c.player_id.id == b.player_id.id); 
                                 let totalWindows = this.name == 'Tiamat' ? userSignups.length : userSignups.reduce((a, b) => a + b?.windows || 0, 0);
-                                return `${b.active && b.windows == null && b.tagged == null && b.killed == null ? '✖' : '✓'} ${b.player_id.username}${this.name != 'Tiamat' && userSignups.length > 1 ? ` x${userSignups.length}` : ''}${this.placeholders == null ? ((totalWindows == null || this.data.max_windows == 1) ? '' : ` - ${totalWindows}${this.windows == null ? '' : `/${this.windows}`} windows`) : ` - ${b.placeholders} PH`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''} Camp: ${this.placeholders != null ? `${(Math.floor(b.placeholders / 4) * 0.2).toFixed(1)} PPP` : `${this.calculatePoints(b.player_id.id)} ${this.getPointType(true)}`} Bonus: ${this.calculateBonusPoints(b)} ${this.getPointType(false)}`;
+                                return `${b.active && b.windows == null && b.tagged == null && b.killed == null ? '✖' : '✓'} ${b.player_id.username}${this.name != 'Tiamat' && userSignups.length > 1 ? ` (${userSignups.length} signups)` : ''}${this.placeholders == null ? ((totalWindows == null || this.data.max_windows == 1) ? '' : ` - ${totalWindows}${this.windows == null ? '' : `/${this.windows}`} windows`) : ` - ${b.placeholders} PH`}${b.tagged ? ' - T' : ''}${b.killed ? ' - K' : ''}${b.rage ? ' - R' : ''} Camp: ${this.placeholders != null ? `${(Math.floor(b.placeholders / 4) * 0.2).toFixed(1)} PPP` : `${this.calculatePoints(b.player_id.id)} ${this.getPointType(true)}`} Bonus: ${this.calculateBonusPoints(b)} ${this.getPointType(false)}`;
                             }).join('\n\n')
                         }\n\`\`\``);
                         if (this.verified) embed.setFooter({ text: '✓ Verified' });
@@ -769,7 +769,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             }
         }
         createButtons() {
-            let unverifiedClears = new Array(this.clears).fill().map((a, i) => i);//.filter(a => !this.verifiedClears.includes(a));
+            let unverifiedClears = new Array(Math.min(0, this.clears)).fill().map((a, i) => i);//.filter(a => !this.verifiedClears.includes(a));
             if (this.verified) {
                 return this.data.signups.length == 0 ? [] : [
                     new ActionRowBuilder()
@@ -863,7 +863,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                     .setLabel('Clear to Next Window')
                                     .setStyle(ButtonStyle.Secondary) : null,
                                 this.name == 'Tiamat' ? new ButtonBuilder()
-                                    .setCustomId(`unclear-monster-${this.name}`)
+                                    .setCustomId(`revert-monster-${this.name}`)
                                     .setLabel('Revert to Last Window')
                                     .setStyle(ButtonStyle.Secondary) : null
                             ].filter(a => a != null)

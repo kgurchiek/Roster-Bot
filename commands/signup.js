@@ -277,7 +277,8 @@ module.exports = {
                     signupId: data.signup_id,
                     todGrab,
                     alt: selections[id].alt,
-                    tag_only: selections[id].tag_only
+                    tag_only: selections[id].tag_only,
+                    window: monster == 'Tiamat' ? monsters[monster].windows : null
                 }
                 delete selections[id];
 

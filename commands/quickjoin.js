@@ -214,7 +214,8 @@ module.exports = {
                     assigned_job_id: job,
                     todgrab: todGrab,
                     alt: selections[id].alt,
-                    tag_only: selections[id].tag_only
+                    tag_only: selections[id].tag_only,
+                    window: monster == 'Tiamat' ? monsters[monster].windows : null
                 }).select('*').single();
                 if (error) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error updating database', error.message)] });
                 
