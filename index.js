@@ -1341,7 +1341,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             }
             let todGrabber = event.todgrab == null ? null : await getUser(event.todgrab);
             if (event.todgrab != null && todGrabber == null) console.log(`[Schedule Monster]: Error: could not fetch user with id ${event.todGrabber}`);
-            archive[event.event_id] = new Monster(event.monster_name, event.start_time, event.day, event.event_id, null, event.rage, thread, message, event.windows, event.killed_by, todGrabber);
+            archive[event.event_id] = new Monster(event.monster_name, Math.floor(new Date(event.start_time) / 1000), event.day, event.event_id, null, event.rage, thread, message, event.windows, event.killed_by, todGrabber);
             archive[event.event_id].name = event.monster_name;
             archive[event.event_id].active = false;
             if (event.close_date) archive[event.event_id].closeDate = new Date(event.close_date);
