@@ -945,6 +945,10 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                     new ActionRowBuilder()
                         .addComponents(
                             new ButtonBuilder()
+                                .setCustomId(`editroster-monster-${this.name}-${this.event}`)
+                                .setLabel('🛡️ Edit Roster')
+                                .setStyle(ButtonStyle.Primary),
+                            new ButtonBuilder()
                                 .setLabel('🛡️ Verify Raid')
                                 .setStyle(ButtonStyle.Success)
                                 .setCustomId(`resolve-monster-${this.event}`)
@@ -965,6 +969,13 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 ].filter(a => a != null)
             }
             return [
+                new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId(`editroster-monster-${this.name}-${this.event}`)
+                            .setLabel('🛡️ Edit Roster')
+                            .setStyle(ButtonStyle.Primary)
+                    ),
                 unverifiedClears.length == 0 ? null : new ActionRowBuilder()
                     .addComponents(
                         new StringSelectMenuBuilder()

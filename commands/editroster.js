@@ -3,7 +3,7 @@ const { errorEmbed, scoreMatch } = require('../commonFunctions.js');
 
 async function findUser(interaction, userList) {
     let args = interaction.customId.split('-');
-    let [command, monster] = args.slice(1);
+    let [command, monster, username, event] = args.slice(1);
     
     let input = interaction.fields.getTextInputValue('username');
     let usernames = userList.map(a => a.username);
@@ -21,7 +21,7 @@ async function findUser(interaction, userList) {
         new ActionRowBuilder()
             .addComponents(
                 new StringSelectMenuBuilder()
-                    .setCustomId(`editroster-username-${command}-${monster}`)
+                    .setCustomId(`editroster-username-${command}-${monster}--${event}`)
                     .setPlaceholder('Similar usernames')
                     .addOptions(
                         usernames.map(a => 
@@ -43,15 +43,7 @@ module.exports = {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {
-                let monster = args[2];
-
-                if (monsters[monster] == null) {
-                    let embed = new EmbedBuilder()
-                        .setTitle('Error')
-                        .setColor('#ff0000')
-                        .setDescription(`${monster} is not active`)
-                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
-                }
+                let [monster, event] = args.slice(2);
 
                 if (!user.staff) {
                     let embed = new EmbedBuilder()
@@ -65,24 +57,26 @@ module.exports = {
                     new ActionRowBuilder()
                         .addComponents(
                             new StringSelectMenuBuilder()
-                                .setCustomId(`editroster-action-${monster}`)
+                                .setCustomId(`editroster-action-${monster}-${event}`)
                                 .setPlaceholder('Select an action...')
                                 .addOptions(
-                                    new StringSelectMenuOptionBuilder()
-                                        .setLabel('Add user')
-                                        .setValue('add'),
-                                    new StringSelectMenuOptionBuilder()
-                                        .setLabel('Move user')
-                                        .setValue('move'),
-                                    new StringSelectMenuOptionBuilder()
-                                        .setLabel('Set leader')
-                                        .setValue('leader'),
-                                    new StringSelectMenuOptionBuilder()
-                                        .setLabel('Set Tod Grab')
-                                        .setValue('todgrab'),
-                                    new StringSelectMenuOptionBuilder()
-                                        .setLabel('Remove user')
-                                        .setValue('remove')
+                                    ...[
+                                        new StringSelectMenuOptionBuilder()
+                                            .setLabel('Add user')
+                                            .setValue('add'),
+                                        monsters[monster] == null ? null : new StringSelectMenuOptionBuilder()
+                                            .setLabel('Move user')
+                                            .setValue('move'),
+                                        monsters[monster] == null ? null : new StringSelectMenuOptionBuilder()
+                                            .setLabel('Set leader')
+                                            .setValue('leader'),
+                                        monsters[monster] == null ? null : new StringSelectMenuOptionBuilder()
+                                            .setLabel('Set Tod Grab')
+                                            .setValue('todgrab'),
+                                        new StringSelectMenuOptionBuilder()
+                                            .setLabel('Remove user')
+                                            .setValue('remove')
+                                    ].filter(a => a != null)
                                 )
                         )
                 ]
@@ -166,15 +160,7 @@ module.exports = {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'action': {
-                let monster = args[2];
-
-                if (monsters[monster] == null) {
-                    let embed = new EmbedBuilder()
-                        .setTitle('Error')
-                        .setColor('#ff0000')
-                        .setDescription(`${monster} is not active`)
-                    return await interaction.update({ ephemeral: true, embeds: [embed] });
-                }
+                let [monster, event] = args.slice(2);
 
                 if (!user.staff) {
                     let embed = new EmbedBuilder()
@@ -188,7 +174,7 @@ module.exports = {
                     case 'add': {
                         let modal = new ModalBuilder()
                             .setTitle('Add User')
-                            .setCustomId(`editroster-add-${monster}`)
+                            .setCustomId(`editroster-add-${monster}--${event}`)
                             .addComponents(
                                 new TextInputBuilder()
                                     .setCustomId('username')
@@ -199,9 +185,17 @@ module.exports = {
                         break;
                     }
                     case 'move': {
+                        if (monsters[monster] == null) {
+                            let embed = new EmbedBuilder()
+                                .setTitle('Error')
+                                .setColor('#ff0000')
+                                .setDescription(`${monster} is not active`)
+                            return await interaction.update({ ephemeral: true, embeds: [embed] });
+                        }
+
                         let modal = new ModalBuilder()
                             .setTitle('Move User')
-                            .setCustomId(`editroster-move-${monster}`)
+                            .setCustomId(`editroster-move-${monster}--${event}`)
                             .addComponents(
                                 new TextInputBuilder()
                                     .setCustomId('username')
@@ -212,9 +206,17 @@ module.exports = {
                         break;
                     }
                     case 'leader': {
+                        if (monsters[monster] == null) {
+                            let embed = new EmbedBuilder()
+                                .setTitle('Error')
+                                .setColor('#ff0000')
+                                .setDescription(`${monster} is not active`)
+                            return await interaction.update({ ephemeral: true, embeds: [embed] });
+                        }
+
                         let modal = new ModalBuilder()
                             .setTitle('Edit Leader')
-                            .setCustomId(`editroster-leader-${monster}`)
+                            .setCustomId(`editroster-leader-${monster}--${event}`)
                             .addComponents(
                                 new TextInputBuilder()
                                     .setCustomId('username')
@@ -225,9 +227,17 @@ module.exports = {
                         break;
                     }
                     case 'todgrab': {
+                        if (monsters[monster] == null) {
+                            let embed = new EmbedBuilder()
+                                .setTitle('Error')
+                                .setColor('#ff0000')
+                                .setDescription(`${monster} is not active`)
+                            return await interaction.update({ ephemeral: true, embeds: [embed] });
+                        }
+
                         let modal = new ModalBuilder()
                             .setTitle('Edit Tod Grab')
-                            .setCustomId(`editroster-todgrab-${monster}`)
+                            .setCustomId(`editroster-todgrab-${monster}--${event}`)
                             .addComponents(
                                 new TextInputBuilder()
                                     .setCustomId('username')
@@ -240,7 +250,7 @@ module.exports = {
                     case 'remove': {
                         let modal = new ModalBuilder()
                             .setTitle('Remove User')
-                            .setCustomId(`editroster-leave-${monster}`)
+                            .setCustomId(`editroster-leave-${monster}--${event}`)
                             .addComponents(
                                 new TextInputBuilder()
                                     .setCustomId('username')
@@ -276,21 +286,13 @@ module.exports = {
             }
         }
     },
-    async modalHandler({ config, interaction, client, user, supabase, userList, monsters, logChannel, jobList, getUser }) {
+    async modalHandler({ config, interaction, client, user, supabase, userList, monsters, logChannel, jobList, getUser, archive }) {
         let args = interaction.customId.split('-');
 
         switch (args[1]) {
             case 'add': {
-                let [monster, username] = args.slice(2);
+                let [monster, username, event] = args.slice(2);
                 if (!username) username = interaction.fields.getTextInputValue('username').toLowerCase();
-
-                if (monsters[monster] == null) {
-                    let embed = new EmbedBuilder()
-                        .setTitle('Error')
-                        .setColor('#ff0000')
-                        .setDescription(`${monster} is not active`)
-                    return await interaction.update({ ephemeral: true, embeds: [embed] });
-                }
         
                 if (!user.staff) {
                     let embed = new EmbedBuilder()
@@ -311,6 +313,29 @@ module.exports = {
                 if (dbUser == null) {
                     await interaction.deferUpdate();
                     return await findUser(interaction, userList);
+                }
+
+                if (monsters[monster] == null) {
+                    if (archive[event] == null) {
+                        let embed = new EmbedBuilder()
+                            .setTitle('Error')
+                            .setColor('#ff0000')
+                            .setDescription(`This raid has been closed`)
+                            .setFooter({ text: `raid id: ${event}` })
+                        return await interaction.reply({ ephemeral: true, embeds: [embed], components: [] });
+                    }
+
+                    let { data, error } = await supabase.from(config.supabase.tables.signups).insert({ event_id: event, player_id: dbUser.id, windows: 1, active: true }).select('*, player_id (id, username)').single();
+                    if (error) return await interaction.update({ embeds: [errorEmbed('Error removing signups', error.message)], components: [] });
+                    archive[event].data.signups.push(data);
+                    await archive[event].updateMessage();
+                    await archive[event].updatePanel();
+
+                    let embed = new EmbedBuilder()
+                        .setTitle('Success')
+                        .setColor('#00ff00')
+                        .setDescription(`${dbUser.username} has been added to the ${archive[event].name} roster`)
+                    return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
                 }
 
                 let components = [
@@ -493,17 +518,9 @@ module.exports = {
                 break;
             }
             case 'leave': {
-                let [monster, username] = args.slice(2);
+                let [monster, username, event] = args.slice(2);
                 if (!username) username = interaction.fields.getTextInputValue('username').toLowerCase();
-
-                if (monsters[monster] == null) {
-                    let embed = new EmbedBuilder()
-                        .setTitle('Error')
-                        .setColor('#ff0000')
-                        .setDescription(`${monster} is not active`)
-                    return await interaction.update({ ephemeral: true, embeds: [embed] });
-                }
-        
+                
                 if (!user.staff) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
@@ -523,6 +540,29 @@ module.exports = {
                 if (dbUser == null) {
                     await interaction.deferUpdate();
                     return await findUser(interaction, userList);
+                }
+
+                if (monsters[monster] == null) {
+                    if (archive[event] == null) {
+                        let embed = new EmbedBuilder()
+                            .setTitle('Error')
+                            .setColor('#ff0000')
+                            .setDescription(`This raid has been closed`)
+                            .setFooter({ text: `raid id: ${event}` })
+                        return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                    }
+
+                    let { error } = await supabase.from(config.supabase.tables.signups).delete().eq('event_id', event).eq('player_id', dbUser.id);
+                    if (error) return await interaction.update({ embeds: [errorEmbed('Error removing signups', error.message)], components: [] });
+                    archive[event].data.signups = archive[event].data.signups.filter(a => a.player_id.id != dbUser.id);
+                    await archive[event].updateMessage();
+                    await archive[event].updatePanel();
+
+                    let embed = new EmbedBuilder()
+                        .setTitle('Success')
+                        .setColor('#00ff00')
+                        .setDescription(`${dbUser.username} has been removed from the ${archive[event].name} roster`)
+                    return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
                 }
 
                 let command = client.commands.get('leave');
