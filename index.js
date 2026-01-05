@@ -553,7 +553,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             if (user.frozen) {
                 let { data: signups, error } = await supabase.from(config.supabase.tables.signups).select('event_id (monster_name), date').eq('player_id', user.id);
                 if (error) {
-                    console.log(`Error fetching ${user.username}'${user.username.endsWith('s') ? '' : 's'}: ${error.message}`);
+                    console.log(`[Update Freeze] Error fetching ${user.username}'${user.username.endsWith('s') ? '' : 's'} signups: ${error.message}`);
                     continue;
                 }
                 rules = signups.filter(a => new Date(a.date).getTime() > new Date(user.frozen_date).getTime()).map(a => campRules.find(b => b.monster_name == a.event_id.monster_name));
@@ -642,7 +642,6 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             this.todGrabber = todGrabber;
             this.todGrabs = [];
 
-            this.clears = 0;
             this.verifiedClears = [];
 
             this.data = monsterList.find(a => a.monster_name == this.name.split('/')[this.day < 4 ? 0 : 1]);
@@ -769,7 +768,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             }
         }
         createButtons() {
-            let unverifiedClears = new Array(Math.min(0, this.clears)).fill().map((a, i) => i);//.filter(a => !this.verifiedClears.includes(a));
+            let unverifiedClears = new Array(Math.min(0, this.windows)).fill().map((a, i) => i);//.filter(a => !this.verifiedClears.includes(a));
             if (this.verified) {
                 return this.data.signups.length == 0 ? [] : [
                     new ActionRowBuilder()
@@ -865,7 +864,8 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                 this.name == 'Tiamat' ? new ButtonBuilder()
                                     .setCustomId(`revert-monster-${this.name}`)
                                     .setLabel('Revert to Last Window')
-                                    .setStyle(ButtonStyle.Secondary) : null
+                                    .setStyle(ButtonStyle.Secondary)
+                                    .setDisabled(this.windows == 1) : null
                             ].filter(a => a != null)
                         ),
                     this.placeholders == null ? null : new ActionRowBuilder()
@@ -1179,7 +1179,8 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             let { data, error } = await supabase.from(config.supabase.tables.events).insert({
                 monster_name: monster,
                 start_time: new Date(timestamp * 1000),
-                day
+                day,
+                windows: monster == 'Tiamat' ? 1 : null
             }).select('*').single();
             if (error) return console.log(`Error creating event for ${monster}:`, error.message);
             event = data;

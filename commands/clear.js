@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
+const { errorEmbed } = require('../commonFunctions');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -71,8 +72,9 @@ module.exports = {
                         )
                     await interaction.editReply({ ephemeral: true, embeds, components: [] });
                 } else {
+                    let { error } = await supabase.from(config.supabase.tables.events).update({ windows: monsters[monster].windows + 1 }).eq('event_id', monsters[monster].event);
+                    if (error) return await interaction.editReply({ embeds: [errorEmbed('Error updating monster windows', error.message)], components: [] });
                     monsters[monster].lastCleared = new Date();
-                    monsters[monster].clears++;
                     monsters[monster].windows++;
                     let embed = new EmbedBuilder()
                         .setDescription(`${monster} has been cleared to the next window`)

@@ -20,7 +20,7 @@ module.exports = {
 
                 let embed = new EmbedBuilder()
                     .setColor('#ffff00')
-                    .setDescription(`Are you sure you want to revert to the previous window (${(monsters[monster].windows || 0) - 1})?`)
+                    .setDescription(`Are you sure you want to revert to window ${(monsters[monster].windows || 0) - 1}?`)
                 let buttons = [
                     new ActionRowBuilder()
                         .addComponents(
@@ -46,7 +46,6 @@ module.exports = {
 
 
                 monsters[monster].lastCleared = new Date();
-                monsters[monster].clears--;
                 monsters[monster].windows--;
                 await interaction.deferUpdate();
                 let { data: signups, error } = await supabase.from(config.supabase.tables.signups).select('*, player_id (*)').eq('event_id', monsters[monster].event).eq('window', monsters[monster].windows);
