@@ -18,7 +18,7 @@ module.exports = {
         ({ data: signups, error } = await supabase.from(config.supabase.tables.signups).select('*, player_id (id, username)').eq('event_id', eventId));
         if (error) return await interaction.editReply({ content: '', embeds: [errorEmbed('Error Fetching Signups', error.message)] });
 
-        signups = signups.filter((a, i) => !a.tagged && signups.slice(0, i).find(b => b.player_id.id == a.player_id.id) == null);
+        signups = signups.filter((a, i) => signups.find(b => b.player_id.id == a.player_id.id && b.tagged) == null && signups.slice(0, i).find(b => b.player_id.id == a.player_id.id) == null);
         const newEmbed = new EmbedBuilder()
             .setTitle(`${event.monster_name} Non-Taggers`)
             .setDescription(`\`\`\`\n${signups.map(a => `${a.player_id.username}`).join('\n')}\n\`\`\``)

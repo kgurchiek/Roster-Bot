@@ -63,7 +63,7 @@ module.exports = {
                     let ppp = 0;
                     ppp += parseFloat((Math.floor(signup.placeholders / 4) * 0.2).toFixed(1));
                     let campPoints = archive[event].calculatePoints(signup.player_id.id);
-                    if (archive[event].getPointType.toLowerCase() == 'dkp') dkp += campPoints;
+                    if (archive[event].getPointType().toLowerCase() == 'dkp') dkp += campPoints;
                     else ppp += campPoints;
                     
                     let type = archive[event].data.monster_type;
