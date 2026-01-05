@@ -768,7 +768,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             }
         }
         createButtons() {
-            let unverifiedClears = new Array(Math.min(0, this.windows)).fill().map((a, i) => i);//.filter(a => !this.verifiedClears.includes(a));
+            let unverifiedClears = new Array(Math.min(0, this.windows || 0)).fill().map((a, i) => i);
             if (this.verified) {
                 return this.data.signups.length == 0 ? [] : [
                     new ActionRowBuilder()
