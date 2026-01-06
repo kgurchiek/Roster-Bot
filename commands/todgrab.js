@@ -1,8 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputStyle, TextInputBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
 const { errorEmbed, scoreMatch } = require('../commonFunctions.js');
 
-async function findMonster(config, interaction, monsterList, args) {
-    let input = interaction.fields.getTextInputValue('monster');
+async function findMonster(config, interaction, input, monsterList, args) {
     let names = monsterList.map(a => a.monster_name);
     names.sort((a, b) =>
         scoreMatch(a.toLowerCase(), input.toLowerCase()) -
@@ -21,12 +20,13 @@ async function findMonster(config, interaction, monsterList, args) {
                     .setCustomId(`todgrab-monster-${args.join('-')}`)
                     .setPlaceholder('Similar monster names')
                     .addOptions(
-                        names.map(a => {
+                        ...names.map((a, i) => {
                             let group = config.roster.monsterGroups.find(b => b.includes(a)) || [a];
+                            if (names.slice(0, i).find(b => group.includes(b))) return null;
                             return new StringSelectMenuOptionBuilder()
                                 .setLabel(group.join('/'))
                                 .setValue(group.join('/'))
-                        })
+                        }).filter(a => a != null)
                     )
             )
     ]
@@ -36,27 +36,33 @@ async function findMonster(config, interaction, monsterList, args) {
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('todgrab'),
-    async buttonHandler({ config, interaction, user, supabase, monsters, logChannel, getUser }) {
+    async buttonHandler({ config, interaction, user, supabase, monsters, logChannel, monsterList, getUser }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'select': {
-                let monster = args[2];
+                let [monster, userId, force, input] = args.slice(2);
 
-                let modal = new ModalBuilder()
-                    .setTitle('Add User')
-                    .setCustomId(`todgrab-select-${monster}`)
-                    .addComponents(
-                        new TextInputBuilder()
-                            .setCustomId('monster')
-                            .setLabel('Monster')
-                            .setStyle(TextInputStyle.Short)
-                    )
-                await interaction.showModal(modal);
+                if (input) {
+                    interaction.customId = `todgrab-select-${monster}-${userId}-${force}-${input}`;
+                    return await this.modalHandler({ config, interaction, user, supabase, monsters, logChannel, monsterList, getUser });
+                } else {
+                    let modal = new ModalBuilder()
+                        .setTitle('Add User')
+                        .setCustomId(`todgrab-select-${monster}`)
+                        .addComponents(
+                            new TextInputBuilder()
+                                .setCustomId('monster')
+                                .setLabel('Monster')
+                                .setStyle(TextInputStyle.Short)
+                        )
+                    await interaction.showModal(modal);
+                }
                 break;
 
             }
             case 'monster': {
                 let [monster, originalMonster, userId, force] = args.slice(2);
+                console.log({ monster, originalMonster, userId, force })
                 let dbUser;
                 if (!userId) dbUser = user;
                 else {
@@ -108,12 +114,15 @@ module.exports = {
                 let { error } = await supabase.from(config.supabase.tables.events).update({ todgrab: dbUser.id }).eq('event_id', monsters[monster].event);
                 if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed(`Error updating Tod Grab`, error.message)] });
                 
-                ({ data, error } = await supabase.from(config.supabase.tables.signups).insert({ event_id: monsters[originalMonster].event, player_id: dbUser.id, active: true, todgrab: monster }).select('*, player_id (id, username)'));
-                if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed(`Error inserting Tod Grab signup`, error.message)] });
-                monsters[originalMonster].todGrabs.push(data[0]);
+                console.log(originalMonster)
+                if (monsters[originalMonster] != null) {
+                    ({ data, error } = await supabase.from(config.supabase.tables.signups).insert({ event_id: monsters[originalMonster].event, player_id: dbUser.id, active: true, todgrab: monster }).select('*, player_id (id, username)'));
+                    if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed(`Error inserting Tod Grab signup`, error.message)] });
+                    monsters[originalMonster].todGrabs.push(data[0]);
+                    await monsters[originalMonster].updateMessage();
+                }
 
                 await monsters[monster].updateMessage();
-                await monsters[originalMonster].updateMessage();
                 let embed = new EmbedBuilder()
                     .setTitle('Success')
                     .setColor('#00ff00')
@@ -138,12 +147,15 @@ module.exports = {
                 let { error } = await supabase.from(config.supabase.tables.events).update({ todgrab: null }).eq('event_id', monsters[monster].event);
                 if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating Tod Grab', error.message)] });
 
-                ({ error } = await supabase.from(config.supabase.tables.signups).delete().eq('event_id', monsters[originalMonster].event).eq('player_id', userId).neq('todgrab', null).select('*, player_id (id, username)'));
-                if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed(`Error delete Tod Grab signup`, error.message)] });
-                monsters[originalMonster].todGrabs = monsters[originalMonster].todGrabs.filter(a => a.player_id.id != userId);
+                console.log(originalMonster)
+                if (monsters[originalMonster] != null) {
+                    ({ error } = await supabase.from(config.supabase.tables.signups).delete().eq('event_id', monsters[originalMonster].event).eq('player_id', userId).neq('todgrab', null).select('*, player_id (id, username)'));
+                    if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed(`Error delete Tod Grab signup`, error.message)] });
+                    monsters[originalMonster].todGrabs = monsters[originalMonster].todGrabs.filter(a => a.player_id.id != userId);
+                    await monsters[originalMonster].updateMessage();
+                }
                 
                 await monsters[monster].updateMessage();
-                await monsters[originalMonster].updateMessage();
                 let embed = new EmbedBuilder()
                     .setTitle('Success')
                     .setColor('#00ff00')
@@ -157,7 +169,9 @@ module.exports = {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster': {
-                interaction.customId = `todgrab-monster-${interaction.values[0]}`;
+                let [originalMonster, userId, force] = args.slice(2);
+
+                interaction.customId = `todgrab-monster-${interaction.values[0]}-${originalMonster}-${userId}-${force}`;
                 await this.buttonHandler({ config, interaction, user, supabase, monsters, logChannel, getUser });
                 break;
             }
@@ -168,25 +182,17 @@ module.exports = {
 
         switch (args[1]) {
             case 'select': {
-                let originalMonster = args[2];
-                input = interaction.fields.getTextInputValue('monster');
-        
-                if (!user.staff) {
-                    let embed = new EmbedBuilder()
-                        .setTitle('Error')
-                        .setColor('#ff0000')
-                        .setDescription(`This action can only be performed by staff`)
-                    return await interaction.update({ ephemeral: true, embeds: [embed] });
-                }
+                let [originalMonster, userId, force, input] = args.slice(2);
+                if (!input) input = interaction.fields.getTextInputValue('monster');
 
                 let monster = monsterList.find(a => a.monster_name.toLowerCase() == input.toLowerCase());
                 if (monster == null) {
                     await interaction.deferReply({ ephemeral: true });
-                    return await findMonster(config, interaction, monsterList, [monster]);
+                    return await findMonster(config, interaction, input, monsterList, [originalMonster, userId, force]);
                 }
 
                 let group = config.roster.monsterGroups.find(a => a.includes(input)) || [input];
-                interaction.customId = `todgrab-monster-${group.join('/')}-${originalMonster}`;
+                interaction.customId = `todgrab-monster-${group.join('/')}-${originalMonster}-${userId}-${force}`;
                 this.buttonHandler({ config, interaction, user, supabase, monsters, logChannel, getUser });
                 break;
             }

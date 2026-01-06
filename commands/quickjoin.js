@@ -1,6 +1,5 @@
 const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { errorEmbed } = require('../commonFunctions.js');
-const todgrab = require('./todgrab.js');
 
 let selections = {};
 module.exports = {
