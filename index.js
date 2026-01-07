@@ -1282,7 +1282,6 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             });
             
             await monsters[monster].updateMessage();
-            console.log(monsters[monster].message)
             let { error } = await supabase.from(config.supabase.tables.events).update({ channel: monsters[monster].message.channelId, message: monsters[monster].message.id }).eq('event_id', monsters[monster].event);
             if (error) console.log('Error updating event:', error.message);
         }
