@@ -647,7 +647,6 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             this.data = monsterList.find(a => a.monster_name == this.name.split('/')[this.day < 4 ? 0 : 1]);
             if (this.data == null) console.log(`Error: could not find data for monster "${this.name}"`);
             else if (thread == null) this.thread = threads[this.data.channel_type].find(a => a.name == this.name);
-            this.updateMessage();
         }
         active = true;
         alliances = config.roster.alliances;
@@ -1148,7 +1147,6 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
 
             await this.updateMessage();
             delete monsters[this.name];
-            delete monsters[this.group.join('/')];
             if (this.group) delete monsters[this.group.join('/')];
             if (this.verified) delete archive[this.event];
 
@@ -1169,13 +1167,14 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
     let archive = {};
     async function scheduleMonster(message, events = []) {
         let monster = message.embeds[0].title;
+        monster = 'Behemoth';
         let group = config.roster.monsterGroups.find(a => a.includes(monster)) || [monster];
         let timestamp = parseInt(message.embeds[0].fields[0].value.split(':')[1]);
         let day = parseInt(message.embeds[0].fields[1].value);
         let delay = timestamp - (Date.now() / 1000);
         // if (delay < 0) return;
         // if (delay > config.roster.postDelay) await new Promise(res => setTimeout(res, (delay - config.roster.postDelay) * 1000));
-
+        
         let dupeEvents = Object.values(archive).filter(a => group.includes(a.data.monster_name) && a.timestamp != timestamp);
         for (let event of dupeEvents) {
             if (event.active && event.signups.flat(2).filter(a => a != null).length > 0) {
@@ -1189,6 +1188,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                     })
                 })
             }
+            if (event.active) await event.close();
             await event.message.delete();
             delete archive[event.event];
         }

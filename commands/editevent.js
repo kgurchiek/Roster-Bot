@@ -106,8 +106,8 @@ module.exports = {
                     .addFields(
                         ...[
                             { name: 'Members', value: String(eventSignups.filter((a, i, arr) => arr.slice(0, i).find(b => a.player_id.id == b.player_id.id) == null).length) },
-                            total.dkp == 0 ? null : { name: 'Total DKP', value: String(total.dkp) },
-                            total.ppp == 0 ? null : { name: 'Total PPP', value: String(total.ppp) }
+                            total.dkp == 0 ? null : { name: 'Total DKP', value: total.dkp.toFixed(1) },
+                            total.ppp == 0 ? null : { name: 'Total PPP', value: total.ppp.toFixed(1) }
                         ].filter(a => a != null)
                     )
                 await message.edit({ embeds: [embed] });

@@ -71,6 +71,14 @@ module.exports = {
                 }
                 force = force == 'true';
 
+                if (monsters[monster] == null) {
+                    let embed = new EmbedBuilder()
+                        .setTitle('Error')
+                        .setColor('#ff0000')
+                        .setDescription(`${monster} is not active`)
+                    return await interaction.reply({ ephemeral: true, embeds: [embed] });
+                }
+
                 for (let i = 0; i < monsters[monster].signups.length; i++) {
                     for (let j = 0; j < monsters[monster].signups[i].length; j++) {
                         for (let k = 0; k < monsters[monster].signups[i][j].length; k++) {
@@ -114,7 +122,6 @@ module.exports = {
                 let { error } = await supabase.from(config.supabase.tables.events).update({ todgrab: dbUser.id }).eq('event_id', monsters[monster].event);
                 if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed(`Error updating Tod Grab`, error.message)] });
                 
-                console.log(originalMonster)
                 if (monsters[originalMonster] != null) {
                     ({ data, error } = await supabase.from(config.supabase.tables.signups).insert({ event_id: monsters[originalMonster].event, player_id: dbUser.id, active: true, todgrab: monster }).select('*, player_id (id, username)'));
                     if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed(`Error inserting Tod Grab signup`, error.message)] });
@@ -147,7 +154,6 @@ module.exports = {
                 let { error } = await supabase.from(config.supabase.tables.events).update({ todgrab: null }).eq('event_id', monsters[monster].event);
                 if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating Tod Grab', error.message)] });
 
-                console.log(originalMonster)
                 if (monsters[originalMonster] != null) {
                     ({ error } = await supabase.from(config.supabase.tables.signups).delete().eq('event_id', monsters[originalMonster].event).eq('player_id', userId).neq('todgrab', null).select('*, player_id (id, username)'));
                     if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed(`Error delete Tod Grab signup`, error.message)] });
