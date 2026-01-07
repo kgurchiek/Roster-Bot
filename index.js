@@ -1167,7 +1167,6 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
     let archive = {};
     async function scheduleMonster(message, events = []) {
         let monster = message.embeds[0].title;
-        monster = 'Behemoth';
         let group = config.roster.monsterGroups.find(a => a.includes(monster)) || [monster];
         let timestamp = parseInt(message.embeds[0].fields[0].value.split(':')[1]);
         let day = parseInt(message.embeds[0].fields[1].value);
