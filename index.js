@@ -619,7 +619,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
     }
 
     class Monster {
-        constructor(name, timestamp, day, event, threads, rage, thread, message, windows, killer, todGrabber) {
+        constructor(name, timestamp, day, event, threads, rage, thread, message, windows, killer, todGrabber, zone) {
             this.group = config.roster.monsterGroups.find(a => a.includes(name));
             this.name = this.group == null ? name : this.group.join('/');
             if (config.roster.placeholderMonsters.includes(this.name)) {
@@ -641,6 +641,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             this.killer = killer;
             this.todGrabber = todGrabber;
             this.todGrabs = [];
+            this.zone = zone;
 
             this.verifiedClears = [];
 
@@ -865,7 +866,11 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                     .setCustomId(`revert-monster-${this.name}`)
                                     .setLabel('Revert to Last Window')
                                     .setStyle(ButtonStyle.Secondary)
-                                    .setDisabled(this.windows == 1) : null
+                                    .setDisabled(this.windows == 1) : null,
+                                this.name == 'Tiamat' ? new ButtonBuilder()
+                                    .setCustomId(`wipe-monster-${this.name}`)
+                                    .setLabel('Wipe Signups')
+                                    .setStyle(ButtonStyle.Secondary) : null
                             ].filter(a => a != null)
                         ),
                     this.placeholders == null ? null : new ActionRowBuilder()
@@ -1148,7 +1153,12 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             await this.updateMessage();
             delete monsters[this.name];
             if (this.group) delete monsters[this.group.join('/')];
-            if (this.verified) delete archive[this.event];
+            if (this.verified) {
+                delete archive[this.event];
+                let embed = new EmbedBuilder()
+                    .setDescription(`${this.name} roster closed with no signups, marked as verified`)
+                await logChannel.send({ embeds: [embed] });
+            }
 
             await this.updatePanel();
 
@@ -1176,20 +1186,22 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
         
         let dupeEvents = Object.values(archive).filter(a => group.includes(a.data.monster_name) && a.timestamp != timestamp);
         for (let event of dupeEvents) {
-            if (event.active && event.signups.flat(2).filter(a => a != null).length > 0) {
-                await event.message.reply(`<@&${config.discord.usersRole}> A new raid is ready, please close the previous roster`);
-                await new Promise(res => {
-                    let interval = setInterval(() => {
-                        if (!event.active) {
-                            clearInterval(interval);
-                            res();
-                        }
+            let { data, error } = await supabase.from(config.supabase.tables.signups).select('*, player_id (id, username)').eq('event_id', event.event);
+            if (error) console.log(`Error fetching signups for event ${event.event}: ${error.message}`);
+            signups = data || [];
+            if (event.active) {
+                if (signups.length > 0) {
+                    await event.message.reply(`<@&${config.discord.usersRole}> A new raid is ready, please close the previous roster`);
+                    await new Promise(res => {
+                        let interval = setInterval(() => {
+                            if (!event.active) {
+                                clearInterval(interval);
+                                res();
+                            }
+                        })
                     })
-                })
+                } else await event.close();
             }
-            if (event.active) await event.close();
-            await event.message.delete();
-            delete archive[event.event];
         }
 
         let threads = {
@@ -1226,7 +1238,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
 
             let todGrabber = event.todgrab == null ? null : await getUser(event.todgrab);
             if (event.todgrab != null && todGrabber == null) console.log(`[Schedule Monster]: Error: could not fetch user with id ${event.todGrabber}`);
-            let newMonster = new Monster(monster, timestamp, day, event.event_id, threads, event.rage, thread, message, event.windows, event.killed_by, todGrabber);
+            let newMonster = new Monster(monster, timestamp, day, event.event_id, threads, event.rage, thread, message, event.windows, event.killed_by, todGrabber, event.zone);
             monster = newMonster.name;
             monsters[monster] = newMonster;
             monsters[event.monster_name] = newMonster;
@@ -1349,7 +1361,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             }
             let todGrabber = event.todgrab == null ? null : await getUser(event.todgrab);
             if (event.todgrab != null && todGrabber == null) console.log(`[Schedule Monster]: Error: could not fetch user with id ${event.todGrabber}`);
-            archive[event.event_id] = new Monster(event.monster_name, Math.floor(new Date(event.start_time) / 1000), event.day, event.event_id, null, event.rage, thread, message, event.windows, event.killed_by, todGrabber);
+            archive[event.event_id] = new Monster(event.monster_name, Math.floor(new Date(event.start_time) / 1000), event.day, event.event_id, null, event.rage, thread, message, event.windows, event.killed_by, todGrabber, event.zone);
             archive[event.event_id].name = event.monster_name;
             archive[event.event_id].active = false;
             if (event.close_date) archive[event.event_id].closeDate = new Date(event.close_date);
@@ -1434,11 +1446,11 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
 
     client.on(Events.MessageDelete, async message => {
         for (let monster in monsters) {
-            if (monsters[monster].message?.id == message.id) {
+            if (monsters[monster]?.message?.id == message.id) {
                 monsters[monster].message = null;
                 await monsters[monster].updateMessage();
             }
-            if (monsters[monster].panel?.id == message.id) {
+            if (monsters[monster]?.panel?.id == message.id) {
                 monsters[monster].panel = null;
                 await monsters[monster].updatePanel();
             }
