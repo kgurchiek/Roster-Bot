@@ -44,7 +44,7 @@ module.exports = {
             let { data, error } = await supabase.from(config.supabase.tables.events).insert({
                 monster_name: monster,
                 start_time: new Date(timestamp * 1000),
-                rage
+                rage: rage || false
             }).select('*').single();
             if (error) return interaction.editReply({ ephemeral: true, embeds: [errorEmbed(`Error creating event for ${monster}:`, error.message)] });
             event = data;
