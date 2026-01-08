@@ -259,18 +259,6 @@ module.exports = {
                 }
                 if (job == null) return await interaction.reply({ ephemeral: true, embeds: [new EmbedBuilder().setTitle('Error').setColor('#ff0000').setDescription('Select the job you wish to sign up for')] });
 
-                if (todGrab == 'undefined') todGrab = null;
-                let { data, error } = await supabase.from(config.supabase.tables.signups).insert({
-                    event_id: monsters[monster].event,
-                    slot_template_id: templateId,
-                    player_id: user.id,
-                    assigned_job_id: job,
-                    todgrab: todGrab,
-                    alt: selections[id].alt,
-                    tag_only: selections[id].tag_only
-                }).select('*').single();
-                if (error) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error updating database', error.message)] });
-                
                 monsters[monster].signups[alliance - 1][party - 1][slot - 1] = {
                     user,
                     job,
@@ -281,6 +269,20 @@ module.exports = {
                     window: monster == 'Tiamat' ? monsters[monster].windows : null
                 }
                 delete selections[id];
+                if (todGrab == 'undefined') todGrab = null;
+                let { data, error } = await supabase.from(config.supabase.tables.signups).insert({
+                    event_id: monsters[monster].event,
+                    slot_template_id: templateId,
+                    player_id: user.id,
+                    assigned_job_id: job,
+                    todgrab: todGrab,
+                    alt: selections[id].alt,
+                    tag_only: selections[id].tag_only
+                }).select('*').single();
+                if (error) {
+                    monsters[monster].signups[alliance - 1][party - 1][slot - 1] = null;
+                    return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error updating database', error.message)] });
+                }
 
                 await interaction.update({ content: '​', embeds: [], components: [] });
                 let embed = new EmbedBuilder().setDescription(`${user.username} has joined the ${monster} raid in alliance ${alliance}, party ${party}, slot ${slot} as a ${jobList.find(a => a.job_id == job)?.job_name || `[error: job id ${job} not found]`}.`);

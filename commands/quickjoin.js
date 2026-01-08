@@ -205,6 +205,15 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
+                monsters[monster].signups[alliance - 1][party - 1][slot - 1] = {
+                    user,
+                    job,
+                    signupId: data.signup_id,
+                    todGrab,
+                    alt: selections[id].alt,
+                    tag_only: selections[id].tag_only
+                }
+                delete selections[id];
                 if (todGrab == 'undefined') todGrab = null;
                 let { data, error } = await supabase.from(config.supabase.tables.signups).insert({
                     event_id: monsters[monster].event,
@@ -216,17 +225,10 @@ module.exports = {
                     tag_only: selections[id].tag_only,
                     window: monster == 'Tiamat' ? monsters[monster].windows : null
                 }).select('*').single();
-                if (error) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error updating database', error.message)] });
-                
-                monsters[monster].signups[alliance - 1][party - 1][slot - 1] = {
-                    user,
-                    job,
-                    signupId: data.signup_id,
-                    todGrab,
-                    alt: selections[id].alt,
-                    tag_only: selections[id].tag_only
+                if (error) {
+                    monsters[monster].signups[alliance - 1][party - 1][slot - 1] = null;
+                    return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error updating database', error.message)] });
                 }
-                delete selections[id];
 
                 await interaction.update({ content: '​', embeds: [], components: [] });
                 let embed = new EmbedBuilder().setDescription(`${user.username} has joined the ${monster} raid in alliance ${alliance}, party ${party}, slot ${slot} as a ${jobList.find(a => a.job_id == job)?.job_name || `[error: job id ${job} not found]`}.`);
