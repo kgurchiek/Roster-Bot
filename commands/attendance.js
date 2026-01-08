@@ -24,10 +24,10 @@ module.exports = {
                 if (type == 'NQ' && this.day >= 4) type = 'HQ';
                 let tagRule = pointRules.find(a => a.point_code == 't' && a.monster_type == type);
                 if (tagRule == null) return await interaction.reply({ ephemeral: true, embeds: [new errorEmbed('Error fetching bonus point rule', `Couldn't find tag point rule for monster type ${type}`)] });
-                let hasTagAward = tagRule.dkp_value != 0 || tagRule.ppp_value != 0;
+                let hasTagAward = !config.roster.disableEmptyBonus || tagRule.dkp_value != 0 || tagRule.ppp_value != 0;
                 let killRule = pointRules.find(a => a.point_code == 'k' && a.monster_type == type);
                 if (killRule == null) return await interaction.reply({ ephemeral: true, embeds: [new errorEmbed('Error fetching bonus point rule', `Couldn't find kill point rule for monster type ${type}`)] });
-                let hasKillAward = killRule.dkp_value != 0 || killRule.ppp_value != 0;
+                let hasKillAward = !config.roster.disableEmptyBonus || killRule.dkp_value != 0 || killRule.ppp_value != 0;
 
                 let monster = archive[event].name;
                 let maxWindows = archive[event].windows;

@@ -4,7 +4,7 @@ const { errorEmbed } = require('../commonFunctions');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('wipe'),
-    async buttonHandler({ config, interaction, supabase, monsters, logChannel, templateList }) {
+    async buttonHandler({ config, interaction, supabase, monsters, logChannel }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'monster':  {

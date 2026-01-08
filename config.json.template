@@ -59,7 +59,8 @@
         "team": "",
         "monsterGroups": [],
         "placeholderMonsters": [],
-        "postDelay": 3600
+        "postDelay": 3600,
+        "disableEmptyBonus": false
     },
     "graph": {
         "backgroundColor": "black",
