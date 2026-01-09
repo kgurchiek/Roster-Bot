@@ -5,7 +5,7 @@ let selections = {};
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('verify'),
-    async selectHandler({ config, interaction, user, supabase, archive, logChannel, pointRules }) {
+    async selectHandler({ config, interaction, user, supabase, archive, logChannel, pointRules, ocrCategory }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'signup': {
@@ -74,13 +74,13 @@ module.exports = {
                         }
                     }
                     interaction.customId = `verify-edit-${id}`;
-                    this.buttonHandler({ config, interaction, user, supabase, archive, logChannel, pointRules });
+                    this.buttonHandler({ config, interaction, user, supabase, archive, logChannel, pointRules, ocrCategory });
                 }
                 break;
             }
         }
     },
-    async buttonHandler({ config, interaction, user, supabase, archive, logChannel, pointRules }) {
+    async buttonHandler({ config, interaction, user, supabase, archive, logChannel, pointRules, ocrCategory }) {
         let args = interaction.customId.split('-');
         switch (args[1]) {
             case 'view': {
@@ -194,7 +194,7 @@ module.exports = {
                 await archive[event].updatePanel();
 
                 interaction.customId = `interaction-view-${event}-${id}`;
-                this.buttonHandler({ config, interaction, user, supabase, archive, logChannel, pointRules });
+                this.buttonHandler({ config, interaction, user, supabase, archive, logChannel, pointRules, ocrCategory });
                 break;
             }
             case 'verify': {
@@ -254,6 +254,30 @@ module.exports = {
                 signup.verified = true;
                 await archive[event].updateMessage();
                 await archive[event].updatePanel();
+
+                let data;
+                ({ data, error } = await supabase.from(config.supabase.tables.signups).select('*, player_id (id, username)').eq('screenshot', signup.screenshot).is('verified', null));
+                if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error fetching screenshot signups', error.message)], components: [] });
+                if (data.length == 0) {
+                    let channelName = (archive[event].group ? archive[event].group.map(a => a).join('—') : archive[event].name).replaceAll(' ', '-').toLowerCase();
+                    let channels = [...(await ocrCategory.guild.channels.fetch(null, { force: true })).values()].filter(a => a.parentId == ocrCategory.id);
+                    let channel = channels.find(a => a.name == channelName);
+                    if (channel) {
+                        let message;
+                        try {
+                            message = await channel.messages.fetch(signup.screenshot);
+                        } catch (err) {
+                            if (!err.message.includes('Unknown Message')) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error fetching screenshot message', error.message)], components: [] });
+                        }
+                        if (message) {
+                            try {
+                                await message.delete();
+                            } catch (err) {
+                                return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error deleting screenshot message', error.message)], components: [] });
+                            }
+                        }
+                    }
+                }
 
                 let embed = new EmbedBuilder()
                     .setDescription(`${user.username} approved ${signup.player_id.username}'${signup.player_id.username.endsWith('s') ? '' : 's'} tag screenshot of "${archive[event].name}".`)
@@ -393,12 +417,12 @@ module.exports = {
 
                 selections[id][option] = !selections[id][option];
                 interaction.customId = `verify-edit-${id}`;
-                this.buttonHandler({ config, interaction, user, supabase, archive, logChannel, pointRules });
+                this.buttonHandler({ config, interaction, user, supabase, archive, logChannel, pointRules, ocrCategory });
                 break;
             }
         }
     },
-    async modalHandler({ config, interaction, user, supabase, archive, logChannel, pointRules }) {
+    async modalHandler({ config, interaction, user, supabase, archive, logChannel, pointRules, ocrCategory }) {
         let args = interaction.customId.split('-');
         let id = args[1];
 
@@ -428,6 +452,6 @@ module.exports = {
         }
         
         interaction.customId = `verify-edit-${id}`;
-        this.buttonHandler({ config, interaction, user, supabase, archive, logChannel, pointRules });
+        this.buttonHandler({ config, interaction, user, supabase, archive, logChannel, pointRules, ocrCategory });
     }
 }
