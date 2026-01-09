@@ -1096,6 +1096,13 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                                 .setCustomId(`verify-decline-${this.event}`)
                                 .setLabel('Decline')
                                 .setStyle(ButtonStyle.Danger)
+                        ),
+                    new ActionRowBuilder()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId(`verifyall-event-${this.event}`)
+                                .setLabel('Approve All')
+                                .setStyle(ButtonStyle.Success)
                         )
                 ]
             }
@@ -1374,6 +1381,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             archive[event.event_id].data.signups = data;
             archive[event.event_id].todGrabs = data.filter(a => a.todgrab != null);
             await archive[event.event_id].updateMessage();
+            if (!event.active) await archive[event.event_id].updatePanel();
         }
         console.log('Handled closed rosters');
 
