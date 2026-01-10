@@ -160,7 +160,7 @@ module.exports = {
                     return await interaction.reply({ ephemeral: true, embeds: [embed] });
                 }
 
-                if (archive[selections[id].event].placeholders == null) {
+                if (archive[selections[id].event].placeholders == null && !archive[selections[id].event].rage) {
                     if (selections[id].monster == 'Tiamat') {
                         let { data, error } = await supabase.from(config.supabase.tables.signups).select('*').eq('event_id', selections[id].event);
                         if (error) return await interaction.reply({ ephemeral: true, embeds: [errorEmbed('Error fetching signups', error.message)] });
@@ -181,7 +181,7 @@ module.exports = {
 
                         return await interaction.showModal(modal);
                     } else {
-                        if (!archive[event].rage && selections[id].windows == null) {
+                        if (selections[id].windows == null) {
                             let embed = new EmbedBuilder()
                                 .setTitle('Error')
                                 .setColor('#ff0000')
@@ -218,7 +218,7 @@ module.exports = {
                     return await interaction.editReply({ ephemeral: true, embeds: [embed] });
                 }
                 
-                if (archive[selections[id].event].placeholders == null && selections[id].windows == null) {
+                if (!archive[selections[id].event].rage && archive[selections[id].event].placeholders == null && selections[id].windows == null) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')

@@ -22,7 +22,7 @@ module.exports = {
     async execute({ config, interaction, supabase, monsters, rosterChannels, logChannel, Monster, eventList, archive }) {
         await interaction.deferReply({ ephemeral: true });
         let monster = interaction.options.getString('monster');
-        let rage = interaction.options.getBoolean('rage');
+        let rage = interaction.options.getBoolean('rage') || false;
 
         if (rage && monsters[monster]?.rage) {
             let embed = new EmbedBuilder()
@@ -44,12 +44,12 @@ module.exports = {
             let { data, error } = await supabase.from(config.supabase.tables.events).insert({
                 monster_name: monster,
                 start_time: new Date(timestamp * 1000),
-                rage: rage || false
+                rage: rage
             }).select('*').single();
             if (error) return interaction.editReply({ ephemeral: true, embeds: [errorEmbed(`Error creating event for ${monster}:`, error.message)] });
             event = data;
 
-            let newMonster = new Monster(monster, timestamp, day, event.event_id, threads, true);
+            let newMonster = new Monster(monster, timestamp, day, event.event_id, threads, rage);
             monster = newMonster.name;
             monsters[monster] = newMonster;
 
@@ -76,7 +76,7 @@ module.exports = {
             embed.setColor('#00ff00');
             await interaction.editReply({ ephemeral: true, embeds: [embed] });
         } else {
-            let { error } = await supabase.from(config.supabase.tables.events).update({ rage: true }).eq('event_id', monsters[monster].event);
+            let { error } = await supabase.from(config.supabase.tables.events).update({ rage }).eq('event_id', monsters[monster].event);
             if (error) return await interaction.editReply({ ephemeral: true, embeds: [new errorEmbed(`Error updating ${monster} rage status`, error.message)] });
             monsters[monster].rage = rage;
             await monsters[monster].message.edit({ embeds: monsters[monster].createEmbeds() });
