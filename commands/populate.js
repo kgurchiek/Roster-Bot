@@ -67,7 +67,7 @@ module.exports = {
                 if (monsters[monster].data.max_windows == 1) selections[interaction.id].windows = 1;
                 
                 let buttons = [
-                    (monsters[monster].placeholders != null || monsters[monster].data.max_windows == null || monsters[monster].data.max_windows == 1 || monsters[monster].data.max_windows >= 25) ? null : new ActionRowBuilder()
+                    (monsters[monster].rage || monsters[monster].placeholders != null || monsters[monster].data.max_windows == null || monsters[monster].data.max_windows == 1 || monsters[monster].data.max_windows >= 25) ? null : new ActionRowBuilder()
                         .addComponents(
                             new StringSelectMenuBuilder()
                                 .setPlaceholder('Windows')
@@ -133,7 +133,7 @@ module.exports = {
                 let fields = [];
                 let modal = new ModalBuilder()
                     .setTitle(`Populate ${monster} Points`)
-                if (monster != 'Tiamat' && monsters[monster].placeholders == null) {
+                if (monster != 'Tiamat' && monsters[monster].placeholders == null && !monsters[monster].rage) {
                     if (monsters[monster].data.max_windows == null || monsters[monster].data.max_windows >= 25) {
                         modal.addComponents(
                             new ActionRowBuilder()
@@ -194,7 +194,7 @@ module.exports = {
                         .setDescription('Please select the group that killed the monster')
                     return await interaction.update({ ephemeral: true, embeds: [embed], components: [] });
                 }
-                if (monster != 'Tiamat' && monsters[monster].placeholders == null && selections[id].windows == null) {
+                if (monster != 'Tiamat' && monsters[monster].placeholders == null && selections[id].windows == null && !monsters[monster].rage) {
                     let embed = new EmbedBuilder()
                         .setTitle('Error')
                         .setColor('#ff0000')

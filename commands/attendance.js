@@ -68,7 +68,7 @@ module.exports = {
                 }
 
                 let buttons = [
-                    (monster == 'Tiamat' || archive[event].placeholders != null || maxWindows == null || maxWindows >= 25) ? null : new ActionRowBuilder()
+                    (monster == 'Tiamat' || archive[event].rage || archive[event].placeholders != null || maxWindows == null || maxWindows >= 25) ? null : new ActionRowBuilder()
                         .addComponents(
                             new StringSelectMenuBuilder()
                                 .setPlaceholder('Total Windows')
@@ -181,7 +181,7 @@ module.exports = {
 
                         return await interaction.showModal(modal);
                     } else {
-                        if (selections[id].windows == null) {
+                        if (!archive[event].rage && selections[id].windows == null) {
                             let embed = new EmbedBuilder()
                                 .setTitle('Error')
                                 .setColor('#ff0000')
