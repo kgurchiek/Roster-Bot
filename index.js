@@ -1390,7 +1390,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
     });
 
     async function getUser(id) {
-        let { data: user, error } = await supabase.from(config.supabase.tables.users).select('id::text, username, dkp, ppp, frozen').eq('id', id).limit(1);
+        let { data: user, error } = await supabase.from(config.supabase.tables.users).select('*').eq('id', id).limit(1);
         return error ? { error } : user[0];
     }
     
