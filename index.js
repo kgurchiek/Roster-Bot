@@ -549,11 +549,14 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
     updateTagRates();
 
     async function updateFreeze() {
+        let { error } = await supabase.from(config.supabase.tables.frozenUsers).delete().gt('camps_until_unfreeze', -1);
+        if (error) console.log(`[Update Freeze]: Error clearing frozen users table: ${error.message}`);
+
         for (let user of userList || []) {
             if (user.frozen) {
                 let { data: signups, error } = await supabase.from(config.supabase.tables.signups).select('event_id (monster_name), date').eq('player_id', user.id);
                 if (error) {
-                    console.log(`[Update Freeze] Error fetching ${user.username}'${user.username.endsWith('s') ? '' : 's'} signups: ${error.message}`);
+                    console.log(`[Update Freeze]: Error fetching ${user.username}'${user.username.endsWith('s') ? '' : 's'} signups: ${error.message}`);
                     continue;
                 }
                 rules = signups.filter(a => new Date(a.date).getTime() > new Date(user.frozen_date).getTime()).map(a => campRules.find(b => b.monster_name == a.event_id.monster_name));
@@ -564,14 +567,21 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                 if (rules.length >= 7) {
                     user.frozen = false;
                     let { error } = await supabase.from(config.supabase.tables.users).update({ frozen: false }).eq('id', user.id);
-                    if (error) console.log(`Error unfreezing ${user.username}: ${error.message}`);
+                    if (error) console.log(`[Update Freeze]: Error unfreezing ${user.username}: ${error.message}`);
+                } else {
+                    let { error } = await supabase.from(config.supabase.tables.frozenUsers).insert({
+                        username: user.username,
+                        last_camp: user.last_camped,
+                        camps_until_unfreeze: 7 - rules.length
+                    });
+                    if (error) console.log(`[Update Freeze]: Error inserting to frozen users table: ${error.message}`);
                 }
             } else {
                 if (Date.now() - new Date(user.last_camped).getTime() > 14 * 24 * 60 * 60 * 1000) {
                     user.frozen = true;
                     user.frozen_date = new Date().toISOString();
                     let { error } = await supabase.from(config.supabase.tables.users).update({ frozen: true, frozen_date: new Date().toISOString() }).eq('id', user.id);
-                    if (error) console.log(`Error freezing ${user.username}: ${error.message}`);
+                    if (error) console.log(`[Update Freeze]: Error freezing ${user.username}: ${error.message}`);
                 }
             }
         }
