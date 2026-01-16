@@ -576,7 +576,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                         last_camp: user.last_camped,
                         camps_until_unfreeze: 7 - rules.length
                     });
-                    if (error) console.log(`[Update Freeze]: Error inserting to frozen users table: ${error.message}`);
+                    if (error) console.log(`[Update Freeze]: Error inserting user ${user.username} to frozen users table: ${error.message}`);
                 }
             } else {
                 if (Date.now() - new Date(user.last_camped).getTime() > 14 * 24 * 60 * 60 * 1000) {
@@ -590,7 +590,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                         last_camp: user.last_camped,
                         days_until_freeze: 14 - Math.floor((Date.now() - new Date(user.last_camped).getTime()) / (24 * 60 * 60 * 1000))
                     });
-                    if (error) console.log(`[Update Freeze]: Error inserting to frozen users table: ${error.message}`);
+                    if (error) console.log(`[Update Freeze]: Error inserting user ${user.username} to unfrozen users table: ${error.message}`);
                 }
             }
         }
