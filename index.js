@@ -551,6 +551,8 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
     async function updateFreeze() {
         let { error } = await supabase.from(config.supabase.tables.frozenUsers).delete().gt('camps_until_unfreeze', -1);
         if (error) console.log(`[Update Freeze]: Error clearing frozen users table: ${error.message}`);
+        ({ error } = await supabase.from(config.supabase.tables.unfrozenUsers).delete().gt('days_until_freeze', -1));
+        if (error) console.log(`[Update Freeze]: Error clearing unfrozen users table: ${error.message}`);
 
         for (let user of userList || []) {
             if (user.frozen) {
@@ -582,6 +584,13 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
                     user.frozen_date = new Date().toISOString();
                     let { error } = await supabase.from(config.supabase.tables.users).update({ frozen: true, frozen_date: new Date().toISOString() }).eq('id', user.id);
                     if (error) console.log(`[Update Freeze]: Error freezing ${user.username}: ${error.message}`);
+                } else {
+                    let { error } = await supabase.from(config.supabase.tables.unfrozenUsers).insert({
+                        username: user.username,
+                        last_camp: user.last_camped,
+                        days_until_freeze: 14 - Math.floor((Date.now() - new Date(user.last_camped).getTime()) / (24 * 60 * 60 * 1000))
+                    });
+                    if (error) console.log(`[Update Freeze]: Error inserting to frozen users table: ${error.message}`);
                 }
             }
         }
