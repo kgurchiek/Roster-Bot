@@ -52,7 +52,8 @@
             "DKP": "",
             "PPP": ""
         },
-        "usersRole": ""
+        "usersRole": "",
+        "duplicateWarning": false
     },
     "roster": {
         "alliances": 4,

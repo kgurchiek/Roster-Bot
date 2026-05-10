@@ -1217,7 +1217,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             signups = data || [];
             if (event.active) {
                 if (signups.length > 0) {
-                    await event.message.reply(`<@&${config.discord.usersRole}> A new raid is ready, please close the previous roster`);
+                    if (config.discord.duplicateWarning) await event.message.reply(`<@&${config.discord.usersRole}> A new raid is ready, please close the previous roster`);
                     await new Promise(res => {
                         let interval = setInterval(() => {
                             if (!event.active) {

@@ -56,8 +56,8 @@ module.exports = {
                 let total = { dkp: 0, ppp: 0 };
                 archive[event].data.signups.forEach(async (signup, i, arr) => {
                     if (arr.slice(0, i).find(a => a.player_id.id == signup.player_id.id) == null) {
-                        let { error } = await supabase.from(config.supabase.tables.users).update({last_camped: new Date() }).eq('id', signup.player_id.id);
-                        if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error incrementing dkp', error.message)] });
+                        let { error } = await supabase.from(config.supabase.tables.users).update({ last_camped: new Date() }).eq('id', signup.player_id.id);
+                        if (error) return await interaction.editReply({ ephemeral: true, embeds: [errorEmbed('Error updating last camp', error.message)] });
                     }
                     let dkp = 0;
                     let ppp = 0;
