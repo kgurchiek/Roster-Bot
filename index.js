@@ -26,7 +26,7 @@ const supabase = createClient(config.supabase.url, config.supabase.key);
             console.log('[Monster List]: Error:', err)
         }
 
-        setTimeout(updateMonsters);
+        setTimeout(updateMonsters, 5000);
         return hadError;
     }
 
